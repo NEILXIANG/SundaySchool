@@ -20,7 +20,7 @@ def test_teacher_friendly_error_messages():
     print("🔍 测试教师友好错误消息...")
     
     try:
-        from teacher_helper import TeacherHelper
+        from ui.teacher_helper import TeacherHelper
         
         helper = TeacherHelper()
         
@@ -68,7 +68,7 @@ def test_input_validation():
     print("🔍 测试输入验证功能...")
     
     try:
-        from input_validator import validator
+        from ui.input_validator import validator
         
         # 测试照片文件名验证
         valid_names = ['张三_1.jpg', '李四.jpg', 'Alice.jpg', 'Bob_2.png']
@@ -114,7 +114,7 @@ def test_interactive_guide():
     print("🔍 测试交互式指导...")
     
     try:
-        from interactive_guide import InteractiveGuide
+        from ui.interactive_guide import InteractiveGuide
         
         guide = InteractiveGuide()
         
@@ -138,7 +138,7 @@ def test_operation_guides():
     print("🔍 测试操作指南...")
     
     try:
-        from interactive_guide import show_operation_guide
+        from ui.interactive_guide import show_operation_guide
         
         guide_types = ['photo_preparation', 'file_organization', 'troubleshooting']
         
@@ -165,7 +165,7 @@ def test_exception_handler():
     print("🔍 测试异常处理器...")
     
     try:
-        from teacher_helper import create_friendly_exception_handler
+        from ui.teacher_helper import create_friendly_exception_handler
         
         # 测试友好异常处理器
         handler = create_friendly_exception_handler()
@@ -185,9 +185,9 @@ def test_help_integration():
     try:
         # 测试所有模块都能正常导入
         modules = [
-            'teacher_helper',
-            'input_validator',
-            'interactive_guide'
+            'ui.teacher_helper',
+            'ui.input_validator',
+            'ui.interactive_guide'
         ]
         
         for module_name in modules:
@@ -196,8 +196,8 @@ def test_help_integration():
         print("✅ 所有帮助模块导入成功")
         
         # 测试模块协作
-        from input_validator import validator
-        from teacher_helper import TeacherHelper
+        from ui.input_validator import validator
+        from ui.teacher_helper import TeacherHelper
         
         # 测试验证器和辅助器协作
         validation_result = validator.validate_photo_name('张三_1.jpg')
@@ -226,7 +226,7 @@ def test_user_friendly_features():
     
     try:
         # 测试表情符号使用
-        from teacher_helper import TeacherHelper
+        from ui.teacher_helper import TeacherHelper
         
         helper = TeacherHelper()
         

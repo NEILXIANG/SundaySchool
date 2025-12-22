@@ -27,6 +27,8 @@
   - [tests/test_packaged_app.py](../tests/test_packaged_app.py)
 - 旧版/简化检查
   - [tests/legacy/test_fixes_simple.py](../tests/legacy/test_fixes_simple.py)
+- **边界测试**
+  - [tests/test_edge_cases.py](../tests/test_edge_cases.py): 验证空目录、无参考照片、重复照片等场景。
 
 ## 常见问题
 

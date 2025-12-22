@@ -149,7 +149,7 @@ class TeacherFriendlyTester:
         
         # 检查文件名格式（允许姓名或姓名_序号）
         try:
-            from input_validator import validator
+            from ui.input_validator import validator
             for photo in photos[:3]:
                 result = validator.validate_photo_name(photo)
                 if not result['valid']:
@@ -204,10 +204,6 @@ class TeacherFriendlyTester:
             required_keys = ['input_dir', 'output_dir', 'tolerance']
             for key in required_keys:
                 if key not in config:
-                    # 兼容旧字段 classroom_dir
-                    if key == 'input_dir' and 'classroom_dir' in config:
-                        print(f"✅ 配置项 input_dir: {config['classroom_dir']} (兼容字段)")
-                        continue
                     print(f"❌ 配置文件缺少: {key}")
                     return False
                 print(f"✅ 配置项 {key}: {config[key]}")

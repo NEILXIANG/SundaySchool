@@ -30,7 +30,7 @@
 支持以下参数：  
 ```bash
 python src/run.py \
-  --input-dir "input" \      # 输入目录（默认：input，兼容 --classroom-dir）
+  --input-dir "input" \      # 输入目录（默认：input）
   --output-dir "output" \     # 输出目录（默认：output）
   --tolerance 0.6             # 人脸识别阈值（默认：0.6，范围：0~1）
 ```
@@ -79,8 +79,7 @@ python src/run.py \
 ### **配置文件（config.json）**  
 ```json
 {
-  "input_dir": "input",        // 必填，输入目录（兼容字段 classroom_dir）
-  "classroom_dir": "input",    // 兼容旧字段
+  "input_dir": "input",        // 必填，输入目录
   "output_dir": "output",        // 必填，输出目录
   "tolerance": 0.6,             // 可选，人脸识别阈值（0~1）
   "log_level": "INFO"           // 可选，日志级别（DEBUG/INFO/WARNING/ERROR）

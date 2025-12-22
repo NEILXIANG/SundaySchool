@@ -9,7 +9,6 @@ from pathlib import Path
 
 from core.config import (
     DEFAULT_INPUT_DIR,
-    DEFAULT_CLASSROOM_DIR,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_LOG_DIR,
     DEFAULT_TOLERANCE,
@@ -353,8 +352,6 @@ class InteractiveGuide:
                 print(f"   识别阈值: {config['tolerance']}")
             if 'input_dir' in config:
                 print(f"   输入数据目录: {config['input_dir']}")
-            elif 'classroom_dir' in config:
-                print(f"   输入数据目录: {config['classroom_dir']} (兼容字段)")
             
             return True
             
@@ -367,7 +364,6 @@ class InteractiveGuide:
         """创建默认配置文件"""
         default_config = {
             "input_dir": DEFAULT_INPUT_DIR,
-            "classroom_dir": DEFAULT_CLASSROOM_DIR,  # 兼容旧字段
             "output_dir": DEFAULT_OUTPUT_DIR,
             "log_dir": DEFAULT_LOG_DIR,
             "tolerance": DEFAULT_TOLERANCE,
@@ -430,6 +426,18 @@ class InteractiveGuide:
    • 序号从1开始，不要用0
    • 扩展名使用小写
         """)
+
+    def get_operation_guide(self, guide_type: str) -> str:
+        """获取操作指南内容
+        
+        Args:
+            guide_type: 指南类型，可选 photo_preparation, file_organization, troubleshooting
+            
+        Returns:
+            指南内容字符串
+        """
+        return show_operation_guide(guide_type)
+
 
 def show_help_menu():
     """显示帮助菜单"""
@@ -593,8 +601,8 @@ sunday-photos/
       • 确认能看到README.md和run.py文件
    
    2️⃣ 检查文件夹结构：
-      • 确认存在classroom文件夹
-      • 确认存在classroom/student_photos文件夹
+      • 确认存在input文件夹
+      • 确认存在input/student_photos文件夹
    
    3️⃣ 检查文件名：
       • 确保文件夹名拼写完全正确

@@ -23,10 +23,10 @@ def test_config_loader_integration():
         print(f"✓ ConfigLoader初始化成功")
         
         # 测试配置加载
-        classroom_dir = config_loader.get_input_dir()
+        input_dir = config_loader.get_input_dir()
         output_dir = config_loader.get_output_dir()
         tolerance = config_loader.get_tolerance()
-        print(f"✓ 参数解析成功，默认值: input_dir={classroom_dir}, tolerance={tolerance}")
+        print(f"✓ 参数解析成功，默认值: input_dir={input_dir}, tolerance={tolerance}")
         
         return True
     except Exception as e:

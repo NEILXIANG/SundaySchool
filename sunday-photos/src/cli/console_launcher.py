@@ -143,7 +143,7 @@ class ConsolePhotoOrganizer:
     def create_config_file(self):
         """创建配置文件"""
         config_data = {
-            "classroom_dir": str(self.app_directory),
+            "input_dir": str(self.app_directory),
             "output_dir": str(self.app_directory / "output"),
             "log_dir": str(self.app_directory / "logs"),
             "photo_processing": {
@@ -183,7 +183,7 @@ class ConsolePhotoOrganizer:
             
             print("🔧 初始化处理系统...")
             organizer = SimplePhotoOrganizer(
-                classroom_dir=str(self.app_directory),
+                input_dir=str(self.app_directory),
                 output_dir=str(self.app_directory / "output"),
                 log_dir=str(self.app_directory / "logs")
             )

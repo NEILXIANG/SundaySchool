@@ -68,7 +68,7 @@ except Exception as e:
 
 # 测试7: 教师辅助功能
 try:
-    from teacher_helper import TeacherHelper
+    from ui.teacher_helper import TeacherHelper
     helper = TeacherHelper()
     msg = helper.get_friendly_error(FileNotFoundError("测试文件"))
     print(f"✓ 教师辅助功能正常: {msg[:20]}...")
@@ -78,7 +78,7 @@ except Exception as e:
 
 # 测试8: 输入验证
 try:
-    from input_validator import InputValidator
+    from ui.input_validator import InputValidator
     validator = InputValidator()
     result = validator.validate_photo_name("张三.jpg")
     print(f"✓ 输入验证正常: {result['valid']}")
@@ -88,7 +88,7 @@ except Exception as e:
 
 # 测试9: 交互向导
 try:
-    from interactive_guide import InteractiveGuide
+    from ui.interactive_guide import InteractiveGuide
     guide = InteractiveGuide()
     print("✓ 交互向导初始化成功")
 except Exception as e:

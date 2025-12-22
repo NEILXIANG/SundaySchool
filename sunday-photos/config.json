@@ -1,6 +1,5 @@
 {
     "input_dir": "input",
-    "classroom_dir": "input",
     "output_dir": "output",
     "log_dir": "logs",
     "tolerance": 0.6,

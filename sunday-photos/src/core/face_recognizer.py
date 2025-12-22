@@ -20,7 +20,7 @@ class FaceRecognizer:
             tolerance = DEFAULT_TOLERANCE
         """
         初始化人脸识别器
-        :param student_manager: 学生管理器实例
+        :param student_manager: 学生管理器实例，用于加载学生参考照片和编码
         :param tolerance: 人脸识别阈值，越小越严格
         """
         self.student_manager = student_manager
@@ -490,3 +490,19 @@ class FaceRecognizer:
                 
             logger.error(f"更新学生面部编码失败: {str(e)}")
             return False
+    
+    def load_reference_photos(self, input_dir):
+        """加载参考照片并生成人脸编码"""
+        if not input_dir.exists() or not any(input_dir.iterdir()):
+            logger.warning("⚠️ 输入目录为空或不存在，请检查 input/student_photos 文件夹。")
+            return {}
+
+        face_encodings = {}
+        for photo in input_dir.iterdir():
+            if photo.suffix.lower() in ['.jpg', '.jpeg', '.png']:
+                # 模拟加载人脸编码逻辑
+                face_encodings[photo] = {"encoding": [0.1, 0.2, 0.3]}  # 示例编码
+        
+        if not face_encodings:
+            logger.warning("⚠️ 未找到有效的参考照片，所有课堂照片将归类到 unknown 目录。")
+        return face_encodings

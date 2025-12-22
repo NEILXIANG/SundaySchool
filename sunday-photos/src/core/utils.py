@@ -40,7 +40,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
 
 def setup_logger(log_dir=None, enable_color_console=False):
     """设置日志记录器"""
-    from config import DEFAULT_LOG_DIR
+    from .config import DEFAULT_LOG_DIR
     if log_dir is None:
         log_dir = DEFAULT_LOG_DIR
         

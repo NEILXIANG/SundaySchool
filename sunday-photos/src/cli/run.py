@@ -15,7 +15,6 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
  
 from core.config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_TOLERANCE
-from core.main import SimplePhotoOrganizer
 
 def check_environment():
     """检查运行环境"""
@@ -45,6 +44,7 @@ def check_environment():
         return False
     
     print("✅ 环境检查通过")
+    print("\n\u2705 环境检查通过，准备运行主程序。")
     return True
 
 def show_help():
@@ -101,13 +101,6 @@ def main():
         default=DEFAULT_INPUT_DIR,
         help="输入数据目录 (默认: input)"
     )
-
-    # 兼容旧参数名称
-    parser.add_argument(
-        "--classroom-dir", 
-        dest="classroom_dir",
-        help=argparse.SUPPRESS
-    )
     
     parser.add_argument(
         "--output-dir", 
@@ -135,9 +128,7 @@ def main():
     )
     
     args = parser.parse_args()
-    input_dir = args.input_dir or getattr(args, "classroom_dir", None)
-    if not input_dir and getattr(args, "classroom_dir", None):
-        input_dir = args.classroom_dir
+    input_dir = args.input_dir
     
     # 显示帮助
     if args.help:
@@ -153,6 +144,7 @@ def main():
     print("\n" + "="*60)
     print("🏫 主日学课堂照片自动整理工具 (简化版)")
     print("="*60)
+    print("🏫 欢迎使用湖东教会(LECC)主日学照片整理工具！")
     
     # 环境检查
     if not check_environment():
@@ -162,7 +154,10 @@ def main():
     # 导入主模块并运行
     try:
         print("\n🚀 启动照片整理程序...")
-        
+
+        # 延迟导入，减少冷启动时的重型依赖加载
+        from core.main import SimplePhotoOrganizer
+
         # 创建整理器实例
         organizer = SimplePhotoOrganizer(
             input_dir=input_dir,
@@ -180,9 +175,13 @@ def main():
             organizer.face_recognizer.tolerance = args.tolerance
         
         # 运行整理流程
+        print("📂 正在整理照片，请稍候...")
+        print("📸 正在扫描照片，寻找每一张笑脸...")
         success = organizer.run()
         
         if success:
+            print("✨ 整理完成！所有照片已分类存放到输出目录。")
+            print("🎯 照片整理完成！快去看看成果吧！")
             print("\n🎉 程序执行完成！")
         else:
             print("\n❌ 程序执行失败，请查看日志了解详情")
@@ -196,6 +195,9 @@ def main():
         print(f"\n❌ 程序运行出错: {e}")
         print("请查看详细日志了解问题原因")
         sys.exit(1)
+
+    print("\n🎉 所有准备工作完成，开始整理照片吧！")
+    print("🌟 准备就绪！让我们开始一场照片大冒险吧！")
 
 if __name__ == "__main__":
     main()

@@ -26,11 +26,10 @@ from config_loader import ConfigLoader
 class SimplePhotoOrganizer:
     """照片整理器主类（文件夹模式，简化版入口兼容）"""
 
-    def __init__(self, input_dir=None, output_dir=None, log_dir=None, classroom_dir=None):
+    def __init__(self, input_dir=None, output_dir=None, log_dir=None):
         """初始化照片整理器"""
         if input_dir is None:
-            # 兼容旧的 classroom_dir 参数
-            input_dir = classroom_dir if classroom_dir is not None else DEFAULT_INPUT_DIR
+            input_dir = DEFAULT_INPUT_DIR
         if output_dir is None:
             output_dir = DEFAULT_OUTPUT_DIR
         if log_dir is None:
@@ -335,13 +334,6 @@ def parse_arguments(config_loader=None):
         help=f"输入数据目录 (默认: {default_input_dir})"
     )
 
-    # 兼容旧参数名称
-    parser.add_argument(
-        "--classroom-dir", 
-        dest="classroom_dir",
-        help=argparse.SUPPRESS
-    )
-
     parser.add_argument(
         "--output-dir", 
         default=default_output_dir,
@@ -372,14 +364,13 @@ def main():
     # 使用配置加载器解析命令行参数
     args = parse_arguments(config_loader)
 
-    input_dir = args.input_dir or getattr(args, "classroom_dir", None)
+    input_dir = args.input_dir
 
     # 创建照片整理器实例
     organizer = SimplePhotoOrganizer(
         input_dir=input_dir,
         output_dir=args.output_dir,
-        log_dir=args.log_dir,
-        classroom_dir=getattr(args, "classroom_dir", None)
+        log_dir=args.log_dir
     )
     
     # 初始化系统

@@ -13,9 +13,8 @@ from pathlib import Path
 # 基础路径配置
 BASE_DIR = Path(__file__).parent.parent
 
-# 默认目录配置（输入目录从 classroom 调整为 input）
+# 默认目录配置
 DEFAULT_INPUT_DIR = "input"
-DEFAULT_CLASSROOM_DIR = DEFAULT_INPUT_DIR  # 兼容旧命名
 DEFAULT_OUTPUT_DIR = "output"
 DEFAULT_LOG_DIR = "logs"
 

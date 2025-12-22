@@ -26,10 +26,14 @@ class TeacherHelpSystemTester:
     def setup_test_environment(self):
         """设置测试环境"""
         self.temp_dir = tempfile.mkdtemp(prefix='teacher_help_test_')
+        os.environ["GUIDE_FORCE_AUTO"] = "true"  # 强制自动回答，避免测试阻塞
         print(f"📁 测试环境创建于: {self.temp_dir}")
     
     def cleanup_test_environment(self):
         """清理测试环境"""
+        if "GUIDE_FORCE_AUTO" in os.environ:
+            del os.environ["GUIDE_FORCE_AUTO"]
+            
         if self.temp_dir and os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
             print(f"🗑️ 测试环境已清理")
@@ -59,7 +63,7 @@ class TeacherHelpSystemTester:
         print("🔍 测试教师辅助模块...")
         
         try:
-            from teacher_helper import TeacherHelper, create_friendly_exception_handler
+            from ui.teacher_helper import TeacherHelper, create_friendly_exception_handler
             
             helper = TeacherHelper()
             print("✅ TeacherHelper 类创建成功")
@@ -101,7 +105,7 @@ class TeacherHelpSystemTester:
         print("🔍 测试输入验证器...")
         
         try:
-            from input_validator import validator
+            from ui.input_validator import validator
             
             # 测试照片文件名验证
             valid_names = ['张三_1.jpg', '李四.jpg', 'Alice.jpg', 'Bob_2.png']
@@ -158,7 +162,7 @@ class TeacherHelpSystemTester:
         print("🔍 测试交互式指导...")
         
         try:
-            from interactive_guide import InteractiveGuide
+            from ui.interactive_guide import InteractiveGuide
             
             guide = InteractiveGuide()
             print("✅ InteractiveGuide 创建成功")
@@ -194,8 +198,8 @@ class TeacherHelpSystemTester:
         print("🔍 测试操作指南...")
         
         try:
-            from interactive_guide import show_operation_guide
-            from input_validator import show_operation_guide as validator_guide
+            from ui.interactive_guide import show_operation_guide
+            from ui.input_validator import show_operation_guide as validator_guide
             
             # 测试各种指南类型
             guide_types = [
@@ -227,7 +231,7 @@ class TeacherHelpSystemTester:
         print("🔍 测试友好错误消息...")
         
         try:
-            from teacher_helper import TeacherHelper
+            from ui.teacher_helper import TeacherHelper
             
             helper = TeacherHelper()
             
@@ -303,9 +307,9 @@ class TeacherHelpSystemTester:
         try:
             # 测试是否可以导入所有帮助模块
             modules = [
-                'teacher_helper',
-                'input_validator', 
-                'interactive_guide'
+                'ui.teacher_helper',
+                'ui.input_validator', 
+                'ui.interactive_guide'
             ]
             
             for module_name in modules:
@@ -317,8 +321,8 @@ class TeacherHelpSystemTester:
                     return False
             
             # 测试模块之间的协作
-            from input_validator import validator
-            from teacher_helper import TeacherHelper
+            from ui.input_validator import validator
+            from ui.teacher_helper import TeacherHelper
             
             # 模拟一个完整的用户帮助场景
             validation_result = validator.validate_photo_name('张三_1.jpg')

@@ -144,11 +144,11 @@ def test_config_integration():
         from config_loader import ConfigLoader
         
         config_loader = ConfigLoader('config.json')
-        classroom_dir = config_loader.get_input_dir()
+        input_dir = config_loader.get_input_dir()
         output_dir = config_loader.get_output_dir()
         tolerance = config_loader.get_tolerance()
         
-        print(f"✓ 配置加载成功: input_dir={classroom_dir}")
+        print(f"✓ 配置加载成功: input_dir={input_dir}")
         print(f"✓ 输出目录: {output_dir}")
         print(f"✓ 识别阈值: {tolerance}")
         

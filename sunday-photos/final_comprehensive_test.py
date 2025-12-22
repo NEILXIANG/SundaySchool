@@ -70,34 +70,37 @@ def main():
         ("python3 -c \"import json; print('配置文件格式正确' if json.load(open('config.json')) else '配置文件格式错误')\"", "配置文件验证"),
         
         # 4. 核心模块导入测试
-        ("python3 -c \"import sys; sys.path.insert(0, 'src'); from student_manager import StudentManager; from face_recognizer import FaceRecognizer; from file_organizer import FileOrganizer; from teacher_helper import TeacherHelper; from input_validator import InputValidator; from interactive_guide import InteractiveGuide; print('✅ 所有核心模块导入成功')\"", "核心模块导入"),
+        ("python3 -c \"import sys; sys.path.insert(0, 'src'); from student_manager import StudentManager; from face_recognizer import FaceRecognizer; from file_organizer import FileOrganizer; from ui.teacher_helper import TeacherHelper; from ui.input_validator import InputValidator; from ui.interactive_guide import InteractiveGuide; print('✅ 所有核心模块导入成功')\"", "核心模块导入"),
         
         # 5. 基础功能测试
-        ("python3 test_basic.py", "基础功能测试"),
+        ("python3 tests/test_basic.py", "基础功能测试"),
         
         # 6. 修复验证测试
-        ("python3 test_fixes.py", "修复验证测试"),
+        ("python3 tests/test_fixes.py", "修复验证测试"),
         
         # 7. 修复验证增强测试
-        ("python3 test_fixes_validation.py", "修复验证增强测试"),
+        ("python3 tests/test_fixes_validation.py", "修复验证增强测试"),
         
         # 8. 集成测试
-        ("python3 test_integration.py", "集成测试"),
+        ("python3 tests/test_integration.py", "集成测试"),
         
         # 9. 教师友好功能测试
-        ("python3 test_teacher_friendly.py", "教师友好功能测试"),
+        ("python3 tests/test_teacher_friendly.py", "教师友好功能测试"),
         
         # 10. 教师帮助系统测试
-        ("python3 test_teacher_help_system.py", "教师帮助系统测试"),
+        ("python3 tests/test_teacher_help_system.py", "教师帮助系统测试"),
         
         # 11. 全功能测试
-        ("python3 test_all_teacher_features.py", "全功能测试"),
+        ("python3 tests/test_all_teacher_features.py", "全功能测试"),
+
+        # 12. 复杂业务逻辑场景测试
+        ("python3 tests/test_logic_scenarios.py", "复杂业务逻辑场景测试"),
         
-        # 12. 主程序运行测试（仅验证启动）
-        ("python3 -c \"import sys; sys.path.insert(0, 'src'); from main import SimplePhotoOrganizer; import config; app = SimplePhotoOrganizer(config.DEFAULT_CLASSROOM_DIR); print('✅ 主程序可正常启动')\"", "主程序启动测试"),
+        # 13. 主程序运行测试（仅验证启动）
+        ("python3 -c \"import sys; sys.path.insert(0, 'src'); from main import SimplePhotoOrganizer; import config; app = SimplePhotoOrganizer(config.DEFAULT_INPUT_DIR); print('✅ 主程序可正常启动')\"", "主程序启动测试"),
         
         # 13. 快速运行脚本测试
-        ("python3 -c \"import sys; sys.path.insert(0, 'src'); from run import check_environment; check_environment(); print('✅ 运行脚本环境检查正常')\"", "运行脚本测试"),
+        ("python3 -c \"import sys; sys.path.insert(0, 'src'); from cli.run import check_environment; check_environment(); print('✅ 运行脚本环境检查正常')\"", "运行脚本测试"),
     ]
     
     # 执行所有测试

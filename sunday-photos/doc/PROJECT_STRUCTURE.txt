@@ -1,0 +1,89 @@
+sunday-photos 项目结构（控制台版）
+
+说明：
+- 仅提供控制台/命令行使用，无GUI
+- 输入目录统一为 input/（兼容旧字段 classroom_dir）
+- student_photos/ 存放学生参考照，命名：姓名 或 姓名_序号.jpg（如 ZhangSan.jpg 或 ZhangSan_1.jpg）
+- class_photos/ 存放课堂合照，建议按日期分子目录
+
+================================================================================
+
+sunday-photos/
+├── input/                               # [输入目录] 存放所有待处理的图片资源
+│   ├── student_photos/                  # [参考照目录] 存放已知学生的单人参考照片
+│   │   ├── 张三.jpg                     # 示例：以学生姓名命名的照片
+│   │   └── LiSi_2.png                   # 示例：同一学生的多张照片（支持 _序号）
+│   └── class_photos/                    # [课堂照目录] 存放需要整理的活动/课堂合照
+│       ├── 2024-12-21/                  # 示例：按日期分类的子目录（推荐）
+│       │   └── 活动合影.jpg
+│       └── 零散照片.jpg                 # 示例：直接放在根目录的照片
+├── output/                              # [输出目录] 整理后的结果（自动生成）
+│   ├── 张三/                            # 示例：按学生姓名归档的文件夹
+│   │   └── 2024-12-21/                  # 示例：该学生在特定日期的照片
+│   ├── 未知照片/                        # 示例：无法识别出已知学生的面孔
+│   └── 整理报告.txt                     # 示例：当次运行的统计报告
+├── logs/                                # [日志目录] 存放程序运行日志
+│   └── sunday_photos_20241221.log       # 示例：按日期滚动的日志文件
+├── src/                                 # [源码目录] 核心程序代码
+│   ├── core/                            # [核心逻辑层] 业务逻辑实现
+│   │   ├── config/                        # 配置子模块
+│   │   │   ├── __init__.py               # 配置模块初始化
+│   │   │   └── config_loader.py          # 配置加载器（解析 JSON/Args）
+│   │   ├── face_recognizer.py           # 人脸识别引擎（封装 face_recognition）
+│   │   ├── file_organizer.py            # 文件整理器（复制/移动/归档逻辑）
+│   │   ├── student_manager.py           # 学生管理器（加载参考照、编码管理）
+│   │   ├── main.py                      # 核心管线控制器（串联各模块）
+│   │   └── utils.py                     # 通用工具函数（日志、路径处理）
+│   ├── cli/                             # [命令行接口层]
+│   │   ├── run.py                       # CLI 入口逻辑
+│   │   └── console_launcher.py          # 控制台启动器封装
+│   ├── ui/                              # [交互层] 终端交互与用户引导
+│   │   ├── interactive_guide.py         # 交互式设置向导（环境/目录检查）
+│   │   ├── input_validator.py           # 输入验证器（检查文件名/配置）
+│   │   ├── teacher_helper.py            # 教师助手（友好错误提示）
+│   │   └── edge_case_handler.py         # 边界情况处理器（处理空目录、重复照片等）
+│   └── scripts/                         # [脚本层] 构建与辅助工具
+│       └── build_console_app.py         # PyInstaller 打包脚本
+├── tests/                               # [测试目录] 自动化测试套件
+│   ├── test_basic.py                    # 基础功能测试
+│   ├── test_logic_scenarios.py          # 复杂业务场景测试（多人、多照、阈值）
+│   ├── test_teacher_friendly.py         # 教师友好性测试（错误提示、引导）
+│   ├── test_integration.py              # 集成测试
+│   └── ...                              # 其他单元测试文件
+├── doc/                                 # [文档目录] 项目文档资料
+│   ├── PROJECT_STRUCTURE.txt            # 本文件（项目结构说明）
+│   ├── 部署说明.md                       # 交付与部署指南
+│   ├── FINAL_TEST_REPORT.md             # 最终测试报告
+│   └── REPAIR_SUMMARY.md                # 修复摘要
+├── release_console/                     # [发布目录] 打包好的可执行程序
+│   ├── SundayPhotoOrganizer             # Mac/Linux 可执行二进制文件
+│   ├── 启动工具.sh                       # 双击启动脚本
+│   └── 使用说明.txt                      # 给最终用户的简易说明
+├── run.py                               # [项目入口] 根目录启动脚本（开发用）
+├── requirements.txt                     # [依赖文件] Python 依赖包列表
+└── README.md                            # [项目主页] 项目综述与快速开始
+
+================================================================================
+使用步骤（源码运行）：
+1. 安装依赖：pip install -r requirements.txt
+2. 准备照片：将参考照放入 input/student_photos/，课堂照放入 input/class_photos/（建议按日期子目录）
+3. 运行：python run.py
+4. 查看 output/ 中的整理结果
+
+使用步骤（打包版）：
+1. 交付 release_console/ 目录
+2. 双击 SundayPhotoOrganizer 或运行启动脚本
+3. 按提示放入照片，重新运行即可完成整理
+
+文档详细说明：
+- doc/PROJECT_STRUCTURE.txt: 
+  [项目结构说明] 本文件。详细展示了项目的目录层级结构，解释了每个关键目录和文件的作用，并提供了源码运行和打包版运行的简要步骤。
+
+- doc/部署说明.md: 
+  [部署与交付指南] 面向部署人员和最终用户的指南。详细说明了如何交付 release_console/ 中的内容，解释了交付包的组成，并提供了输入(input)和输出(output)目录的详细示例结构。
+
+- doc/FINAL_TEST_REPORT.md: 
+  [最终测试报告] 自动化测试的执行报告。记录了项目在交付前的全量测试结果，包括环境检查、依赖验证、核心功能测试、修复验证以及教师友好性测试的详细通过情况。
+
+- doc/REPAIR_SUMMARY.md: 
+  [修复摘要] 项目维护与优化记录。总结了项目开发过程中发现的问题（如配置加载、硬编码路径等）及其修复方案和验证结果，是项目质量改进的记录。

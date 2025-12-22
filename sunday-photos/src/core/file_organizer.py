@@ -36,7 +36,7 @@ class FileOrganizer:
         :param input_dir: 输入目录
         :param recognition_results: 识别结果字典 {photo_path: [student_names]}
         :param unknown_photos: 未知照片列表
-        :return: 处理统计信息
+        :return: 处理统计信息，包括总任务数、成功数、失败数、跳过数等
         """
         start_time = datetime.now()
         
@@ -52,16 +52,28 @@ class FileOrganizer:
         
         logger.info(f"开始整理照片，共 {stats['total']} 个复制任务")
         
+        processed_photos = set()  # 用于检测重复照片
+
         # 使用进度条
         with tqdm(total=stats['total'], desc="整理照片", unit="张") as pbar:
             # 处理识别到的照片
             for photo_path, student_names in recognition_results.items():
+                if photo_path in processed_photos:
+                    stats['failed'] += 1  # 跳过重复照片
+                    stats['skipped'] = stats.get('skipped', 0) + 1  # 记录跳过的照片数量
+                    continue
                 self._process_recognized_photo(photo_path, student_names, stats)
+                processed_photos.add(photo_path)
                 pbar.update(len(student_names))
-            
+
             # 处理未知照片
             for photo_path in unknown_photos:
+                if photo_path in processed_photos:
+                    stats['failed'] += 1  # 跳过重复照片
+                    stats['skipped'] = stats.get('skipped', 0) + 1  # 记录跳过的照片数量
+                    continue
                 self._process_unknown_photo(photo_path, stats)
+                processed_photos.add(photo_path)
                 pbar.update(1)
         
         # 计算耗时

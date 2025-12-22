@@ -56,13 +56,12 @@ sunday-photos/
 │   └── classroom/              # 示例/占位（课堂照片示例）
 ├── tests/                      # 自动化测试（含教师友好、打包验证）
 │   └── legacy/                 # 历史测试样例（保留参考）
-├── doc/                        # 文档（PRD、测试说明等）
+├── doc/                        # 文档（PRD、测试说明、部署说明等）
 ├── release_console/            # 控制台打包产物（可执行与启动脚本）
 ├── run.py                      # 根入口脚本（调用 src/main.py）
 ├── run_all_tests.py            # 一键运行全套测试
 ├── requirements.txt            # 依赖声明
-├── README.md                   # 项目说明（当前文档）
-└── 部署说明.md                 # 部署/交付指引
+└── README.md                   # 项目说明（当前文档）
 ```
 
 ### 📥 input 目录示例

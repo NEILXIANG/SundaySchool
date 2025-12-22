@@ -18,11 +18,8 @@ from datetime import datetime
 from tqdm import tqdm
 import shutil
 
-from .utils import setup_logger, is_supported_image_file, get_photo_date
-from .student_manager import StudentManager
-from .face_recognizer import FaceRecognizer
-from .file_organizer import FileOrganizer
-from .config import DEFAULT_INPUT_DIR, DEFAULT_CLASSROOM_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_LOG_DIR, DEFAULT_TOLERANCE, CLASS_PHOTOS_DIR
+from .utils import setup_logger, is_supported_image_file, get_photo_date, ensure_directory_exists
+from .config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_LOG_DIR, DEFAULT_TOLERANCE, CLASS_PHOTOS_DIR, STUDENT_PHOTOS_DIR
 from .config_loader import ConfigLoader
 
 
@@ -30,10 +27,14 @@ class SimplePhotoOrganizer:
     """照片整理器主类（文件夹模式，简化版入口兼容）"""
 
     def __init__(self, input_dir=None, output_dir=None, log_dir=None, classroom_dir=None):
-        """初始化照片整理器"""
+        """初始化照片整理器
+
+        :param input_dir: 输入数据目录
+        :param output_dir: 输出照片目录
+        :param log_dir: 日志目录路径，用于存储运行日志
+        """
         if input_dir is None:
-            # 兼容旧的 classroom_dir 参数
-            input_dir = classroom_dir if classroom_dir is not None else DEFAULT_INPUT_DIR
+            input_dir = DEFAULT_INPUT_DIR
         if output_dir is None:
             output_dir = DEFAULT_OUTPUT_DIR
         if log_dir is None:
@@ -42,9 +43,17 @@ class SimplePhotoOrganizer:
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
         self.log_dir = Path(log_dir)
+        self.classroom_dir = Path(classroom_dir) if classroom_dir else None
         
         # 输入照片目录：input/class_photos（保持兼容旧路径名称）
         self.photos_dir = self.input_dir / CLASS_PHOTOS_DIR
+
+        # 自动创建教师常用的基础目录，避免手工建目录
+        ensure_directory_exists(self.input_dir)
+        ensure_directory_exists(self.photos_dir)
+        ensure_directory_exists(self.input_dir / STUDENT_PHOTOS_DIR)
+        ensure_directory_exists(self.output_dir)
+        ensure_directory_exists(self.log_dir)
 
         # 设置日志（启用彩色控制台）
         self.logger = setup_logger(self.log_dir, enable_color_console=True)
@@ -89,6 +98,10 @@ class SimplePhotoOrganizer:
             self.logger.debug("系统组件已初始化，跳过重复初始化")
             return True
         try:
+            # 延迟导入重型依赖，减少冷启动开销
+            from .student_manager import StudentManager
+            from .face_recognizer import FaceRecognizer
+            from .file_organizer import FileOrganizer
             self.logger.info("=====================================")
             self.logger.info("主日学课堂照片自动整理工具（文件夹模式）")
             self.logger.info("=====================================")
@@ -271,7 +284,9 @@ class SimplePhotoOrganizer:
             photo_files = self.scan_input_directory()
             if not photo_files:
                 self.logger.warning("输入目录中没有找到照片文件")
-                return False
+                # 空输入视为正常结束，便于打包环境下直接运行通过
+                self.print_final_statistics()
+                return True
 
             # 3. 处理照片，进行人脸识别并累积分类信息
             recognition_results, unknown_photos = self.process_photos(photo_files)
@@ -338,13 +353,6 @@ def parse_arguments(config_loader=None):
         help=f"输入数据目录 (默认: {default_input_dir})"
     )
 
-    # 兼容旧参数名称
-    parser.add_argument(
-        "--classroom-dir", 
-        dest="classroom_dir",
-        help=argparse.SUPPRESS
-    )
-
     parser.add_argument(
         "--output-dir", 
         default=default_output_dir,
@@ -376,13 +384,10 @@ def main():
     args = parse_arguments(config_loader)
 
     # 创建照片整理器实例
-    input_dir = args.input_dir or getattr(args, "classroom_dir", None)
-
     organizer = SimplePhotoOrganizer(
-        input_dir=input_dir,
+        input_dir=args.input_dir,
         output_dir=args.output_dir,
-        log_dir=args.log_dir,
-        classroom_dir=getattr(args, "classroom_dir", None)
+        log_dir=args.log_dir
     )
     
     # 初始化系统

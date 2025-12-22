@@ -32,7 +32,10 @@ class StudentManager:
         self.load_students()
     
     def load_students(self):
-        """从 student_photos 目录加载学生信息，按文件名前缀识别学生"""
+        """从 student_photos 目录加载学生信息，按文件名前缀识别学生
+
+        :return: 学生数据字典，包含学生姓名和对应的参考照片路径
+        """
         try:
             if not self.students_photos_dir.exists():
                 logger.warning(f"student_photos目录不存在: {self.students_photos_dir}")

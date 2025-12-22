@@ -64,12 +64,8 @@ class ConfigLoader:
         self.config_data.update(data)
     
     def get_input_dir(self):
-        """获取输入数据目录配置（兼容旧字段classroom_dir）"""
-        return self.get('input_dir', self.get('classroom_dir', DEFAULT_INPUT_DIR))
-
-    def get_classroom_dir(self):
-        """兼容旧接口，返回输入目录配置"""
-        return self.get_input_dir()
+        """获取输入数据目录配置"""
+        return self.get('input_dir', DEFAULT_INPUT_DIR)
     
     def get_output_dir(self):
         """获取输出目录配置"""

@@ -18,8 +18,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 os.chdir(PROJECT_ROOT)
 
-from teacher_helper import TeacherHelper
-from interactive_guide import InteractiveGuide
+from ui.teacher_helper import TeacherHelper
+from ui.interactive_guide import InteractiveGuide
 
 
 class TeacherOnboardingFlowTests(unittest.TestCase):
