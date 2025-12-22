@@ -1,39 +1,38 @@
-主日学照片整理工具 - 控制台版本使用说明
+主日学照片整理工具 - 控制台版使用说明 / Sunday School Photo Organizer - Console Guide (Bilingual)
 
-🚀 超级简单使用方法：
+【快速开始 | Quick Start】
+- 双击 "SundayPhotoOrganizer/SundaySchool"（或终端 ./SundayPhotoOrganizer/SundaySchool）
+- 按提示将照片放入自动创建的桌面文件夹，再次运行即可整理；输出自动打开
+- Double-click "SundayPhotoOrganizer/SundaySchool" (or run ./SundayPhotoOrganizer/SundaySchool).
+- Place photos into the auto-created desktop folder, rerun to organize; output opens automatically.
 
-1. 双击运行 "SundayPhotoOrganizer/SundaySchool" 可执行文件
-2. 等待程序自动处理
-3. 完成！
+【自动创建的文件夹 | Auto-created folders】Desktop/主日学照片整理
+- student_photos：学生参考照，命名“姓名”或“姓名_序号”（张三.jpg、张三_2.jpg、LiSi.png）
+	student_photos: reference photos, named "Name" or "Name_number" (ZhangSan.jpg, ZhangSan_2.jpg, LiSi.png)
+- class_photos：课堂照，建议按日期子目录（2024-12-21/合影.jpg）
+	class_photos: classroom photos, date subfolders recommended (2024-12-21/group.jpg)
+- output：整理结果，按学生 → 日期分层
+	output: sorted results by student → date
+- logs：运行日志，可清空
+	logs: run logs, safe to clear
 
-📁 文件夹位置：
-程序会在桌面创建 "主日学照片整理" 文件夹，包含：
-- student_photos（学生照片）
-- class_photos（课堂照片）  
-- output（整理结果）
-- logs（日志文件）
+【照片准备 | Photo prep】
+- 每人至少 1 张清晰正脸参考照；2-3 张可提升识别率
+	At least 1 clear frontal reference per student; 2–3 improves accuracy.
+- 课堂照支持 jpg/png，模糊或侧脸会降低匹配效果
+	Classroom photos: jpg/png; blurry/side profiles reduce matches.
 
-📸 照片准备：
-1. 学生照片：放入 student_photos 文件夹
-   命名格式：姓名_序号.jpg（如：张三_1.jpg）
-2. 课堂照片：放入 class_photos 文件夹
-   可以是任何 .jpg 或 .png 文件
+【运行提示 | Run notes】
+- 首次无照片会直接结束；先放照片再运行
+	First run with no photos will exit; add photos then rerun.
+- 可多次运行，仅整理新增课堂照；结束后自动打开 output
+	Re-run anytime; only new classroom photos are organized; output auto-opens.
 
-💡 使用技巧：
-- 第一次运行时，如果找不到照片，请按照提示添加照片
-- 后续运行时，只需添加新的课堂照片即可
-- 程序会自动打开整理结果文件夹
-
-❓ 常见问题：
-Q: 程序运行很快就结束了？
-A: 可能是没有找到照片，请检查文件夹位置和照片命名
-
-Q: 识别不准确？
-A: 增加每个学生的参考照片数量
-
-Q: 程序无法启动？
-A: 确保在 macOS 系统上运行，并允许程序运行权限
+【常见问题 | FAQ】
+- 很快结束 / finishes too fast：检查桌面/主日学照片整理 的目录与命名
+- 识别不准 / poor matches：为该学生多放 2-3 张清晰正脸参考照
+- 无法启动 / won't launch：确保在 macOS 上运行，若被拦截到“隐私与安全性”→“仍要打开” (Open Anyway)
 
 ---
-版本：1.0.0
-更新日期：2025-12-21
+版本/Version：1.0.0
+更新日期/Updated：2025-12-21

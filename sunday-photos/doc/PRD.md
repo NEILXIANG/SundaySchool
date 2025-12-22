@@ -1,124 +1,74 @@
-# **产品需求说明文档（PRD）**  
-**项目名称**：主日学照片整理工具（Sunday Photos Organizer）  
-**版本**：1.0  
+# 产品需求说明文档 / Product Requirements Document (PRD)
+项目：主日学照片整理工具 / Sunday Photos Organizer  
+版本：1.0
 
 ---
 
-## **1. 产品概述**  
-### **目标**  
-开发一个自动化工具，用于整理主日学课堂照片，实现以下功能：  
-- 通过人脸识别将多人合照按学生分类。  
-- 自动按日期和学生姓名组织输出目录。  
-- 支持灵活配置（如识别阈值、输入/输出路径）。  
+## 1. 产品概述 / Overview
+- 目标 Goals：
+  - 通过人脸识别将课堂合照按学生分类 / Classify classroom photos by student via face recognition.
+  - 输出按日期+学生组织 / Outputs organized by date and student.
+  - 路径与阈值可配置 / Configurable paths and tolerance.
+- 用户 Users：主日学教师、活动组织者；零基础也可用 / Teachers and organizers; non-technical friendly.
 
-### **用户群体**  
-- 主日学教师或活动组织者。  
-- 需要批量整理照片的非技术用户。  
+## 2. 功能需求 / Functional Requirements
+- 核心功能 Core Features：
+  - 人脸识别 / Face recognition (`face_recognition`).
+  - 文件整理 / File organizer (student/date folders).
+  - 配置管理 / Config management via config.json.
+  - 日志记录 / Logging with levels.
+- 命令行接口 CLI：
+  ```bash
+  python src/run.py \
+    --input-dir "input" \    # 默认输入 default input
+    --output-dir "output" \   # 默认输出 default output
+    --tolerance 0.6           # 阈值 tolerance 0~1 (default 0.6)
+  ```
 
----
+## 3. 非功能需求 / Non-Functional
+- 性能 Performance：≤2s/张（标准硬件）；支持并发（需按需优化）。
+- 兼容 Compatibility：Windows/macOS/Linux；Python >=3.8.
+- 安全 Security：配置字段必填/范围校验；日志不记录人脸编码。
 
-## **2. 功能需求**  
-### **核心功能**  
-| 功能模块          | 描述                                                                 |  
-|-------------------|----------------------------------------------------------------------|  
-| **人脸识别**      | 基于 `face_recognition` 库，从多人合照中识别学生并分类。              |  
-| **文件整理**      | 将识别后的照片按学生姓名和日期存储到指定目录。                        |  
-| **配置管理**      | 通过 `config.json` 动态加载路径、识别阈值等参数。                      |  
-| **日志记录**      | 记录程序运行状态和错误信息，支持按级别（DEBUG/INFO/ERROR）过滤。       |  
-
-### **命令行接口（CLI）**  
-支持以下参数：  
-```bash
-python src/run.py \
-  --input-dir "input" \      # 输入目录（默认：input）
-  --output-dir "output" \     # 输出目录（默认：output）
-  --tolerance 0.6             # 人脸识别阈值（默认：0.6，范围：0~1）
-```
-
----
-
-## **3. 非功能需求**  
-### **性能要求**  
-- 单张照片处理时间 ≤ 2秒（标准硬件配置）。  
-- 支持并发处理多张照片（需测试优化）。  
-
-### **兼容性**  
-- 操作系统：Windows/macOS/Linux。  
-- Python 版本：≥ 3.8。  
-
-### **安全性**  
-- 配置文件（`config.json`）需验证必填字段和取值范围。  
-- 日志文件不记录敏感信息（如人脸特征数据）。  
-
----
-
-## **4. 数据需求**  
-### **输入数据**  
-- **目录结构**：  
+## 4. 数据需求 / Data
+- 输入 Input：
   ```
   input/
-  ├── student_photos/      # 学生单人参考照（文件名格式：姓名 或 姓名_序号.jpg）
-  └── class_photos/        # 课堂合照，推荐按日期子目录存放（如 2025-12-21/xxx.jpg）
-  ```  
-- **照片格式**：`.jpg` 或 `.png`，单张 ≤ 5MB。  
-
-### **输出数据**  
-- **目录结构**：  
+  ├── student_photos/      # 姓名 或 姓名_序号.jpg / Name or Name_index.jpg
+  └── class_photos/        # 推荐日期子目录 / date subfolders recommended
   ```
-      output/
-      ├── ZhangSan/            # 先按学生分目录
-      │   ├── 2025-12-21/      # 学生目录下按日期分层
-      │   └── 2025-12-28/
-      └── LiSi/
-        └── 2025-12-21/
-  ```  
+  格式 formats: jpg/png, ≤5MB。
+- 输出 Output：
+  ```
+  output/
+  ├── ZhangSan/
+  │   ├── 2025-12-21/
+  │   └── 2025-12-28/
+  └── LiSi/
+      └── 2025-12-21/
+  ```
 
----
+## 5. 配置需求 / Config
+- config.json
+  ```json
+  {
+    "input_dir": "input",      // 必填 required
+    "output_dir": "output",     // 必填 required
+    "tolerance": 0.6,           // 可选 optional 0~1
+    "log_level": "INFO"         // 可选 optional: DEBUG/INFO/WARNING/ERROR
+  }
+  ```
+- 依赖 Dependencies（requirements.txt）：face_recognition>=1.3.0, Pillow>=10.3.0, numpy>=1.26.0.
 
-## **5. 配置需求**  
-### **配置文件（config.json）**  
-```json
-{
-  "input_dir": "input",        // 必填，输入目录
-  "output_dir": "output",        // 必填，输出目录
-  "tolerance": 0.6,             // 可选，人脸识别阈值（0~1）
-  "log_level": "INFO"           // 可选，日志级别（DEBUG/INFO/WARNING/ERROR）
-}
-```  
+## 6. 测试需求 / Testing
+- 场景 Scenarios：单元 / unit；集成 / integration；性能 / performance (100+ photos)。
+- 测试数据 Test data：示例照片位于 tests/data/student_photos 与 tests/data/class_photos。
 
-### **依赖库**  
-见 `requirements.txt`：  
-```
-face_recognition>=1.3.0
-Pillow>=10.3.0
-numpy>=1.26.0
-```
+## 7. 交付物 / Deliverables
+1) 代码仓库（实现、测试、文档） / Repo with impl, tests, docs.
+2) 可执行脚本 run.py（打包/清理脚本单独维护） / run.py; packaging/cleanup separately.
+3) 文档 Docs：README、使用指南、PRD（本文件）。
 
----
-
-## **6. 测试需求**  
-### **测试场景**  
-| 测试类型       | 用例描述                                                                 |  
-|---------------|--------------------------------------------------------------------------|  
-| **单元测试**   | 验证人脸识别、文件整理模块的核心逻辑。                                    |  
-| **集成测试**   | 模拟真实目录结构，检查输出分类是否正确。                                  |  
-| **性能测试**   | 处理 100+ 照片的耗时和内存占用。                                          |  
-
-### **测试数据**  
-- 提供示例照片（`tests/data/student_photos/` 和 `tests/data/class_photos/`）。  
-
----
-
-## **7. 交付物**  
-1. **代码仓库**：包含完整实现、测试和文档。  
-2. **可执行脚本**：`run.py` 和 `cleanup.py`。  
-3. **文档**：  
-   - `README.md`：快速使用指南。  
-   - `使用说明.md`：详细操作手册。  
-   - `PRD.md`（本文档）。  
-
----
-
-## **8. 风险与约束**  
-- **人脸识别精度**：依赖 `face_recognition` 库，需高质量参考照片。  
-- **资源占用**：处理大量照片时需优化内存管理。  
+## 8. 风险与约束 / Risks & Constraints
+- 人脸识别精度依赖参考照质量 / Accuracy depends on reference quality.
+- 大批量时的内存/CPU占用 / Resource load for large batches.

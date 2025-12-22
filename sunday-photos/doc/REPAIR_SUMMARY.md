@@ -1,106 +1,29 @@
-# 修复总结报告
+# 修复总结报告 / Repair Summary
 
-## 概述
+## 概述 / Overview
+汇总全部修复项，均经测试验证。 / Summary of fixes, all validated.
 
-本报告总结了对主日学照片整理工具进行的所有修复工作。所有修复都经过了验证测试，确认功能正常。
+## 修复列表 / Fixes
+1) 配置加载器未用 / ConfigLoader unused → 集成到 main.py，argparse 默认值来自配置；验证通过.
+2) 文档结构不一致 / Doc structure mismatch → 更新 README/run.py 描述以匹配实现.
+3) CLI 阈值未生效 / Tolerance not applied → 调整 init 顺序，先初始化识别器再设阈值.
+4) 边界处理不足 / Edge cases → 统计重复照片；修复 teardown 权限；测试通过.
+5) 错误处理不区分 / Error detail → recognize_faces 返回细分状态；process_photos 分类统计.
+6) 内存释放不足 / Memory cleanup → 显式 del，异常路径也清理.
+7) 模块化优化 / Modularization → 新增 config 子模块；UI 拆分 validators/guides.
 
-## 修复项目
+## 验证测试 / Validation
+- 配置加载器集成 / config loader integration
+- 系统初始化与阈值传递 / init + tolerance propagation
+- 识别状态细分 / detailed recognition status
+- 内存清理 / memory cleanup
+- 导入路径一致性 / import consistency
+- 目录结构一致性 / directory structure consistency
 
-### 1. 配置加载器未使用问题 ✓
-
-**问题**: 项目实现了`ConfigLoader`类，但在`main.py`中并未使用，而是直接使用了`config.py`中的常量。
-
-**修复**:
-- 将`ConfigLoader`类集成到`main.py`中
-- 修改了参数解析函数，使用配置文件中的默认值
-- 在main函数中正确初始化配置加载器
-
-**验证**: 配置加载器能够正确加载配置，参数解析器能够使用配置文件中的默认值。
-
-### 2. 文档目录结构不一致 ✓
-
-**问题**: `README.md`中描述的是基于学生子目录的结构，但实际实现是基于文件名前缀的结构。
-
-**修复**:
-- 更新了`README.md`中的目录结构描述，使其与实际实现一致
-- 修改了`README.md`中的使用说明
-- 更新了`run.py`中的帮助信息，保持一致性
-
-**验证**: 文档与实际项目结构和实现保持一致。
-
-### 3. 命令行参数传递问题 ✓
-
-**问题**: `run.py`中的`--tolerance`参数在`main.py`中被引用时，`face_recognizer`尚未初始化，导致设置无效。
-
-**修复**:
-- 修改了`main.py`和`run.py`中的初始化顺序
-- 确保`face_recognizer`在设置tolerance之前被初始化
-- 在main函数中先初始化系统，再设置tolerance
-
-**验证**: tolerance参数能够正确地传递到人脸识别器中并生效。
-
-### 4. 边界情况处理逻辑优化 ✓
-
-**问题**: 缺少对空目录、重复照片等边界情况的处理。
-
-**修复**:
-- 在 `organize_photos` 方法中添加了对重复照片的统计逻辑。
-- 修复了 `tearDown` 方法中的权限问题，确保测试环境清理正常。
-
-**验证**: 所有边界测试用例通过，功能正常。
-
-### 5. 错误处理增强 ✓
-
-**问题**: 对于未识别到人脸的情况没有区分"照片中没有人脸"和"人脸识别失败"两种情况。
-
-**修复**:
-- 修改了`face_recognizer.py`中的`recognize_faces`方法
-- 添加了`return_details`参数，返回详细状态信息
-- 更新了`main.py`中的`process_photos`方法，使用新的详细状态信息进行更精确的分类统计
-
-**验证**: 能够区分"无人脸"、"未匹配"、"识别成功"和"识别失败"等情况。
-
-### 6. 内存使用优化 ✓
-
-**问题**: 人脸识别过程中加载大量图片到内存，但未显式释放内存。
-
-**修复**:
-- 在`face_recognizer.py`的所有方法中添加了显式的内存释放
-- 使用`del`语句在不再需要图片数据时立即释放内存
-- 在异常处理中也添加了内存清理，确保不会发生内存泄漏
-
-**验证**: 代码中包含了适当的内存清理代码。
-
-### 7. 模块化优化 ✓
-
-**问题**: 核心模块职责不够单一，UI 模块功能分散。
-
-**修复**:
-- 创建 config 子模块，将配置相关逻辑集中管理。
-- 将 UI 模块拆分为 validators 和 guides 子模块，分别负责输入验证和交互引导。
-
-**验证**: 模块化调整后，代码结构更清晰，所有测试用例通过。
-
-## 验证测试
-
-所有修复都通过了验证测试，包括：
-
-1. 配置加载器集成测试
-2. 系统初始化和tolerance设置测试
-3. 详细识别状态功能测试
-4. 内存清理功能测试
-5. 导入路径一致性测试
-6. 目录结构一致性测试
-
-## 结果
-
-所有修复都已成功实施并通过验证。主日学照片整理工具现在具有：
-
-- 更好的配置管理
-- 一致的文档和实现
-- 正确的参数传递
-- 统一的导入方式
-- 增强的错误处理
-- 优化的内存使用
-
-这些修复提高了代码的健壮性、一致性和资源使用效率，同时保持了原有功能的完整性。
+## 结果 / Result
+- 配置管理更完善 / Better config management
+- 文档与实现一致 / Docs aligned with behavior
+- 参数流转正确 / Params applied correctly
+- 导入与内存更健壮 / Robust imports and memory handling
+- 错误处理更细致 / Finer error handling
+- 模块职责更清晰 / Clearer module boundaries
