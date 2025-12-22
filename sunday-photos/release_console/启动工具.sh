@@ -5,7 +5,7 @@ echo "🏫 正在启动主日学照片整理工具..."
 
 # 获取脚本所在目录
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-EXECUTABLE="$DIR/SundayPhotoOrganizer"
+EXECUTABLE="$DIR/SundayPhotoOrganizer/SundaySchool"
 
 # 检查可执行文件是否存在
 if [ ! -f "$EXECUTABLE" ]; then

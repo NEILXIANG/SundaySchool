@@ -2,7 +2,7 @@
 
 🚀 超级简单使用方法：
 
-1. 双击运行 "SundayPhotoOrganizer" 文件
+1. 双击运行 "SundayPhotoOrganizer/SundaySchool" 可执行文件
 2. 等待程序自动处理
 3. 完成！
 

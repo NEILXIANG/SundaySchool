@@ -27,6 +27,8 @@ then
 fi
 
 # 打包命令
+APP_BINARY_NAME="SundaySchool"
+
 pyinstaller \
     --clean \
     --console \
@@ -34,6 +36,7 @@ pyinstaller \
     --paths src \
     --collect-all core \
     --collect-all face_recognition_models \
+    --name "$APP_BINARY_NAME" \
     "${ARCH_FLAG[@]}" \
     --icon="$ICON_PATH" \
     src/cli/run.py
@@ -55,11 +58,11 @@ if [ $? -eq 0 ]; then
     # 复制最新 onedir 目录（含所有依赖）
     rm -rf "$RELEASE_DIR/$APP_NAME"
     mkdir -p "$RELEASE_DIR/$APP_NAME"
-    cp -R dist/run/ "$RELEASE_DIR/$APP_NAME/"
+    cp -R "dist/$APP_BINARY_NAME/" "$RELEASE_DIR/$APP_NAME/"
 
     echo "✅ 发布目录已准备好：$RELEASE_DIR"
     echo "   - 已预创建 input/class_photos、input/student_photos、output、logs"
-    echo "   - 可执行目录：$RELEASE_DIR/$APP_NAME (内含 run 可执行文件)"
+    echo "   - 可执行目录：$RELEASE_DIR/$APP_NAME (内含 $APP_BINARY_NAME 可执行文件)"
 else
     echo "❌ 打包失败，请检查错误信息。"
 fi
