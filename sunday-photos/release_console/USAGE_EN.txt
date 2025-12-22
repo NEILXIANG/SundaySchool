@@ -1,7 +1,7 @@
 Sunday School Photo Organizer - Console Edition (English)
 
 🚀 Quick Start (3 steps)
-1) Double-click "SundayPhotoOrganizer/SundaySchool" (or run ./SundayPhotoOrganizer/SundaySchool in Terminal).
+1) Double-click "SundayPhotoOrganizer" (or run ./SundayPhotoOrganizer in Terminal).
 2) When prompted, place photos into the auto-created desktop folder "主日学照片整理".
 3) Run the app again to process; the output folder opens automatically.
 

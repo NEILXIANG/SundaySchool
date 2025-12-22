@@ -1,6 +1,13 @@
-"""
-文件组织和处理模块
-负责照片的复制、目录创建和文件组织
+"""文件组织与落盘模块。
+
+职责：
+- 根据识别结果把照片复制到输出目录（学生/日期/照片文件）；
+- 将未匹配到学生的照片放入 UNKNOWN 目录（按日期分层）；
+- 生成整理报告（便于教师核对本次整理结果）。
+
+统计口径：
+- 以“复制任务”为单位计数：一张多人合影若识别到 N 名学生，会产生 N 次复制任务。
+    这样能避免“成功数 > 总数”的统计歧义。
 """
 
 import os
@@ -17,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class FileOrganizer:
-    """文件组织器"""
+    """文件组织器（只负责复制与目录结构，不做识别）。"""
     
     def __init__(self, output_dir=None):
         if output_dir is None:
@@ -31,12 +38,18 @@ class FileOrganizer:
         ensure_directory_exists(self.output_dir)
     
     def organize_photos(self, input_dir, recognition_results, unknown_photos):
-        """
-        组织照片到相应的目录
-        :param input_dir: 输入目录
-        :param recognition_results: 识别结果字典 {photo_path: [student_names]}
-        :param unknown_photos: 未知照片列表
-        :return: 处理统计信息，包括总任务数、成功数、失败数、跳过数等
+        """把识别结果落盘到输出目录，并返回统计信息。
+
+        参数：
+        - input_dir：输入目录（当前实现中主要用于日志语义，逻辑上不依赖）
+        - recognition_results：{photo_path: [student_names]}，同一照片可能对应多个学生
+        - unknown_photos：未识别到任何已知学生的照片路径列表
+
+        返回：
+        - stats：按“复制任务”统计的字典（total/copied/failed/processed 等）
+
+        备注：
+        - 为避免同一照片被重复处理，内部会用 processed_photos 集合去重。
         """
         start_time = datetime.now()
         

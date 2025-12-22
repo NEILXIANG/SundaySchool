@@ -2,6 +2,13 @@
 """
 教师帮助系统测试
 测试所有面向教师的帮助功能和用户体验
+
+合理性说明：
+- 该文件属于“体验/文案/协作”层面的回归测试，主要验证：
+    - 关键模块可导入
+    - 关键文案/表情符号/解决方案提示存在且格式合理
+    - InteractiveGuide 在自动化环境下不会阻塞
+- 测试过程中会设置 GUIDE_FORCE_AUTO，结束后会恢复原值，避免影响同进程其他测试。
 """
 
 import os
@@ -21,6 +28,7 @@ class TeacherHelpSystemTester:
     def __init__(self):
         self.test_results = []
         self.temp_dir = None
+        self._prev_guide_force_auto = os.environ.get("GUIDE_FORCE_AUTO")
         self.setup_test_environment()
     
     def setup_test_environment(self):
@@ -31,8 +39,10 @@ class TeacherHelpSystemTester:
     
     def cleanup_test_environment(self):
         """清理测试环境"""
-        if "GUIDE_FORCE_AUTO" in os.environ:
-            del os.environ["GUIDE_FORCE_AUTO"]
+        if self._prev_guide_force_auto is None:
+            os.environ.pop("GUIDE_FORCE_AUTO", None)
+        else:
+            os.environ["GUIDE_FORCE_AUTO"] = self._prev_guide_force_auto
             
         if self.temp_dir and os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)

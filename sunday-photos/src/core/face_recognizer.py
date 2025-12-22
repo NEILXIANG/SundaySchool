@@ -16,13 +16,15 @@ class FaceRecognizer:
     """人脸识别器"""
     
     def __init__(self, student_manager, tolerance=None):
+        """初始化人脸识别器。
+
+        参数：
+        - student_manager：学生管理器实例，用于加载学生参考照片与学生名册
+        - tolerance：人脸识别阈值（越小越严格），默认取配置 DEFAULT_TOLERANCE
+        """
+
         if tolerance is None:
             tolerance = DEFAULT_TOLERANCE
-        """
-        初始化人脸识别器
-        :param student_manager: 学生管理器实例，用于加载学生参考照片和编码
-        :param tolerance: 人脸识别阈值，越小越严格
-        """
         self.student_manager = student_manager
         self.tolerance = tolerance
         self.students_encodings = {}
@@ -38,7 +40,13 @@ class FaceRecognizer:
         self.known_encodings = [data['encoding'] for data in self.students_encodings.values()]
     
     def load_student_encodings(self):
-        """加载所有学生的面部编码"""
+        """加载所有学生的面部编码。
+
+        策略：
+        - 每个学生可能有多张参考照：使用第一张“成功检测到人脸”的照片生成编码
+        - 参考照为 0 字节/不存在/无法检测人脸：跳过并尝试下一张
+        - 允许“空数据集”：没有任何学生编码时，系统仍可运行，但识别结果会倾向未知
+        """
         students = self.student_manager.get_all_students()
         loaded_count = 0
         failed_count = 0
@@ -58,6 +66,14 @@ class FaceRecognizer:
                 if not os.path.exists(photo_path):
                     logger.warning(f"学生 {student_name} 的参考照片不存在: {photo_path}")
                     continue
+
+                try:
+                    if os.path.getsize(photo_path) <= 0:
+                        logger.warning(f"学生 {student_name} 的参考照片为空文件(0字节)，已跳过: {photo_path}")
+                        continue
+                except Exception:
+                    # 如果无法获取大小，继续尝试读取，由后续异常处理兜底
+                    pass
                 
                 image = None
                 face_locations = None
@@ -124,18 +140,36 @@ class FaceRecognizer:
             logger.warning("未加载到学生面部编码，将作为空数据集继续运行")
     
     def recognize_faces(self, image_path, return_details=False):
-        """
-        识别照片中的所有人脸
-        :param image_path: 图片路径
-        :param return_details: 是否返回详细信息
-        :return: 如果return_details为False，返回识别到的学生姓名列表
-                 如果return_details为True，返回字典包含状态和详细信息
+        """识别照片中的所有人脸。
+
+        参数：
+        - image_path：图片路径
+        - return_details：是否返回详细状态（成功/无人脸/无匹配/错误等）
+
+        返回：
+        - return_details=False：返回识别到的学生姓名列表（去重）
+        - return_details=True：返回包含 status/message/recognized_students 等字段的 dict
         """
         image = None
         face_locations = None
         face_encodings = None
         
         try:
+            try:
+                if os.path.getsize(image_path) <= 0:
+                    msg = f"图片文件为空(0字节)，已跳过: {image_path}"
+                    logger.warning(msg)
+                    if return_details:
+                        return {
+                            'status': 'error',
+                            'message': msg,
+                            'recognized_students': [],
+                            'total_faces': 0
+                        }
+                    return []
+            except Exception:
+                pass
+
             # 加载图片
             image = face_recognition.load_image_file(image_path)
             
@@ -318,6 +352,11 @@ class FaceRecognizer:
         face_encodings = None
         
         try:
+            try:
+                if os.path.getsize(image_path) <= 0:
+                    return 0.0
+            except Exception:
+                pass
             # 找到学生的编码
             if student_name not in self.students_encodings:
                 return 0.0
@@ -429,6 +468,13 @@ class FaceRecognizer:
             if not os.path.exists(new_photo_path):
                 logger.error(f"新照片不存在: {new_photo_path}")
                 return False
+
+            try:
+                if os.path.getsize(new_photo_path) <= 0:
+                    logger.error(f"新照片为空文件(0字节): {new_photo_path}")
+                    return False
+            except Exception:
+                pass
             
             # 加载新照片并获取编码
             image = face_recognition.load_image_file(new_photo_path)

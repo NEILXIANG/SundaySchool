@@ -1,3 +1,10 @@
+"""综合性测试（覆盖主流程关键分支，偏集成/场景）。
+
+体检要点：
+- 这些测试更接近“业务场景验证”，会同时触发多个模块的协作；
+- 为了在不同工作目录/沙箱中可稳定运行，这里显式把项目根目录加入 sys.path。
+"""
+
 import unittest
 import os
 import shutil
@@ -5,6 +12,12 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import logging
+
+import sys
+
+# 确保在沙箱/不同 cwd 下也能导入 src 包
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 # 导入核心模块
 from src.core.main import SimplePhotoOrganizer

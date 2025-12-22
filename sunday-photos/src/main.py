@@ -21,6 +21,12 @@ from face_recognizer import FaceRecognizer
 from file_organizer import FileOrganizer
 from config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_LOG_DIR, DEFAULT_TOLERANCE, CLASS_PHOTOS_DIR
 from config_loader import ConfigLoader
+from core.incremental_state import (
+    build_class_photos_snapshot,
+    compute_incremental_plan,
+    load_snapshot,
+    save_snapshot,
+)
 
 
 class SimplePhotoOrganizer:
@@ -52,6 +58,7 @@ class SimplePhotoOrganizer:
 
         self.initialized = False
         self.last_run_report = None
+        self._incremental_plan = None
         self._reset_stats()
 
     def _reset_stats(self):
@@ -149,19 +156,50 @@ class SimplePhotoOrganizer:
             self.logger.error(f"输入目录不存在: {self.photos_dir}")
             return []
 
+        previous = load_snapshot(self.output_dir)
+        current = build_class_photos_snapshot(self.photos_dir)
+        plan = compute_incremental_plan(previous, current)
+        self._incremental_plan = plan
+
+        if previous is None:
+            self.logger.info("✓ 未找到增量快照（首次运行），将处理全部日期文件夹")
+
+        if plan.deleted_dates:
+            deleted_line = ", ".join(sorted(plan.deleted_dates))
+            self.logger.info(f"✓ 检测到已删除的日期文件夹，将同步清理输出: {deleted_line}")
+
+        if plan.changed_dates:
+            changed_line = ", ".join(sorted(plan.changed_dates))
+            self.logger.info(f"✓ 检测到有变更的日期文件夹，将仅处理这些日期: {changed_line}")
+        else:
+            self.logger.info("✓ 未检测到新增或变更的日期文件夹")
+
         photo_files = []
+        for date in sorted(plan.changed_dates):
+            date_dir = self.photos_dir / date
+            if not date_dir.exists():
+                continue
+            for root, _, files in os.walk(date_dir):
+                for file in files:
+                    if is_supported_image_file(file):
+                        photo_files.append(os.path.join(root, file))
 
-        # 遍历输入目录，获取所有照片文件
-        for root, _, files in os.walk(self.photos_dir):
-            for file in files:
-                if is_supported_image_file(file):
-                    photo_path = os.path.join(root, file)
-                    photo_files.append(photo_path)
-
-        self.logger.info(f"✓ 找到 {len(photo_files)} 张照片待处理")
+        self.logger.info(f"✓ 本次需要处理 {len(photo_files)} 张照片")
         self.stats['total_photos'] = len(photo_files)
-
         return photo_files
+
+    def _cleanup_output_for_dates(self, dates):
+        """清理输出目录中指定日期的数据（用于增量重建/删除同步）"""
+        if not dates:
+            return
+
+        for top in self.output_dir.iterdir():
+            if not top.is_dir():
+                continue
+            for date in dates:
+                date_dir = top / date
+                if date_dir.exists() and date_dir.is_dir():
+                    shutil.rmtree(date_dir, ignore_errors=True)
 
     def process_photos(self, photo_files):
         """处理照片，进行人脸识别"""
@@ -259,15 +297,29 @@ class SimplePhotoOrganizer:
         self.stats['start_time'] = datetime.now()
 
         try:
-            # 1. 初始化系统
+            # 1. 初始化系统（幂等）
             if not self.initialized and not self.initialize():
                 return False
 
-            # 2. 扫描输入目录
+            # 2. 扫描输入目录（含增量计划）
             photo_files = self.scan_input_directory()
+            plan = self._incremental_plan
+            changed_dates = getattr(plan, 'changed_dates', set()) if plan else set()
+            deleted_dates = getattr(plan, 'deleted_dates', set()) if plan else set()
+
+            # 2b. 同步删除/重建：先清理输出中涉及的日期目录
+            self._cleanup_output_for_dates(sorted(changed_dates | deleted_dates))
+
+            # 若本次没有任何需要处理的照片（可能是“无变化”或“仅删除”）
             if not photo_files:
-                self.logger.warning("输入目录中没有找到照片文件")
-                return False
+                if deleted_dates:
+                    self.logger.info("✓ 本次无新增/变更照片，仅执行了删除同步")
+                    if plan:
+                        save_snapshot(self.output_dir, plan.snapshot)
+                else:
+                    self.logger.info("✓ 本次无需处理：没有新增/变更/删除的日期文件夹")
+                self.print_final_statistics()
+                return True
 
             # 3. 处理照片，进行人脸识别
             recognition_results, unknown_photos = self.process_photos(photo_files)
@@ -275,9 +327,12 @@ class SimplePhotoOrganizer:
             # 4. 整理输出目录
             organize_stats = self.organize_output(recognition_results, unknown_photos)
 
+            # 4b. 成功后写入增量快照
+            if plan:
+                save_snapshot(self.output_dir, plan.snapshot)
+
             # 5. 输出最终统计信息
             self.print_final_statistics()
-
             return True
 
         except Exception as e:

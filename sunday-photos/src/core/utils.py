@@ -1,5 +1,12 @@
-"""
-工具函数模块
+"""通用工具函数。
+
+本模块集中放置：
+- 日志初始化（文件日志 + 可选彩色控制台）
+- 日期推断（优先目录名 YYYY-MM-DD，其次 EXIF，其次文件 mtime）
+- 文件/目录相关的通用检查
+
+注意：
+- 0 字节图片在扫描/增量快照阶段会被视为无效而忽略，避免误报与无意义异常。
 """
 import os
 import re
@@ -39,7 +46,15 @@ class ColoredConsoleHandler(logging.StreamHandler):
             self.setFormatter(logging.Formatter(LOG_FORMAT))
 
 def setup_logger(log_dir=None, enable_color_console=False):
-    """设置日志记录器"""
+    """设置日志记录器。
+
+    设计：
+    - 文件日志始终输出到 logs 目录（UTF-8，无颜色，便于归档）
+    - 控制台日志可选彩色输出（提高教师/操作者可读性）
+
+    说明：
+    - 这里会配置 root logger，并清理已存在的 handler，避免重复打印。
+    """
     from .config import DEFAULT_LOG_DIR
     if log_dir is None:
         log_dir = DEFAULT_LOG_DIR
@@ -80,7 +95,17 @@ def _get_date_from_directory(photo_path: str):
 
 
 def get_photo_date(photo_path):
-    """获取照片的日期，优先使用目录名(yyyy-mm-dd)，否则回退到EXIF/文件时间"""
+    """获取照片日期。
+
+    优先级：
+    1) 从父目录中推断：若路径任意上层目录名匹配 YYYY-MM-DD，直接使用
+    2) 读取 EXIF DateTimeOriginal
+    3) 使用文件 mtime
+
+    这样做的原因：
+    - 教师通常会把课堂照片按日期放到文件夹中；目录名往往最可靠
+    - EXIF 在转发/压缩后可能缺失
+    """
     date_from_dir = _get_date_from_directory(photo_path)
     if date_from_dir:
         return date_from_dir
@@ -106,7 +131,7 @@ def get_photo_date(photo_path):
         return datetime.now().strftime('%Y-%m-%d')
 
 def ensure_directory_exists(directory):
-    """确保目录存在，如果不存在则创建"""
+    """确保目录存在（mkdir -p 语义）。"""
     Path(directory).mkdir(parents=True, exist_ok=True)
 
 def get_file_extension(filename):
@@ -116,3 +141,21 @@ def get_file_extension(filename):
 def is_supported_image_file(filename):
     """检查是否为支持的图片格式"""
     return get_file_extension(filename) in SUPPORTED_IMAGE_EXTENSIONS
+
+
+def is_supported_nonempty_image_path(path) -> bool:
+    """检查路径是否为支持的且非空的图片文件。
+
+    说明：老师可能会误放 0 字节文件或损坏文件。
+    - 0 字节文件：在处理与增量快照中视为“无效图片”，直接忽略。
+    - 其他损坏文件：仍可能在后续读取时抛异常，由调用方捕获并跳过。
+    """
+    try:
+        p = Path(path)
+        if not p.is_file():
+            return False
+        if p.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
+            return False
+        return p.stat().st_size > 0
+    except Exception:
+        return False

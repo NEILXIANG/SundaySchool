@@ -2,6 +2,11 @@
 """
 教师友好功能综合测试
 测试所有为教师设计的友好功能
+
+合理性说明：
+- 该文件覆盖“教师体验层”的多个功能点（错误提示、输入验证、操作指南等）。
+- 为避免污染工作目录，涉及目录创建的测试会在临时目录中运行。
+- 为避免交互阻塞，相关测试会显式设置 GUIDE_FORCE_AUTO，并在结束后恢复原值。
 """
 
 import os
@@ -14,6 +19,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 os.chdir(PROJECT_ROOT)
+
+
+def _truthy_env(name: str, default: str = "0") -> bool:
+    return os.environ.get(name, default).strip().lower() in ("1", "true", "yes", "y", "on")
 
 def test_teacher_friendly_error_messages():
     """测试教师友好错误消息"""
@@ -117,13 +126,25 @@ def test_interactive_guide():
         from ui.interactive_guide import InteractiveGuide
         
         guide = InteractiveGuide()
-        
-        # 测试环境检查
+
+        # 测试环境检查（纯读取，无副作用）
         env_result = guide.check_environment()
         print(f"✅ 环境检查: {env_result}")
-        
-        # 测试目录检查
-        dir_result = guide.check_directories()
+
+        # 测试目录检查（有创建目录副作用）：放到临时目录中执行
+        prev_cwd = os.getcwd()
+        prev_auto = os.environ.get("GUIDE_FORCE_AUTO")
+        os.environ["GUIDE_FORCE_AUTO"] = "1"
+        with tempfile.TemporaryDirectory(prefix="teacher_features_guide_") as td:
+            os.chdir(td)
+            try:
+                dir_result = guide.check_directories()
+            finally:
+                os.chdir(prev_cwd)
+                if prev_auto is None:
+                    os.environ.pop("GUIDE_FORCE_AUTO", None)
+                else:
+                    os.environ["GUIDE_FORCE_AUTO"] = prev_auto
         print(f"✅ 目录检查: {dir_result}")
         
         print("✅ 交互式指导测试通过")

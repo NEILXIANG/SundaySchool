@@ -1,0 +1,16 @@
+{
+  "include": [
+    "src",
+    "tests",
+    "run.py",
+    "run_all_tests.py"
+  ],
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": [
+        "src"
+      ]
+    }
+  ]
+}

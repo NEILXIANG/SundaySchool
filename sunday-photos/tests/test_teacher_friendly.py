@@ -6,9 +6,11 @@
 
 import os
 import sys
-from pathlib import Path
 import traceback
 from pathlib import Path
+
+# 说明：该测试偏“教师体验/可用性检查”，不是单元测试风格；
+# 这里保留其输出与交互逻辑（通过 GUIDE_FORCE_AUTO 自动选择）。
 
 # 添加 src 目录到路径
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

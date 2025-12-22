@@ -2,6 +2,10 @@
 """
 业务逻辑场景测试
 测试复杂的人脸识别和文件归档场景
+
+说明：
+- 本文件主要验证“识别器/组织器”的业务逻辑分支是否正确，而非验证真实模型精度。
+- 对 face_recognition 的耗时/不稳定部分全部用 mock 替代，确保测试稳定可复现。
 """
 
 import os
@@ -20,6 +24,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from core.face_recognizer import FaceRecognizer
 from core.file_organizer import FileOrganizer
 from core.student_manager import StudentManager
+from core.config import UNKNOWN_PHOTOS_DIR
 
 class TestLogicScenarios(unittest.TestCase):
     def setUp(self):
@@ -36,13 +41,16 @@ class TestLogicScenarios(unittest.TestCase):
         self.student_photos_dir.mkdir()
         self.class_photos_dir.mkdir()
         
-        # 模拟学生管理器
+        # 模拟学生管理器：默认返回空学生列表，避免 FaceRecognizer.__init__ 触发不必要的文件读取
         self.student_manager = MagicMock(spec=StudentManager)
+        self.student_manager.get_all_students.return_value = []
         
         # 模拟人脸编码 (128维向量)
-        self.encoding_zhang = np.random.rand(128)
-        self.encoding_li = np.random.rand(128)
-        self.encoding_wang = np.random.rand(128)
+        # 注意：这里使用固定种子，确保测试完全可复现（避免偶发失败）。
+        rng = np.random.default_rng(20251222)
+        self.encoding_zhang = rng.random(128)
+        self.encoding_li = rng.random(128)
+        self.encoding_wang = rng.random(128)
         
     def tearDown(self):
         shutil.rmtree(self.test_dir)
@@ -69,9 +77,9 @@ class TestLogicScenarios(unittest.TestCase):
         (self.student_photos_dir / 'ZhangSan_1.jpg').touch()
         (self.student_photos_dir / 'ZhangSan_2.jpg').touch()
         
-        # 模拟 face_recognition 行为
-        # 假设第一张照片加载失败（没检测到人脸），第二张成功
-        # 注意：第二张照片的人脸尺寸也要足够大
+        # 模拟 face_recognition 行为：
+        # - 第一张照片检测不到人脸 => 跳过
+        # - 第二张照片检测到人脸且尺寸足够大 => 生成编码并写入 students_encodings
         mock_locations.side_effect = [[], [(10, 100, 100, 10)]]
         mock_encodings.side_effect = [[self.encoding_zhang]] # 只有第二次调用会用到这个
         
@@ -97,6 +105,7 @@ class TestLogicScenarios(unittest.TestCase):
         print("\n🧪 测试场景2: 多人合照识别")
         
         # 准备已加载的学生编码
+        # 初始化识别器（会加载空学生列表），随后手动注入 known faces
         recognizer = FaceRecognizer(self.student_manager)
         recognizer.students_encodings = {
             'ZhangSan': {'name': 'ZhangSan', 'encoding': self.encoding_zhang},
@@ -240,7 +249,8 @@ class TestLogicScenarios(unittest.TestCase):
         organizer.organize_photos(self.input_dir, recognition_results, unknown_photos)
         
         # 验证是否进入 unknown_photos 目录
-        unknown_file = self.output_dir / "unknown_photos" / "2023-12-25" / "stranger.jpg"
+        # 使用常量，避免目录名未来变更导致测试失效
+        unknown_file = self.output_dir / UNKNOWN_PHOTOS_DIR / "2023-12-25" / "stranger.jpg"
         self.assertTrue(unknown_file.exists(), "未知照片应该被归档到 unknown_photos")
         print("✅ 未知照片正确归档")
 

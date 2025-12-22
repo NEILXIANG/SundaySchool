@@ -4,6 +4,11 @@
 - 在非交互环境下自动选择默认选项，不阻塞
 - 自动创建课堂/输出目录并生成默认配置
 - 友好错误信息保持完整
+
+合理性说明：
+- 该测试会显式切换到临时目录中运行，避免污染真实工作目录。
+- 通过设置 GUIDE_FORCE_AUTO 让交互式流程在自动化环境不阻塞。
+- 测试结束会恢复环境变量，避免影响同进程内的其他用例。
 """
 import os
 import sys
@@ -27,6 +32,7 @@ class TeacherOnboardingFlowTests(unittest.TestCase):
         self.temp_dir = Path(tempfile.mkdtemp(prefix="onboarding_input_"))
         # 保持环境干净
         self.original_cwd = Path.cwd()
+        self._prev_guide_force_auto = os.environ.get("GUIDE_FORCE_AUTO")
         os.chdir(self.temp_dir)
         # 为指南提供最小的src占位，模拟老师拿到的打包目录
         (self.temp_dir / "src").mkdir(parents=True, exist_ok=True)
@@ -37,7 +43,10 @@ class TeacherOnboardingFlowTests(unittest.TestCase):
         os.chdir(self.original_cwd)
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
-        os.environ.pop("GUIDE_FORCE_AUTO", None)
+        if self._prev_guide_force_auto is None:
+            os.environ.pop("GUIDE_FORCE_AUTO", None)
+        else:
+            os.environ["GUIDE_FORCE_AUTO"] = self._prev_guide_force_auto
 
     def test_non_tty_auto_selection(self):
         """模拟无交互终端，确认自动选择默认，不抛异常。"""

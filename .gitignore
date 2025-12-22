@@ -32,6 +32,9 @@ MANIFEST
 *.manifest
 *.spec
 
+# 本仓库的 sunday-photos 子项目会维护自己的 spec（用于可复现打包），因此允许跟踪。
+!sunday-photos/*.spec
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt

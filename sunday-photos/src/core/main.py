@@ -18,9 +18,15 @@ from datetime import datetime
 from tqdm import tqdm
 import shutil
 
-from .utils import setup_logger, is_supported_image_file, get_photo_date, ensure_directory_exists
+from .utils import setup_logger, is_supported_image_file, is_supported_nonempty_image_path, get_photo_date, ensure_directory_exists
 from .config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_LOG_DIR, DEFAULT_TOLERANCE, CLASS_PHOTOS_DIR, STUDENT_PHOTOS_DIR
 from .config_loader import ConfigLoader
+from .incremental_state import (
+    build_class_photos_snapshot,
+    compute_incremental_plan,
+    load_snapshot,
+    save_snapshot,
+)
 
 
 class SimplePhotoOrganizer:
@@ -65,6 +71,7 @@ class SimplePhotoOrganizer:
 
         self.initialized = False
         self.last_run_report = None
+        self._incremental_plan = None
         self._reset_stats()
 
     def _reset_stats(self):
@@ -143,7 +150,7 @@ class SimplePhotoOrganizer:
             return
         moved_count = 0
         for file in photo_root.iterdir():
-            if file.is_file() and is_supported_image_file(file.name):
+            if is_supported_nonempty_image_path(file):
                 photo_date = get_photo_date(str(file))
                 date_dir = photo_root / photo_date
                 date_dir.mkdir(exist_ok=True)
@@ -158,7 +165,13 @@ class SimplePhotoOrganizer:
             self.logger.info("✓ 输入照片已按日期整理，无需移动")
 
     def scan_input_directory(self):
-        """扫描输入目录，获取所有照片文件"""
+        """扫描输入目录，返回“本次需要处理”的课堂照片列表。
+
+        关键点：
+        - 会先把课堂照片根目录按日期归档到 YYYY-MM-DD 子目录（见 _organize_input_by_date）
+        - 使用增量快照（隐藏状态）只处理新增/变更的日期目录
+        - 0 字节图片会被忽略，避免产生无意义的识别异常与增量误报
+        """
         self._organize_input_by_date()
         self.logger.info(f"[步骤 2/4] 正在扫描输入目录: {self.photos_dir}")
 
@@ -166,22 +179,67 @@ class SimplePhotoOrganizer:
             self.logger.error(f"输入目录不存在: {self.photos_dir}")
             return []
 
+        previous = load_snapshot(self.output_dir)
+        current = build_class_photos_snapshot(self.photos_dir)
+        plan = compute_incremental_plan(previous, current)
+        self._incremental_plan = plan
+
+        if previous is None:
+            self.logger.info("✓ 未找到增量快照（首次运行），将处理全部日期文件夹")
+
+        if plan.deleted_dates:
+            deleted_line = ", ".join(sorted(plan.deleted_dates))
+            self.logger.info(f"✓ 检测到已删除的日期文件夹，将同步清理输出: {deleted_line}")
+
+        if plan.changed_dates:
+            changed_line = ", ".join(sorted(plan.changed_dates))
+            self.logger.info(f"✓ 检测到有变更的日期文件夹，将仅处理这些日期: {changed_line}")
+        else:
+            self.logger.info("✓ 未检测到新增或变更的日期文件夹")
+
         photo_files = []
+        for date in sorted(plan.changed_dates):
+            date_dir = self.photos_dir / date
+            if not date_dir.exists():
+                continue
+            for root, _, files in os.walk(date_dir):
+                for file in files:
+                    p = Path(root) / file
+                    if is_supported_nonempty_image_path(p):
+                        photo_files.append(str(p))
 
-        # 遍历输入目录，获取所有照片文件
-        for root, _, files in os.walk(self.photos_dir):
-            for file in files:
-                if is_supported_image_file(file):
-                    photo_path = os.path.join(root, file)
-                    photo_files.append(photo_path)
-
-        self.logger.info(f"✓ 找到 {len(photo_files)} 张照片待处理")
+        self.logger.info(f"✓ 本次需要处理 {len(photo_files)} 张照片")
         self.stats['total_photos'] = len(photo_files)
-
         return photo_files
 
+    def _cleanup_output_for_dates(self, dates):
+        """清理输出目录中指定日期的数据（用于增量重建/删除同步）。
+
+        约定：
+        - 输出目录结构通常为：output/<学生名>/<日期>/... 以及 output/unknown/<日期>/...
+        - 对于 deleted_dates：输入端日期文件夹被删除时，这里会同步删除输出端同日期目录
+        - 对于 changed_dates：会先清理旧结果再重建，避免混入历史残留
+        """
+        if not dates:
+            return
+
+        for top in self.output_dir.iterdir():
+            if not top.is_dir():
+                continue
+            for date in dates:
+                date_dir = top / date
+                if date_dir.exists() and date_dir.is_dir():
+                    shutil.rmtree(date_dir, ignore_errors=True)
+
     def process_photos(self, photo_files):
-        """处理照片，进行人脸识别"""
+        """对照片列表执行人脸识别，并按状态分类结果。
+
+        返回：
+        - recognition_results：{photo_path: [student_names]}（成功识别）
+        - unknown_photos：未匹配到已知学生（但可能检测到人脸）
+        - no_face_photos：未检测到人脸/人脸过小
+        - error_photos：处理出错（例如损坏文件、读取失败等）
+        """
         self.logger.info(f"[步骤 3/4] 正在进行人脸识别...")
 
         recognition_results = {}
@@ -280,11 +338,23 @@ class SimplePhotoOrganizer:
             if not self.initialized and not self.initialize():
                 return False
 
-            # 2. 扫描输入目录（自动把散落的课堂照按日期归档到 class_photos/日期）
+            # 2. 扫描输入目录（自动把散落的课堂照按日期归档到 class_photos/日期；并做增量计划）
             photo_files = self.scan_input_directory()
+            plan = self._incremental_plan
+            changed_dates = getattr(plan, 'changed_dates', set()) if plan else set()
+            deleted_dates = getattr(plan, 'deleted_dates', set()) if plan else set()
+
+            # 2b. 同步删除/重建：先清理输出中涉及的日期目录
+            self._cleanup_output_for_dates(sorted(changed_dates | deleted_dates))
+
+            # 若本次没有任何需要处理的照片（可能是“无变化”或“仅删除”）
             if not photo_files:
-                self.logger.warning("输入目录中没有找到照片文件")
-                # 空输入视为正常结束，便于打包环境下直接运行通过
+                if deleted_dates:
+                    self.logger.info("✓ 本次无新增/变更照片，仅执行了删除同步")
+                    if plan:
+                        save_snapshot(self.output_dir, plan.snapshot)
+                else:
+                    self.logger.info("✓ 本次无需处理：没有新增/变更/删除的日期文件夹")
                 self.print_final_statistics()
                 return True
 
@@ -293,6 +363,10 @@ class SimplePhotoOrganizer:
 
             # 4. 整理输出目录（学生/日期分层；未知放 unknown_photos/日期）
             organize_stats = self.organize_output(recognition_results, unknown_photos)
+
+            # 4b. 成功后写入增量快照
+            if plan:
+                save_snapshot(self.output_dir, plan.snapshot)
 
             # 5. 输出最终统计信息
             self.print_final_statistics()

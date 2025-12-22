@@ -13,6 +13,7 @@ from pathlib import Path
 # 添加src目录到Python路径
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / 'src'))
+sys.path.insert(0, str(PROJECT_ROOT / 'tests'))
 os.chdir(PROJECT_ROOT)
 
 def test_imports():
@@ -77,10 +78,12 @@ def test_student_manager():
         student_photos_dir = input_dir / "student_photos"
         student_photos_dir.mkdir(parents=True)
         
-        # 创建测试图片文件（空文件用于测试）
-        (student_photos_dir / "Student1_1.jpg").touch()
-        (student_photos_dir / "Student1_2.jpg").touch()
-        (student_photos_dir / "Student2_1.jpg").touch()
+        # 创建测试图片文件（真实可打开 JPEG，避免 0 字节文件被主流程忽略导致测试变脆）
+        from testdata_builder import write_jpeg
+
+        write_jpeg(student_photos_dir / "Student1_1.jpg", "Student1_1", seed=1)
+        write_jpeg(student_photos_dir / "Student1_2.jpg", "Student1_2", seed=2)
+        write_jpeg(student_photos_dir / "Student2_1.jpg", "Student2_1", seed=3)
         
         try:
             # 测试StudentManager

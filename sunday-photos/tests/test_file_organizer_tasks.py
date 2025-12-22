@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""FileOrganizer 扩展测试：统计与输出结构校验。"""
+"""FileOrganizer 扩展测试：统计与输出结构校验。
+
+合理性说明：
+- 这里关注的是“文件复制/输出结构/统计计数”的正确性，而不是图片解码。
+- 因此输入文件内容使用简单字节即可（非真实 JPEG/PNG 也可），
+    避免引入 PIL/face_recognition 等外部依赖与不稳定因素。
+"""
 
 import os
 import sys
@@ -21,7 +27,14 @@ def _touch(path: Path):
 
 
 class FileOrganizerTaskTests(unittest.TestCase):
-    """验证多学生、多任务的复制统计与输出结构。"""
+    """验证多学生、多任务的复制统计与输出结构。
+
+    覆盖点：
+    - 同一张照片复制到多名学生目录
+    - 单名学生复制多张照片
+    - 未识别照片进入 UNKNOWN 目录
+    - 统计字段 total/copied/failed/processed/students 的一致性
+    """
 
     def test_multi_student_counts_and_outputs(self):
         with tempfile.TemporaryDirectory() as tmpdir:

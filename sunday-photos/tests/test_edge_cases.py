@@ -1,8 +1,23 @@
+"""边界条件测试（异常/空数据/极端输入）。
+
+目标：
+- 覆盖教师最可能遇到的“脏输入”场景（空文件、目录缺失、重复文件名等）；
+- 保证不会崩溃，并且统计/输出结构合理。
+
+说明：
+- 这里使用 src.core.* 的导入方式；因此需要确保项目根目录在 sys.path 中。
+"""
+
 import os
 import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 import shutil
+
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.core.file_organizer import FileOrganizer
 from src.core.face_recognizer import FaceRecognizer

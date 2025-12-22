@@ -1,15 +1,22 @@
 主日学照片整理工具 - 控制台版使用说明 / Sunday School Photo Organizer - Console Guide (Bilingual)
 
+【使用方法 | How to run】
+- 双击运行：双击 "SundayPhotoOrganizer"（或在终端执行 ./SundayPhotoOrganizer）
+- Double-click to run: "SundayPhotoOrganizer" (or run ./SundayPhotoOrganizer in Terminal)
+
 【快速开始 | Quick Start】
-- 双击 "SundayPhotoOrganizer/SundaySchool"（或终端 ./SundayPhotoOrganizer/SundaySchool）
+- 双击运行 "SundayPhotoOrganizer"（或终端 ./SundayPhotoOrganizer）
 - 按提示将照片放入自动创建的桌面文件夹，再次运行即可整理；输出自动打开
-- Double-click "SundayPhotoOrganizer/SundaySchool" (or run ./SundayPhotoOrganizer/SundaySchool).
+- Double-click "SundayPhotoOrganizer" (or run ./SundayPhotoOrganizer).
 - Place photos into the auto-created desktop folder, rerun to organize; output opens automatically.
 
+【文件夹位置 | Folder location】
+- 桌面/Desktop：Desktop/主日学照片整理
+
 【自动创建的文件夹 | Auto-created folders】Desktop/主日学照片整理
-- student_photos：学生参考照，命名“姓名”或“姓名_序号”（张三.jpg、张三_2.jpg、LiSi.png）
+- student_photos：学生照片（学生参考照），命名“姓名”或“姓名_序号”（张三.jpg、张三_2.jpg、LiSi.png）
 	student_photos: reference photos, named "Name" or "Name_number" (ZhangSan.jpg, ZhangSan_2.jpg, LiSi.png)
-- class_photos：课堂照，建议按日期子目录（2024-12-21/合影.jpg）
+- class_photos：课堂照片（课堂照），建议按日期子目录（2024-12-21/合影.jpg）
 	class_photos: classroom photos, date subfolders recommended (2024-12-21/group.jpg)
 - output：整理结果，按学生 → 日期分层
 	output: sorted results by student → date

@@ -18,28 +18,27 @@ if [ -n "$TARGET_ARCH" ]; then
     echo "Target arch: $TARGET_ARCH"
 fi
 
-# 检查 PyInstaller 是否安装
-if ! command -v pyinstaller &> /dev/null
-then
-    echo "PyInstaller 未安装，请运行以下命令安装:"
-    echo "pip install pyinstaller"
+# 优先使用项目虚拟环境中的 python（避免使用系统 python 导致依赖不一致）
+PYTHON="$(pwd)/venv/bin/python"
+if [ ! -x "$PYTHON" ]; then
+    PYTHON="python3"
+fi
+
+# 检查 PyInstaller 是否安装（在同一 python 环境中）
+if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
+    echo "PyInstaller 未安装（当前 python: $PYTHON）"
+    echo "请运行: $PYTHON -m pip install pyinstaller"
     exit 1
 fi
 
-# 打包命令
-APP_BINARY_NAME="SundaySchool"
+# 打包命令（控制台 onefile）：生成 dist/SundayPhotoOrganizer
+SPEC_FILE="SundayPhotoOrganizer.spec"
 
-pyinstaller \
+"$PYTHON" -m PyInstaller \
     --clean \
-    --console \
-    --noupx \
-    --paths src \
-    --collect-all core \
-    --collect-all face_recognition_models \
-    --name "$APP_BINARY_NAME" \
+    --noconfirm \
     "${ARCH_FLAG[@]}" \
-    --icon="$ICON_PATH" \
-    src/cli/run.py
+    "$SPEC_FILE"
 
 # 打包完成后，准备发布目录并预创建老师需要的空目录
 if [ $? -eq 0 ]; then
@@ -55,14 +54,15 @@ if [ $? -eq 0 ]; then
     mkdir -p "$RELEASE_DIR/output"
     mkdir -p "$RELEASE_DIR/logs"
 
-    # 复制最新 onedir 目录（含所有依赖）
+    # 复制最新 onefile 可执行文件到发布目录根部：release_console/SundayPhotoOrganizer
+    # 兼容旧版本：如果之前是目录结构（release_console/SundayPhotoOrganizer/），这里需要 rm -rf
     rm -rf "$RELEASE_DIR/$APP_NAME"
-    mkdir -p "$RELEASE_DIR/$APP_NAME"
-    cp -R "dist/$APP_BINARY_NAME/" "$RELEASE_DIR/$APP_NAME/"
+    cp "dist/$APP_NAME" "$RELEASE_DIR/$APP_NAME"
+    chmod +x "$RELEASE_DIR/$APP_NAME" || true
 
     echo "✅ 发布目录已准备好：$RELEASE_DIR"
     echo "   - 已预创建 input/class_photos、input/student_photos、output、logs"
-    echo "   - 可执行目录：$RELEASE_DIR/$APP_NAME (内含 $APP_BINARY_NAME 可执行文件)"
+    echo "   - 可执行文件：$RELEASE_DIR/$APP_NAME"
 else
     echo "❌ 打包失败，请检查错误信息。"
 fi
