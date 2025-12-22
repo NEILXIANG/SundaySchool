@@ -24,6 +24,7 @@ jobs:
           pip install pyinstaller
 
       - name: Build (Windows)
+        shell: cmd
         working-directory: sunday-photos
         run: |
           pyinstaller ^
