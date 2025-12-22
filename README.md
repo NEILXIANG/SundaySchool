@@ -1,4 +1,6 @@
 # SundaySchool
 
-- 老师使用指南：见 [sunday-photos/doc/TeacherGuide.md](sunday-photos/doc/TeacherGuide.md)
-- 开发与打包指南：见 [sunday-photos/doc/DeveloperGuide.md](sunday-photos/doc/DeveloperGuide.md)
+- 老师使用指南（中）：[sunday-photos/doc/TeacherGuide.md](sunday-photos/doc/TeacherGuide.md)
+- Teacher Guide (EN): [sunday-photos/doc/TeacherGuide_en.md](sunday-photos/doc/TeacherGuide_en.md)
+- 开发与打包指南（中）：[sunday-photos/doc/DeveloperGuide.md](sunday-photos/doc/DeveloperGuide.md)
+- Developer & Packaging (EN): [sunday-photos/doc/DeveloperGuide_en.md](sunday-photos/doc/DeveloperGuide_en.md)
