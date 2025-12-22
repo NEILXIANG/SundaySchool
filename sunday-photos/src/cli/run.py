@@ -197,7 +197,6 @@ def main():
         sys.exit(1)
 
     print("\n🎉 所有准备工作完成，开始整理照片吧！")
-    print("🌟 准备就绪！让我们开始一场照片大冒险吧！")
 
 if __name__ == "__main__":
     main()
