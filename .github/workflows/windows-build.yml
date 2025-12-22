@@ -16,6 +16,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install build tools
+        working-directory: sunday-photos
         run: |
           python -m pip install --upgrade pip
           pip install cmake
@@ -23,6 +24,7 @@ jobs:
           pip install pyinstaller
 
       - name: Build (Windows)
+        working-directory: sunday-photos
         run: |
           pyinstaller ^
             --clean ^
@@ -38,4 +40,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-x86_64
-          path: dist/
+          path: sunday-photos/dist/

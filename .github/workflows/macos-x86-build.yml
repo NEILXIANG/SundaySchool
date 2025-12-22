@@ -16,12 +16,14 @@ jobs:
           python-version: "3.14"
 
       - name: Install dependencies
+        working-directory: sunday-photos
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
 
       - name: Build (x86_64)
+        working-directory: sunday-photos
         env:
           TARGET_ARCH: x86_64
         run: |
@@ -31,4 +33,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-x86_64
-          path: release_console/
+          path: sunday-photos/release_console/
