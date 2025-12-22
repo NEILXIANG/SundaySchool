@@ -1,0 +1,23 @@
+{
+    "input_dir": "input",
+    "classroom_dir": "input",
+    "output_dir": "output",
+    "log_dir": "logs",
+    "tolerance": 0.6,
+    "enable_debug": false,
+    "enable_color_console": true,
+    "photo_processing": {
+        "max_file_size_mb": 50,
+        "supported_formats": [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"]
+    },
+    "face_recognition": {
+        "min_face_size": 50,
+        "confidence_threshold": 0.7,
+        "low_confidence_threshold": 0.5
+    },
+    "reporting": {
+        "generate_summary_report": true,
+        "generate_detailed_report": true,
+        "include_statistics": true
+    }
+}
