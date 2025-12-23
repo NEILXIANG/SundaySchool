@@ -132,7 +132,7 @@ def create_console_guide():
 
 📸 照片准备：
 1. 学生照片：放入 student_photos 文件夹
-   命名格式：姓名_序号.jpg（如：张三_1.jpg）
+    命名：姓名.jpg 或 姓名_序号.jpg（序号可选，如：张三.jpg、张三_2.jpg、LiSi.jpg）
 2. 课堂照片：放入 class_photos 文件夹
    可以是任何 .jpg 或 .png 文件
 

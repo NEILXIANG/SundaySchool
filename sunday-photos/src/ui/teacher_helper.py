@@ -192,21 +192,21 @@ class TeacherHelper:
 🚀 程序设置指南
 
 📋 准备工作：
-   1. 确保已安装Python 3.7或更高版本
+    1. 确保已安装 Python 3.10+（本仓库以 Python 3.14 环境测试）
    2. 安装所需的程序包：pip install -r requirements.txt
    3. 确保在正确的项目文件夹中运行程序
 
 📁 文件夹设置：
-   • classroom/ - 存放课堂数据
-     └── student_photos/ - 学生参考照片
-     └── class_photos/ - 待整理的课堂照片
+    • input/ - 输入数据
+      └── student_photos/ - 学生参考照片
+      └── class_photos/ - 待整理的课堂照片
    • output/ - 整理后的照片输出
    • logs/ - 程序运行日志
 
 📸 照片要求：
-   • 学生照片：文件名格式 姓名_序号.jpg（如：张三_1.jpg）
+    • 学生照片：姓名.jpg 或 姓名_序号.jpg（序号可选，如：张三.jpg、张三_2.jpg、LiSi.jpg）
    • 照片清晰度：确保人脸清晰可见
-   • 照片格式：推荐使用.jpg格式
+    • 照片格式：推荐使用 .jpg/.png
 
 🎯 运行程序：
    • 简单模式：python run.py
@@ -217,13 +217,14 @@ class TeacherHelper:
 📸 学生照片命名指南
 
 📝 正确命名格式：
-   • 姓名_序号.扩展名
-   • 示例：张三_1.jpg、李四_1.png
+    • 姓名.扩展名（只有 1 张参考照时）
+    • 姓名_序号.扩展名（同一学生多张参考照时，序号可选）
+    • 示例：张三.jpg、张三_2.jpg、LiSi.png
 
 ❌ 错误示例：
-   • 张三.jpg （缺少序号）
-   • zhangsan_1.jpg （使用英文名）
-   • 张三_1.JPEG （大写扩展名）
+    • .jpg （没有姓名）
+    • 张三__.jpg（文件名异常）
+    • 张三.txt（不是图片格式）
 
 💡 最佳实践：
    • 使用学生真实姓名
