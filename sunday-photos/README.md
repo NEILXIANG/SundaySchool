@@ -182,6 +182,15 @@ python run.py --help
 
 ---
 
+## ⚙️ 配置（config.json）
+
+标准 JSON 不支持注释。为了让配置“打开就能看懂”，本项目在 `config.json` 中使用 `_comment` / `xxx_comment` 字段存放说明文字，程序会忽略这些字段，文件仍然是合法 JSON。
+
+- 中文配置说明：[doc/CONFIG.md](doc/CONFIG.md)
+- English config guide: [doc/CONFIG_en.md](doc/CONFIG_en.md)
+
+---
+
 ## 📋 输出结构
 
 ```

@@ -29,4 +29,12 @@
 ## 常见问题 / FAQ
 - face_recognition 告警：`pkg_resources is deprecated` 为上游噪声，可忽略 / upstream noise.
 - 路径不存在：测试会自动创建 input/output；手动运行确保 CWD 为仓库根 / ensure repo root.
-- 打包测试：test_console_app.py、test_packaged_app.py 需要打包产物；缺失会提示失败 / requires packaged artifacts.
+- 打包测试：`test_console_app.py`、`test_packaged_app.py` 针对 `release_console/` 产物。
+  - 日常开发/CI 场景：如果没有打包产物，测试会默认跳过（skip），避免误报。
+  - 发布验收场景：可设置 `REQUIRE_PACKAGED_ARTIFACTS=1` 强制要求产物存在（缺失则失败）。
+
+## 配置说明
+
+配置字段与注释规则详见：
+- 中文：[doc/CONFIG.md](doc/CONFIG.md)
+- English：[doc/CONFIG_en.md](doc/CONFIG_en.md)

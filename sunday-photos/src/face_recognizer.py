@@ -1,4 +1,4 @@
-"""Compatibility shim for face_recognizer.
+"""兼容层（shim）：保持历史导入路径不变。
 
 保持与核心实现一致，但保留面向测试的钩子：
 - 暴露 face_recognition 模块，便于单元测试 mock。

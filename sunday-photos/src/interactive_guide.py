@@ -1,4 +1,8 @@
-"""Compatibility shim for interactive_guide."""
+"""兼容层（shim）：保持历史导入路径不变。
+
+历史上部分脚本会从 `interactive_guide` 导入交互式指导能力。
+当前权威实现位于 `ui.interactive_guide`。
+"""
 
 from ui.interactive_guide import InteractiveGuide  # noqa: F401
 """

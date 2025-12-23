@@ -42,12 +42,13 @@ def _truthy_env(name: str, default: str = "0") -> bool:
 def net_testdata_enabled() -> bool:
     """是否启用联网测试数据。
 
-    约定：默认启用；只有显式设置 FORCE_OFFLINE_TESTDATA=1 才关闭。
+    约定：默认关闭（测试应离线稳定）；只有显式设置 ALLOW_NET_TESTDATA=1 才启用。
+    如需强制离线，可设置 FORCE_OFFLINE_TESTDATA=1。
     """
     if _truthy_env("FORCE_OFFLINE_TESTDATA", default="0"):
         return False
-    # Default ON
-    return os.environ.get("ALLOW_NET_TESTDATA", "1").strip() == "1"
+    # Default OFF (offline-friendly)
+    return os.environ.get("ALLOW_NET_TESTDATA", "0").strip() == "1"
 
 
 def net_testdata_strict() -> bool:
@@ -55,7 +56,8 @@ def net_testdata_strict() -> bool:
 
     严格模式含义：在联网启用时，只要数据不足/下载失败，就必须抛错使测试失败。
     """
-    return os.environ.get("STRICT_NET_TESTDATA", "1").strip() == "1"
+    # Default OFF (avoid flaky failures in offline/CI environments)
+    return os.environ.get("STRICT_NET_TESTDATA", "0").strip() == "1"
 
 
 def testdata_cache_dir(fallback: Path) -> Path:
@@ -219,9 +221,9 @@ def build_dataset(
     student_names = generate_students(student_count)
     dates = generate_dates(date_prefix, date_start_day, date_count)
 
-    # Optional/Default: network-backed CC0 images.
-    # - Default is ON + strict, unless FORCE_OFFLINE_TESTDATA=1.
-    # - If enabled and strict: must succeed (no silent fallback).
+    # Optional: network-backed CC0 images.
+    # - Default is OFF (offline-friendly). Enable with ALLOW_NET_TESTDATA=1.
+    # - If enabled and strict (STRICT_NET_TESTDATA=1): must succeed (no silent fallback).
     cache_dir = testdata_cache_dir(base_dir / "_downloaded_images")
     urls = _parse_urls_from_env("TESTDATA_URLS")
     downloaded_paths: List[Path] = []

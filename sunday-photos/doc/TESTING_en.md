@@ -31,4 +31,12 @@ Tests are consolidated under `tests/` for quick runs by teachers and developers.
 ## FAQ
 - face_recognition warnings: `pkg_resources is deprecated` is upstream noise; ignore.
 - Missing paths/dirs: tests auto-create `input/`, `output/`, etc.; ensure CWD is repo root when running manually.
-- Packaging tests: `test_console_app.py` and `test_packaged_app.py` expect packaged artifacts; if absent, they will fail with missing-file messages.
+- Packaging tests: `test_console_app.py` and `test_packaged_app.py` validate `release_console/` artifacts.
+  - In normal dev/CI runs: if artifacts are missing, tests will be skipped by default.
+  - For release acceptance: set `REQUIRE_PACKAGED_ARTIFACTS=1` to require artifacts (missing artifacts will fail).
+
+## Configuration
+
+See:
+- Chinese: [doc/CONFIG.md](doc/CONFIG.md)
+- English: [doc/CONFIG_en.md](doc/CONFIG_en.md)

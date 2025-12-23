@@ -1,5 +1,8 @@
-"""Compatibility shim for config.
-Exports everything from core.config."""
+"""兼容层（shim）：保持历史导入路径不变。
+
+历史上部分脚本会从 `config` 导入常量与默认值。
+当前权威实现位于 `core.config`。
+"""
 
 from core.config import *  # noqa: F401,F403
 """

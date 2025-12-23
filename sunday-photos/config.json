@@ -1,22 +1,59 @@
 {
+    "_comment": "说明：JSON 标准不支持注释。本项目使用 _comment / *_comment 字段存放说明文字，程序会忽略这些字段。",
+    "_comment_priority": "配置优先级：命令行参数 > config.json > 程序默认值。",
+    "_comment_paths": "路径可用相对路径（相对仓库根目录）或绝对路径。建议不要包含中文空格。",
     "input_dir": "input",
+    "input_dir_comment": "输入根目录。学生参考照位于 {input_dir}/student_photos/；课堂照片位于 {input_dir}/class_photos/。",
     "output_dir": "output",
+    "output_dir_comment": "输出根目录。程序会按“学生/日期”组织照片，并在 unknown/ 目录存放未识别或无人脸的照片。",
     "log_dir": "logs",
+    "log_dir_comment": "日志目录。每次运行会生成带时间戳的日志文件，便于排障。",
     "tolerance": 0.6,
+    "tolerance_comment": "人脸匹配阈值（0~1）。越小越严格（误识别更少、漏识别可能更多）；越大越宽松。一般建议 0.55~0.65。",
+
+    "parallel_recognition": {
+        "_comment": "并行识别（多进程）配置：课堂照片很多时可明显加速；小批量会自动回退串行以提高稳定性。",
+        "enabled": true,
+        "enabled_comment": "是否允许启用并行识别。即使为 true，程序也可能因照片数量少/进程数为 1/环境变量强制关闭而回退串行。",
+        "workers": 4,
+        "workers_comment": "并行进程数。建议从 2~6 试起；过大可能因内存/IO 反而变慢。",
+        "chunk_size": 12,
+        "chunk_size_comment": "每个任务批次包含的照片数量。太小会增加调度开销；太大可能导致单批耗时过长。",
+        "min_photos": 30,
+        "min_photos_comment": "仅当本次待处理照片数量 >= min_photos 时才启用并行（小批量默认串行更稳定）。",
+        "force_disable_env_comment": "环境变量 SUNDAY_PHOTOS_NO_PARALLEL=1 / true / yes 可强制禁用并行，用于排障或低内存机器。"
+    },
+
     "enable_debug": false,
+    "enable_debug_comment": "是否输出更详细的调试日志（可能更啰嗦）。",
     "enable_color_console": true,
+    "enable_color_console_comment": "控制台日志是否启用彩色输出（仅影响控制台显示，不影响日志文件）。",
     "photo_processing": {
+        "_comment": "图片处理相关限制与格式白名单。",
         "max_file_size_mb": 50,
+        "max_file_size_mb_comment": "单张图片最大允许大小（MB）。过大可能导致处理缓慢或内存不足。",
         "supported_formats": [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"]
+        ,
+        "supported_formats_comment": "允许处理的图片扩展名列表（小写）。"
     },
     "face_recognition": {
+        "_comment": "人脸识别相关参数。注意：不同相机距离/清晰度可能需要微调。",
         "min_face_size": 50,
+        "min_face_size_comment": "最小人脸尺寸（像素近似值）。过小可能引入误检，过大可能漏检远处的人脸。",
         "confidence_threshold": 0.7,
+        "confidence_threshold_comment": "高置信度阈值（与内部评分逻辑相关）。通常不需要频繁调整。",
         "low_confidence_threshold": 0.5
+        ,
+        "low_confidence_threshold_comment": "低置信度阈值（与内部评分逻辑相关）。通常不需要频繁调整。"
     },
     "reporting": {
+        "_comment": "报告输出相关开关。",
         "generate_summary_report": true,
+        "generate_summary_report_comment": "是否生成简要报告。",
         "generate_detailed_report": true,
+        "generate_detailed_report_comment": "是否生成详细报告（包含更多统计/分组信息）。",
         "include_statistics": true
+        ,
+        "include_statistics_comment": "报告中是否包含统计信息（数量、耗时等）。"
     }
 }

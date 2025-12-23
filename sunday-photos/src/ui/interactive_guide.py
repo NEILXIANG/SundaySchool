@@ -429,12 +429,12 @@ class InteractiveGuide:
 
     def get_operation_guide(self, guide_type: str) -> str:
         """获取操作指南内容
-        
-        Args:
-            guide_type: 指南类型，可选 photo_preparation, file_organization, troubleshooting
-            
-        Returns:
-            指南内容字符串
+
+        参数：
+            guide_type：指南类型，可选 photo_preparation / file_organization / troubleshooting。
+
+        返回：
+            指南内容字符串。
         """
         return show_operation_guide(guide_type)
 

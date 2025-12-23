@@ -47,6 +47,9 @@ input/
 # Packaged console binary (onefile) - too large for normal git hosting; build locally.
 release_console/SundayPhotoOrganizer
 
+# Testdata cache (downloaded assets)
+_downloaded_images/
+
 # Reference photos (should be managed by user)
 data/students/photos/*.jpg
 data/students/photos/*.jpeg
