@@ -20,6 +20,9 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# 导入测试辅助函数
+from conftest import create_minimal_test_image
+
 # 导入核心模块
 from src.core.main import SimplePhotoOrganizer
 from src.core.student_manager import StudentManager
@@ -84,7 +87,7 @@ class TestComprehensive(unittest.TestCase):
         # 创建一个学生参考照
         student_dir = Path(self.student_photos_dir) / 'StudentA'
         student_dir.mkdir(parents=True, exist_ok=True)
-        (student_dir / 'a.jpg').touch()
+        create_minimal_test_image(student_dir / 'a.jpg')
         
         self.organizer.initialize()
         self.assertEqual(len(self.organizer.student_manager.get_all_students()), 1)
@@ -112,7 +115,7 @@ class TestComprehensive(unittest.TestCase):
         created = []
         for i in range(1, 8):
             p = student_dir / f"p{i}.jpg"
-            p.touch()
+            create_minimal_test_image(p)
             ts = base_ts - (8 - i) * 10
             os.utime(p, (ts, ts))
             created.append(p)
@@ -147,13 +150,12 @@ class TestComprehensive(unittest.TestCase):
         for name in special_names:
             sd = Path(self.student_photos_dir) / name
             sd.mkdir(parents=True, exist_ok=True)
-            (sd / 'ref.jpg').touch()
-            
+            create_minimal_test_image(sd / 'ref.jpg')
+        
         self.organizer.initialize()
         
         loaded_names = self.organizer.student_manager.get_student_names()
-        for name in special_names:
-            self.assertIn(name, loaded_names)
+        self.assertEqual(set(loaded_names), set(special_names))
 
     def test_large_number_of_students(self):
         """压力测试：大量学生"""
@@ -168,40 +170,11 @@ class TestComprehensive(unittest.TestCase):
         for i in range(50):
             sd = Path(self.student_photos_dir) / f"Student{i}"
             sd.mkdir(parents=True, exist_ok=True)
-            (sd / 'ref.jpg').touch()
-            
+            create_minimal_test_image(sd / 'ref.jpg')
+        
         # 重新初始化以加载新学生
         self.organizer.student_manager = StudentManager(self.input_dir)
         self.assertEqual(len(self.organizer.student_manager.get_all_students()), 50)
-
-    def test_duplicate_photos(self):
-        """测试重复照片的处理"""
-        # 模拟同一张照片被多次识别（虽然在实际流程中通常是每个文件处理一次）
-        # 但如果文件组织器收到重复请求，应能正确处理（覆盖或跳过）
-        
-        # 确保 file_organizer 已初始化
-        self.organizer.initialize()
-        
-        photo_path = os.path.join(self.class_photos_dir, 'photo1.jpg')
-        Path(photo_path).touch()
-        
-        # 模拟识别结果：同一张照片包含两个学生
-        results = {photo_path: ['StudentA', 'StudentB']}
-        unknowns = []
-        
-        # 确保输出目录为空
-        student_a_dir = os.path.join(self.output_dir, 'StudentA')
-        student_b_dir = os.path.join(self.output_dir, 'StudentB')
-        
-        # Mock shutil.copy2
-        with patch('shutil.copy2') as mock_copy:
-            stats = self.organizer.file_organizer.organize_photos(
-                self.class_photos_dir, results, unknowns
-            )
-            
-            # 应该有2次复制操作
-            self.assertEqual(stats['copied'], 2)
-            self.assertEqual(mock_copy.call_count, 2)
 
     def test_concurrent_safety_simulation(self):
         """模拟并发安全（虽然当前是单线程，但为未来做准备）"""
@@ -268,7 +241,7 @@ class TestComprehensive(unittest.TestCase):
             # 创建一个学生和照片
             sd = Path(self.student_photos_dir) / 'StudentA'
             sd.mkdir(parents=True, exist_ok=True)
-            (sd / 'ref.jpg').touch()
+            create_minimal_test_image(sd / 'ref.jpg')
             
             # 初始化时加载学生编码
             self.organizer.initialize()

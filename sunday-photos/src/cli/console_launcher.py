@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import json
 import time
+import logging
 from datetime import datetime
 import platform
 
@@ -24,7 +25,7 @@ SRC_DIR = Path(__file__).resolve().parents[1]
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from config import UNKNOWN_PHOTOS_DIR
+from core.config import UNKNOWN_PHOTOS_DIR
 from core.platform_paths import get_desktop_dir
 from core.utils import is_supported_nonempty_image_path
 
@@ -42,6 +43,7 @@ class ConsolePhotoOrganizer:
         self.app_directory = get_desktop_dir() / "SundaySchoolPhotoOrganizer"
         self.setup_complete = False
         self.teacher_helper = _try_get_teacher_helper()
+        self.logger = logging.getLogger(__name__)
 
     def _print_divider(self):
         print("=" * 56)
@@ -187,7 +189,7 @@ Supported formats: .jpg / .jpeg / .png
         return True
     
     def create_config_file(self):
-        """创建配置文件（如已存在则不覆盖）。"""
+        """创建配置文件（如已存在则不覆盖），保证零配置可运行。"""
         config_data = {
             "input_dir": str(self.app_directory),
             "output_dir": str(self.app_directory / "output"),
@@ -204,14 +206,12 @@ Supported formats: .jpg / .jpeg / .png
         
         config_file = self.app_directory / "config.json"
         if config_file.exists():
-            # 老师无需理解/修改配置；保留该文件主要用于一致性与排障。
-            return config_file
+            return config_file, False
 
         with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(config_data, f, indent=4, ensure_ascii=False)
 
-        # 不提示老师去找配置/改配置
-        return config_file
+        return config_file, True
 
     def _format_friendly_error(self, e: Exception, context: str = "") -> str:
         if self.teacher_helper is None:
@@ -223,6 +223,7 @@ Supported formats: .jpg / .jpeg / .png
         self._print_section("开始整理")
         print("整理过程中请不要关闭窗口；完成后我会告诉你结果在哪。")
         self._print_tip(f"如果中途出现问题：日志会保存在 {self.app_directory / 'logs'}")
+        self._print_tip("无需任何配置文件，我会自动为你准备默认配置。")
         
         start_time = time.time()
         
@@ -231,9 +232,13 @@ Supported formats: .jpg / .jpeg / .png
             from main import SimplePhotoOrganizer
             from config_loader import ConfigLoader
             
-            # 创建/读取配置文件（存在则不覆盖；主要用于一致性与排障，老师无需调参）
-            config_file = self.create_config_file()
-            
+            # 创建/读取配置文件（存在则不覆盖；老师无需调参）
+            config_file, created = self.create_config_file()
+            if created:
+                self._print_ok("已自动生成默认配置（无需修改）")
+            else:
+                self._print_tip("检测到已有配置，将直接使用。")
+
             config_loader = ConfigLoader(str(config_file))
             
             organizer = SimplePhotoOrganizer(
@@ -251,9 +256,11 @@ Supported formats: .jpg / .jpeg / .png
             if hasattr(organizer, 'face_recognizer') and organizer.face_recognizer:
                 organizer.face_recognizer.tolerance = tolerance
             
-            print("第 1/3 步：读取学生参考照（建立识别资料库）...")
-            print("第 2/3 步：分析课堂照片（检测人脸 → 匹配姓名 → 分类保存）...")
-            self._print_tip("这一阶段耗时最长，请耐心等待；窗口看起来‘没动’也可能正在处理。")
+            print("第 1/4 步：读取学生参考照（建立识别资料库）...")
+            print("第 2/4 步：分析课堂照片（检测人脸 → 匹配姓名 → 分类保存）...")
+            print("第 3/4 步：保存结果并写入报告...")
+            print("第 4/4 步：尝试为你打开结果文件夹...")
+            self._print_tip("处理中请耐心等待；窗口看起来‘没动’也可能正在忙碌。")
             
             # 运行完整流程
             success = organizer.run()
@@ -297,6 +304,7 @@ Supported formats: .jpg / .jpeg / .png
                 self._print_ok("已打开结果文件夹。")
                 
             except Exception as e:
+                self.logger.debug(f"打开结果文件夹失败（非关键操作）: {e}")
                 self._print_warn("我没能自动打开文件夹（不影响结果）。")
                 self._print_next("请手动打开这个文件夹查看结果")
                 print(f"  {output_dir}")
@@ -305,6 +313,7 @@ Supported formats: .jpg / .jpeg / .png
             
         except Exception as e:
             context = ""
+            self.logger.exception("控制台启动器主流程失败")
             try:
                 context = f"桌面目录：{self.app_directory}；日志目录：{self.app_directory / 'logs'}"
             except Exception:

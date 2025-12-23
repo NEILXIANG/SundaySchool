@@ -204,6 +204,7 @@ class InteractiveGuide:
                             os.makedirs(dir_path, exist_ok=True)
                             print(f"✅ 成功创建文件夹: {dir_path}")
                         except Exception as e:
+                            logger.exception(f"创建文件夹 {dir_path} 失败")
                             print(f"❌ 创建文件夹失败: {e}")
                             all_exist = False
                     else:
@@ -254,6 +255,7 @@ class InteractiveGuide:
                     print("💡 请将待整理的课堂照片放入此文件夹")
                     return True
                 except Exception as e:
+                    logger.exception(f"创建课堂照片文件夹 {class_photos_dir} 失败")
                     print(f"❌ 创建文件夹失败: {e}")
                     return False
             else:
@@ -308,6 +310,7 @@ class InteractiveGuide:
             return True
             
         except Exception as e:
+            logger.exception("配置文件格式验证失败")
             print(f"❌ 配置文件格式错误: {e}")
             print("💡 请检查JSON格式或删除文件使用默认配置")
             return False
@@ -329,6 +332,7 @@ class InteractiveGuide:
                 json.dump(default_config, f, ensure_ascii=False, indent=2)
             print("✅ 默认配置文件创建成功")
         except Exception as e:
+            logger.exception("创建默认配置文件失败")
             print(f"❌ 创建配置文件失败: {e}")
     
     def show_rename_guide(self):

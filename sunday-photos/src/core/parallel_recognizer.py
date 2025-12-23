@@ -86,6 +86,7 @@ def recognize_one(image_path: str) -> Tuple[str, Dict[str, Any]]:
 
         recognized_students: List[str] = []
         unknown_faces_count = 0
+        unknown_encodings = []
 
         known_encodings = _G_KNOWN_ENCODINGS
         known_names = _G_KNOWN_NAMES
@@ -104,6 +105,7 @@ def recognize_one(image_path: str) -> Tuple[str, Dict[str, Any]]:
                     recognized_students.append(student_name)
             else:
                 unknown_faces_count += 1
+                unknown_encodings.append(face_encoding)
 
         total_faces = len(face_encodings)
         status = "success" if recognized_students else "no_matches_found"
@@ -113,6 +115,7 @@ def recognize_one(image_path: str) -> Tuple[str, Dict[str, Any]]:
             "recognized_students": recognized_students,
             "total_faces": total_faces,
             "unknown_faces": unknown_faces_count,
+            "unknown_encodings": unknown_encodings,
         }
 
     except MemoryError:
@@ -123,6 +126,7 @@ def recognize_one(image_path: str) -> Tuple[str, Dict[str, Any]]:
             "total_faces": 0,
         }
     except Exception as e:
+        logger.exception(f"并行识别图片 {image_path} 失败")
         return image_path, {
             "status": "error",
             "message": f"识别图片 {image_path} 中的人脸失败: {str(e)}",

@@ -21,7 +21,7 @@ def test_imports():
     print("测试模块导入...")
     
     try:
-        from config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_LOG_DIR
+        from core.config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_LOG_DIR
         print("✓ config模块导入成功")
     except ImportError as e:
         print(f"✗ config模块导入失败: {e}")

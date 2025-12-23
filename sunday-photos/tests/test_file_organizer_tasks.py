@@ -17,8 +17,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 os.chdir(PROJECT_ROOT)
 
-from file_organizer import FileOrganizer  # noqa: E402
-from config import UNKNOWN_PHOTOS_DIR  # noqa: E402
+from core.file_organizer import FileOrganizer  # noqa: E402
+from core.config import UNKNOWN_PHOTOS_DIR  # noqa: E402
 
 
 def _touch(path: Path):

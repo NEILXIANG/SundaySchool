@@ -148,7 +148,7 @@ class StudentManager:
             logger.info(f"成功加载 {len(self.students_data)} 名学生信息")
             
         except Exception as e:
-            logger.error(f"加载学生信息失败: {str(e)}")
+            logger.exception("加载学生信息失败")
             raise
     
     def get_all_students(self):

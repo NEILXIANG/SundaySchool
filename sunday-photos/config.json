@@ -13,7 +13,7 @@
 
     "parallel_recognition": {
         "_comment": "并行识别（多进程）配置：课堂照片很多时可明显加速；小批量会自动回退串行以提高稳定性。",
-        "enabled": true,
+        "enabled": false,
         "enabled_comment": "是否允许启用并行识别。即使为 true，程序也可能因照片数量少/进程数为 1/环境变量强制关闭而回退串行。",
         "workers": 4,
         "workers_comment": "并行进程数。建议从 2~6 试起；过大可能因内存/IO 反而变慢。",

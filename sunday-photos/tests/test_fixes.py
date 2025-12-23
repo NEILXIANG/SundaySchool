@@ -26,7 +26,7 @@ def test_hardcoding_fixes():
     """测试硬编码问题是否解决"""
     print("测试硬编码问题修复...")
     try:
-        from config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_LOG_DIR, STUDENT_PHOTOS_DIR, CLASS_PHOTOS_DIR
+        from core.config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_LOG_DIR, STUDENT_PHOTOS_DIR, CLASS_PHOTOS_DIR
         print('✓ 硬编码问题测试通过')
         print(f'  默认输入数据目录: {DEFAULT_INPUT_DIR}')
         print(f'  默认输出目录: {DEFAULT_OUTPUT_DIR}')

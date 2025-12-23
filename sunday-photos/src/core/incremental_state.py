@@ -13,17 +13,19 @@
 from __future__ import annotations
 
 import json
+import re
+import threading
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
-from .utils import DATE_DIR_PATTERN, is_supported_nonempty_image_path, is_ignored_fs_entry
+from .config import STATE_DIR_NAME, CLASS_PHOTOS_SNAPSHOT_FILENAME, SNAPSHOT_VERSION, DATE_DIR_PATTERN
+from .utils import is_supported_nonempty_image_path, is_ignored_fs_entry
 
 
-STATE_DIR_NAME = ".state"
-CLASS_PHOTOS_SNAPSHOT_FILENAME = "class_photos_snapshot.json"
-SNAPSHOT_VERSION = 1
+# 全局锁用于并发安全
+_snapshot_lock = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -50,7 +52,7 @@ def iter_date_directories(class_photos_dir: Path) -> List[Path]:
     for child in class_photos_dir.iterdir():
         if is_ignored_fs_entry(child):
             continue
-        if child.is_dir() and DATE_DIR_PATTERN.match(child.name):
+        if child.is_dir() and re.match(DATE_DIR_PATTERN, child.name):
             date_dirs.append(child)
     return sorted(date_dirs, key=lambda p: p.name)
 
@@ -102,21 +104,23 @@ def build_class_photos_snapshot(class_photos_dir: Path) -> Dict:
 
 def load_snapshot(output_dir: Path) -> Optional[Dict]:
     """从输出目录加载历史快照；不存在或损坏时返回 None。"""
-    path = snapshot_file_path(output_dir)
-    if not path.exists():
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
+    with _snapshot_lock:
+        path = snapshot_file_path(output_dir)
+        if not path.exists():
+            return None
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return None
 
 
 def save_snapshot(output_dir: Path, snapshot: Dict) -> None:
     """保存快照到输出目录（UTF-8 + pretty json，便于人工排查）。"""
-    state_dir = _state_dir(output_dir)
-    state_dir.mkdir(parents=True, exist_ok=True)
-    path = snapshot_file_path(output_dir)
-    path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
+    with _snapshot_lock:
+        state_dir = _state_dir(output_dir)
+        state_dir.mkdir(parents=True, exist_ok=True)
+        path = snapshot_file_path(output_dir)
+        path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def compute_incremental_plan(previous: Optional[Dict], current: Dict) -> IncrementalPlan:

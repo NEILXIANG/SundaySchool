@@ -1,5 +1,6 @@
 import sys
 import types
+from pathlib import Path
 
 
 def _install_face_recognition_stub() -> None:
@@ -34,3 +35,14 @@ try:
     import face_recognition  # type: ignore  # noqa: F401
 except Exception:
     _install_face_recognition_stub()
+
+
+def create_minimal_test_image(path: Path) -> None:
+    """创建一个最小的测试图片文件（非空，可通过 is_supported_nonempty_image_path 检查）。
+    
+    说明：测试不应依赖可解码的真实图片（避免引入 PIL/face_recognition 解析开销），
+    只需确保文件非空即可通过扫描与加载阶段的校验。
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # 使用任意非空字节（例如 "fake image"）
+    path.write_bytes(b"fake-test-image-data")

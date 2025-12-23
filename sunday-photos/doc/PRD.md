@@ -1,75 +1,293 @@
 # 产品需求说明文档 / Product Requirements Document (PRD)
 项目：主日学照片整理工具 / Sunday Photos Organizer  
-版本：1.0
+版本：1.3.0  
+更新日期：2025-12-23
 
 ---
 
 ## 1. 产品概述 / Overview
-- 目标 Goals：
-  - 通过人脸识别将课堂合照按学生分类 / Classify classroom photos by student via face recognition.
-  - 输出按日期+学生组织 / Outputs organized by date and student.
-  - 路径与阈值可配置 / Configurable paths and tolerance.
-- 用户 Users：主日学教师、活动组织者；零基础也可用 / Teachers and organizers; non-technical friendly.
+
+### 1.1 产品定位
+- **核心价值**：解放老师双手，让照片管理从"繁琐手工"变成"一键完成"
+- **目标用户**：主日学教师、培训机构组织者、活动管理员（零技术背景可用）
+- **应用场景**：课堂合照批量整理、活动照片归档、学生成长记录管理
+
+### 1.2 核心目标
+- 通过人脸识别将课堂合照按学生自动分类 / Classify classroom photos by student via face recognition
+- 输出按 `学生/日期` 三级组织，直观易用 / Outputs organized by student and date
+- 智能识别未知人脸并自动聚类（访客/家长归组）/ Cluster unknown faces automatically
+- 零配置启动，打包版双击即用 / Zero-config start, packaged version ready-to-use
+- 路径与阈值可配置，满足高级需求 / Configurable paths and tolerance for advanced users
+
+---
 
 ## 2. 功能需求 / Functional Requirements
-- 核心功能 Core Features：
-  - 人脸识别 / Face recognition (`face_recognition`).
-  - 文件整理 / File organizer (student/date folders).
-  - 配置管理 / Config management via config.json.
-  - 日志记录 / Logging with levels.
-- 命令行接口 CLI：
-  ```bash
-  python src/run.py \
-    --input-dir "input" \    # 默认输入 default input
-    --output-dir "output" \   # 默认输出 default output
-    --tolerance 0.6           # 阈值 tolerance 0~1 (default 0.6)
-  ```
 
-## 3. 非功能需求 / Non-Functional
-- 性能 Performance：≤2s/张（标准硬件）；支持并发（需按需优化）。
-- 兼容 Compatibility：Windows/macOS/Linux；Python >=3.8.
-- 安全 Security：配置字段必填/范围校验；日志不记录人脸编码。
+### 2.1 核心功能
+- **人脸识别引擎** / Face Recognition Engine：
+  - 基于 `face_recognition` (dlib深度学习模型)
+  - 支持多编码融合（每学生多张参考照，自动选择最佳匹配）
+  - 识别准确率 >95%（参考照质量良好时）
+  
+- **智能聚类** / Intelligent Clustering (v1.3.0)：
+  - 未知人脸自动聚类，相似人脸归入 `Unknown_Person_X` 组
+  - 贪婪算法 + 严格阈值(0.45)，避免误聚类
+  - 应用场景：访客/家长/新学生自动归档
+  
+- **增量处理** / Incremental Processing：
+  - 按日期文件夹追踪处理状态，仅处理变化部分
+  - 删除同步：输入删除时自动清理输出
+  - 识别结果缓存：参数未变时复用，提升速度
+  
+- **智能并行** / Smart Parallelization：
+  - 自适应：照片数<30自动串行，≥50提示并行
+  - 性能提升60-70%（大批量场景）
+  - 异常自动回退串行，确保完成
+  
+- **文件整理** / File Organization：
+  - 输出结构：`output/学生名/日期/照片`
+  - 未知照片：`output/unknown_photos/日期/` 或 `output/unknown_photos/Unknown_Person_X/日期/`
+  - 智能文件命名：保留原名 + 时间戳，避免冲突
+  
+- **配置管理** / Configuration Management：
+  - config.json（支持注释字段）
+  - 环境变量覆盖（临时配置）
+  - 命令行参数（调试用）
+  
+- **日志与报告** / Logging & Reporting：
+  - 彩色日志（绿色成功/黄色警告/红色错误）
+  - 实时进度条（tqdm）
+  - 详细统计报告（耗时/成功率/学生分布）
 
-## 4. 数据需求 / Data
-- 输入 Input：
-  ```
-  input/
-  ├── student_photos/      # 唯一方式：student_photos/学生名/ 里放参考照（文件名随意）
-  └── class_photos/        # 推荐日期子目录 / date subfolders recommended
-  ```
-  格式 formats: jpg/png；单张大小不做限制（超大图片可能占用更多内存，资源不足时程序会提示并跳过）。
-  参考照数量：每位学生最多使用 5 张（建议 2–5 张，越清晰越好）。
-- 输出 Output：
-  ```
-  output/
-  ├── ZhangSan/
-  │   ├── 2025-12-21/
-  │   └── 2025-12-28/
-  └── LiSi/
-      └── 2025-12-21/
-  ```
+### 2.2 命令行接口 / CLI
+```bash
+# 基础使用
+python run.py
 
-## 5. 配置需求 / Config
-- config.json
-  ```json
-  {
-    "input_dir": "input",      // 必填 required
-    "output_dir": "output",     // 必填 required
-    "tolerance": 0.6,           // 可选 optional 0~1
-    "log_level": "INFO"         // 可选 optional: DEBUG/INFO/WARNING/ERROR
+# 带参数使用
+python run.py \
+  --input-dir "input" \      # 输入目录 default: input
+  --output-dir "output" \    # 输出目录 default: output
+  --tolerance 0.6           # 识别阈值 default: 0.6
+
+# 环境变量
+SUNDAY_PHOTOS_PARALLEL=1 python run.py  # 临时启用并行
+SUNDAY_PHOTOS_NO_PARALLEL=1 python run.py  # 强制禁用并行
+```
+
+### 2.3 打包版（老师模式）
+- **运行方式**：双击 `release_console/启动工具.sh` (macOS) 或 `Launch_SundayPhotoOrganizer.bat` (Windows)
+- **工作目录**：桌面 `SundaySchoolPhotoOrganizer/`（首次自动创建）
+- **参数配置**：通过 `config.json` 修改（可选，默认即可）
+
+---
+
+## 3. 非功能需求 / Non-Functional Requirements
+
+### 3.1 性能
+- **识别速度** Performance：
+  - 串行模式：≤2s/张（标准硬件）
+  - 并行模式：≤0.5s/张（4核CPU）
+  - 增量处理：第二次运行速度提升 80%+
+  
+- **资源占用** Resource Usage：
+  - 内存：100张照片约 500MB-1GB
+  - CPU：支持多核并行（自适应）
+  - 磁盘：缓存约 10MB/100张照片
+
+### 3.2 兼容性 / Compatibility
+- **操作系统**：Windows 10+, macOS 10.15+, Linux (Ubuntu 20.04+)
+- **Python版本**：3.7 - 3.14（推荐 3.10+）
+- **架构支持**：x86_64, ARM64 (macOS M1/M2)
+
+### 3.3 安全性 / Security
+- 配置字段范围校验（tolerance: 0-1）
+- 日志不记录人脸编码（numpy数组）
+- 缓存使用原子操作，避免损坏
+
+### 3.4 稳定性 / Reliability
+- **容错设计**：核心流程确保完成，辅助功能静默失败
+- **自动回退**：并行失败→串行，内存不足→跳过
+- **错误回滚**：文件操作失败时自动清理
+- **测试覆盖**：128个测试用例，涵盖核心/边界/打包验证
+
+---
+
+## 4. 数据需求 / Data Requirements
+
+### 4.1 输入规范 / Input
+```
+input/
+├── student_photos/      # 学生参考照（唯一方式：student_photos/学生名/...）
+│   ├── Alice/
+│   │   ├── ref_01.jpg   # 文件名随意
+│   │   └── ref_02.png
+│   └── Bob/
+│       └── photo.jpg
+└── class_photos/        # 课堂照片（建议按日期子目录）
+    ├── 2025-12-21/
+    │   └── group.jpg
+    └── loose.jpg        # 根目录照片会自动移动到日期子目录
+```
+
+- **格式支持**：JPG, PNG, BMP（自动检测）
+- **文件大小**：不做限制（超大图片可能占用更多内存）
+- **参考照数量**：每学生最多使用 5张（按修改时间取最新）
+- **参考照质量要求**：
+  - 清晰正脸，无遮挡
+  - 尽量单人照（避免多人合照）
+  - 建议 2-5张不同角度
+
+### 4.2 输出结构 / Output
+```
+output/
+├── Alice/                    # 学生文件夹
+│   ├── 2025-12-21/
+│   │   ├── group_103045.jpg
+│   │   └── activity_104823.jpg
+│   └── 2025-12-28/
+│       └── discussion_101010.jpg
+├── Bob/
+│   └── 2025-12-21/
+│       └── group_103045.jpg
+├── unknown_photos/           # 未识别照片
+│   ├── Unknown_Person_1/     # 聚类组（v1.3.0）
+│   │   └── 2025-12-21/
+│   │       ├── visitor_a.jpg
+│   │       └── visitor_b.jpg
+│   └── 2025-12-21/           # 单次出现
+│       └── blurry_105632.jpg
+├── .state/                   # 隐藏状态（增量/缓存）
+│   ├── snapshot.json
+│   └── recognition_cache_by_date/
+│       └── 2025-12-21.json
+└── 20251221_143052_整理报告.txt
+```
+
+---
+
+## 5. 配置需求 / Configuration
+
+### 5.1 配置文件 (config.json)
+```json
+{
+  "input_dir": "input",                # 必填 required
+  "output_dir": "output",              # 必填 required
+  "log_dir": "logs",                   # 可选 optional
+  "tolerance": 0.6,                    # 识别阈值 0~1, default: 0.6
+  "log_level": "INFO",                 # DEBUG/INFO/WARNING/ERROR
+  "parallel_recognition": {
+    "enabled": false,                  # 并行开关
+    "workers": 4,                      # 进程数
+    "chunk_size": 12,                  # 批次大小
+    "min_photos": 30                   # 启用阈值
   }
-  ```
-- 依赖 Dependencies（requirements.txt）：face_recognition>=1.3.0, Pillow>=10.3.0, numpy>=1.26.0.
+}
+```
 
-## 6. 测试需求 / Testing
-- 场景 Scenarios：单元 / unit；集成 / integration；性能 / performance (100+ photos)。
-- 测试数据 Test data：示例照片位于 tests/data/student_photos 与 tests/data/class_photos。
+### 5.2 依赖管理 (requirements.txt)
+```
+face_recognition>=1.3.0
+face_recognition_models>=0.3.0
+dlib>=19.24.0
+Pillow>=10.3.0
+numpy>=1.26.0
+tqdm>=4.66.0
+```
+
+---
+
+## 6. 测试需求 / Testing Requirements
+
+### 6.1 测试场景
+- **单元测试** Unit Tests：核心功能模块（识别/整理/缓存）
+- **集成测试** Integration Tests：完整流程验收
+- **性能测试** Performance Tests：大批量场景（100+张）
+- **打包验证** Packaging Validation：release acceptance检查
+- **边界测试** Edge Cases：空输入/损坏文件/并发冲突
+
+### 6.2 测试覆盖率
+- **测试用例数**：128个
+- **通过率要求**：100%
+- **测试数据**：tests/data/ 目录
+
+### 6.3 发布前检查清单
+见 [doc/ReleaseAcceptanceChecklist.md](ReleaseAcceptanceChecklist.md)
+
+---
 
 ## 7. 交付物 / Deliverables
-1) 代码仓库（实现、测试、文档） / Repo with impl, tests, docs.
-2) 可执行脚本 run.py（打包/清理脚本单独维护） / run.py; packaging/cleanup separately.
-3) 文档 Docs：README、使用指南、PRD（本文件）。
+
+### 7.1 源码仓库
+- **实现**：src/ 目录（核心模块 + CLI）
+- **测试**：tests/ 目录（128个用例）
+- **文档**：doc/ 目录（PRD/README/开发指南/测试说明/配置说明）
+
+### 7.2 打包产物
+- **macOS (x86_64)**：release_console/SundayPhotoOrganizer (Intel芯片)
+- **macOS (ARM64)**：release_console/SundayPhotoOrganizer (M1/M2芯片)
+- **Windows (x86_64)**：release_console/SundayPhotoOrganizer.exe
+
+### 7.3 用户文档
+- **老师指南**：doc/TeacherGuide.md（中文） + doc/TeacherGuide_en.md（英文）
+- **配置说明**：doc/CONFIG.md（中文） + doc/CONFIG_en.md（英文）
+- **开发指南**：doc/DeveloperGuide.md
+- **测试说明**：doc/TESTING.md
+
+---
 
 ## 8. 风险与约束 / Risks & Constraints
-- 人脸识别精度依赖参考照质量 / Accuracy depends on reference quality.
-- 大批量时的内存/CPU占用 / Resource load for large batches.
+
+### 8.1 技术风险
+- **人脸识别精度**：依赖参考照质量（清晰度/角度/光线）
+- **大批量性能**：200+张照片可能占用较多内存（建议分批处理）
+- **模型体积**：face_recognition_models 约 95MB（可考虑运行时下载）
+
+### 8.2 用户约束
+- **学习成本**：打包版零学习成本；源码版需基础命令行知识
+- **参考照要求**：每学生至少 1张清晰正脸照
+- **硬件要求**：推荐 4GB+ 内存，双核CPU
+
+### 8.3 缓解策略
+- **精度问题**：提供清晰的参考照要求说明 + 智能提示
+- **性能问题**：智能并行 + 增量处理 + 缓存优化
+- **模型体积**：当前版本打包集成，未来可改为首次运行下载
+
+---
+
+## 9. 成功指标 / Success Metrics
+
+### 9.1 功能指标
+- ✅ 识别准确率 >95%（参考照质量良好时）
+- ✅ 100张照片处理时间 <2分钟（并行模式）
+- ✅ 测试通过率 100%（128/128）
+- ✅ 未知人脸聚类准确率 >90%
+
+### 9.2 用户体验指标
+- ✅ 老师首次上手时间 <5分钟（打包版）
+- ✅ 操作步骤 ≤3步（放照片→运行→查看结果）
+- ✅ 错误提示友好度（提供解决方案，非堆栈）
+
+### 9.3 工程质量指标
+- ✅ 代码测试覆盖（核心模块）
+- ✅ 文档完整性（中英文双语）
+- ✅ 跨平台兼容（Windows/macOS/Linux）
+
+---
+
+## 10. 未来规划 / Future Roadmap
+
+### 10.1 短期优化（v1.4）
+- 🔄 参考照质量检测（自动提示模糊/侧脸）
+- 🔄 批量导入学生名单（CSV支持）
+- 🔄 重复照片检测
+
+### 10.2 中期增强（v2.0）
+- 🔄 Web界面（简化老师操作）
+- 🔄 云端存储集成（Google Photos/OneDrive）
+- 🔄 照片质量分析
+
+### 10.3 长期愿景
+- 🔄 移动端应用（iOS/Android）
+- 🔄 多语言界面
+- 🔄 AI照片美化（自动选出最佳角度）

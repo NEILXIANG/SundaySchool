@@ -25,8 +25,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 os.chdir(PROJECT_ROOT)
 
-from student_manager import StudentManager
-from face_recognizer import FaceRecognizer
+from core.student_manager import StudentManager
+from core.face_recognizer import FaceRecognizer
 
 
 def _create_dummy_photos(base_dir: Path, student_count: int = 30) -> None:

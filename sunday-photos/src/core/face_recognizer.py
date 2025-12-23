@@ -404,6 +404,7 @@ class FaceRecognizer:
             # 识别每张人脸
             recognized_students = []
             unknown_faces_count = 0
+            unknown_encodings = []
             known_encodings = self.known_encodings
             known_names = self.known_student_names
             
@@ -429,6 +430,7 @@ class FaceRecognizer:
                         recognized_students.append(student_name)
                 else:
                     unknown_faces_count += 1
+                    unknown_encodings.append(face_encoding)
                     logger.debug(f"在图片中识别到未知人脸: {image_path}")
             
             # 存储结果，在内存释放前返回
@@ -442,7 +444,8 @@ class FaceRecognizer:
                     'message': f'检测到{total_faces_detected}张人脸，识别到{recognized_count}名学生',
                     'recognized_students': recognized_students,
                     'total_faces': total_faces_detected,
-                    'unknown_faces': unknown_faces_count
+                    'unknown_faces': unknown_faces_count,
+                    'unknown_encodings': unknown_encodings
                 }
             else:
                 result = recognized_students
@@ -523,11 +526,13 @@ class FaceRecognizer:
                     return 0.0
             except Exception:
                 pass
-            # 找到学生的编码
+            # 找到学生的编码（支持多编码）
             if student_name not in self.students_encodings:
                 return 0.0
                 
-            student_encoding = self.students_encodings[student_name]['encoding']
+            student_encodings = self.students_encodings[student_name]['encodings']
+            if not student_encodings:
+                return 0.0
             
             # 加载图片并识别人脸
             image = face_recognition.load_image_file(image_path)
@@ -566,10 +571,14 @@ class FaceRecognizer:
                     del face_locations
                 return 0.0
             
-            distances = [
-                face_recognition.face_distance([student_encoding], encoding)[0]
-                for encoding in face_encodings
-            ]
+            # 对每个参考编码和每个检测到的人脸计算距离，取全局最小值
+            all_distances = []
+            for face_encoding in face_encodings:
+                for student_encoding in student_encodings:
+                    distance = face_recognition.face_distance([student_encoding], face_encoding)[0]
+                    all_distances.append(distance)
+            
+            distances = all_distances
             
             if len(distances) == 0:
                 if image is not None:
@@ -664,6 +673,47 @@ class FaceRecognizer:
                     'encodings': [face_encoding]
                 }
                 self._refresh_known_faces()
+                
+                # 持久化更新：保存到缓存文件和snapshot
+                try:
+                    rel = self._rel_to_input(new_photo_path)
+                    st = os.stat(new_photo_path)
+                    mtime = int(st.st_mtime)
+                    size = int(st.st_size)
+                    
+                    # 写入 per-photo 缓存
+                    cache_key = hashlib.sha1(f"{rel}|{mtime}|{size}".encode("utf-8")).hexdigest()
+                    cache_file = f"{cache_key}.npy"
+                    cache_path = self._ref_cache_dir / cache_file
+                    np.save(str(cache_path), face_encoding)
+                    
+                    # 重新加载snapshot并更新
+                    prev = self._load_ref_snapshot()
+                    students_data = prev.get('students', {}) if prev else {}
+                    students_data[student_name] = [{
+                        'rel_path': rel,
+                        'mtime': mtime,
+                        'size': size,
+                        'status': 'ok',
+                        'cache': cache_file
+                    }]
+                    
+                    # 重新计算fingerprint
+                    selected_for_fingerprint = [{'rel_path': rel, 'mtime': mtime, 'size': size}]
+                    self.reference_fingerprint = self._make_reference_fingerprint(selected_for_fingerprint)
+                    
+                    next_snapshot = {
+                        'version': 1,
+                        'mode': 'student_folder_only',
+                        'max_photos_per_student': 5,
+                        'students': students_data,
+                        'reference_fingerprint': self.reference_fingerprint
+                    }
+                    self._save_ref_snapshot(next_snapshot)
+                    
+                    logger.debug(f"已持久化学生 {student_name} 的更新编码")
+                except Exception as e:
+                    logger.debug(f"持久化编码失败（不影响当前会话）: {e}")
                 
                 # 释放内存
                 if image is not None:
