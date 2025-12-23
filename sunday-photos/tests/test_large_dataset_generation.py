@@ -149,13 +149,13 @@ def test_large_dataset_incremental_and_organize():
         assert produced >= 50, f"输出文件数过少(清理后): {produced}"
 
     print("✓ 大规模数据自动构建与验证通过")
-    return True
+    return
 
 
 def main():
     ok = True
     try:
-        ok = bool(test_large_dataset_incremental_and_organize()) and ok
+        test_large_dataset_incremental_and_organize()
     except AssertionError as e:
         print(f"✗ 断言失败: {e}")
         ok = False

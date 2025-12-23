@@ -34,11 +34,9 @@ def test_config_loader_integration():
         output_dir = config_loader.get_output_dir()
         tolerance = config_loader.get_tolerance()
         print(f"✓ 参数解析成功，默认值: input_dir={input_dir}, tolerance={tolerance}")
-        
-        return True
     except Exception as e:
         print(f"✗ 配置加载器集成测试失败: {e}")
-        return False
+        raise AssertionError(f"配置加载器集成测试失败: {e}") from e
 
 def test_system_initialization():
     """测试系统初始化和tolerance设置"""
@@ -70,15 +68,13 @@ def test_system_initialization():
                     print(f"✗ tolerance设置失败: 仍然是 {new_tolerance}")
             else:
                 print("✗ face_recognizer未正确初始化")
-                return False
+                assert False, "face_recognizer未正确初始化"
         else:
             print("✗ 系统组件初始化失败")
-            return False
-            
-        return True
+            assert False, "系统组件初始化失败"
     except Exception as e:
         print(f"✗ 系统初始化测试失败: {e}")
-        return False
+        raise AssertionError(f"系统初始化测试失败: {e}") from e
 
 def test_detailed_recognition_status():
     """测试详细识别状态功能"""
@@ -96,15 +92,13 @@ def test_detailed_recognition_status():
                 print("✓ recognize_faces方法包含return_details参数")
             else:
                 print("✗ recognize_faces方法缺少return_details参数")
-                return False
+                assert False, "recognize_faces方法缺少return_details参数"
         else:
             print("✗ recognize_faces方法不存在")
-            return False
-            
-        return True
+            assert False, "recognize_faces方法不存在"
     except Exception as e:
         print(f"✗ 详细识别状态测试失败: {e}")
-        return False
+        raise AssertionError(f"详细识别状态测试失败: {e}") from e
 
 def test_memory_cleanup():
     """测试内存清理功能"""
@@ -119,12 +113,10 @@ def test_memory_cleanup():
             print("✓ face_recognizer.py包含内存清理代码")
         else:
             print("✗ face_recognizer.py缺少内存清理代码")
-            return False
-            
-        return True
+            assert False, "face_recognizer.py缺少内存清理代码"
     except Exception as e:
         print(f"✗ 内存清理测试失败: {e}")
-        return False
+        raise AssertionError(f"内存清理测试失败: {e}") from e
 
 def test_import_paths():
     """测试导入路径一致性"""
@@ -142,18 +134,16 @@ def test_import_paths():
             print("✓ run.py使用一致的导入路径")
         else:
             print("✗ run.py导入路径不一致")
-            return False
+            assert False, "run.py导入路径不一致"
             
         if "PROJECT_ROOT" in test_content and "sys.path.insert(0, str(PROJECT_ROOT / 'src'))" in test_content:
             print("✓ test_basic.py使用一致的导入路径")
         else:
             print("✗ test_basic.py导入路径不一致")
-            return False
-            
-        return True
+            assert False, "test_basic.py导入路径不一致"
     except Exception as e:
         print(f"✗ 导入路径测试失败: {e}")
-        return False
+        raise AssertionError(f"导入路径测试失败: {e}") from e
 
 def test_directory_structure():
     """测试目录结构一致性"""
@@ -165,42 +155,41 @@ def test_directory_structure():
             print("✓ input/student_photos目录存在")
         else:
             print("✗ input/student_photos目录不存在")
-            return False
+            assert False, "input/student_photos目录不存在"
             
         if os.path.exists('input/class_photos'):
             print("✓ input/class_photos目录存在")
         else:
             print("✗ input/class_photos目录不存在")
-            return False
-            
-        return True
+            assert False, "input/class_photos目录不存在"
     except Exception as e:
         print(f"✗ 目录结构测试失败: {e}")
-        return False
+        raise AssertionError(f"目录结构测试失败: {e}") from e
 
 def main():
     """运行所有验证测试"""
     print("开始验证修复后的代码功能...\n")
     
     all_passed = True
-    
-    if not test_config_loader_integration():
-        all_passed = False
-    
-    if not test_system_initialization():
-        all_passed = False
-    
-    if not test_detailed_recognition_status():
-        all_passed = False
-    
-    if not test_memory_cleanup():
-        all_passed = False
-    
-    if not test_import_paths():
-        all_passed = False
-    
-    if not test_directory_structure():
-        all_passed = False
+
+    tests = [
+        ("配置加载器集成", test_config_loader_integration),
+        ("系统初始化", test_system_initialization),
+        ("详细识别状态", test_detailed_recognition_status),
+        ("内存清理", test_memory_cleanup),
+        ("导入路径", test_import_paths),
+        ("目录结构", test_directory_structure),
+    ]
+
+    for name, fn in tests:
+        try:
+            fn()
+        except AssertionError as e:
+            all_passed = False
+            print(f"✗ {name} 断言失败: {e}")
+        except Exception as e:
+            all_passed = False
+            print(f"✗ {name} 测试异常: {e}")
     
     print("\n验证结果:")
     if all_passed:

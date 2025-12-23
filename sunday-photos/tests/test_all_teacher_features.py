@@ -62,15 +62,12 @@ def test_teacher_friendly_error_messages():
                     print(f"❌ {description}: 消息过短")
                     all_passed = False
         
-        if all_passed:
-            print("✅ 教师友好错误消息测试通过")
-            return True
-        else:
-            return False
+        assert all_passed, "教师友好错误消息检查未通过"
+        print("✅ 教师友好错误消息测试通过")
             
     except Exception as e:
         print(f"❌ 测试失败: {e}")
-        return False
+        raise AssertionError(f"测试失败: {e}") from e
 
 def test_input_validation():
     """测试输入验证功能"""
@@ -87,13 +84,13 @@ def test_input_validation():
             result = validator.validate_photo_name(name)
             if not result['valid']:
                 print(f"❌ 有效文件名验证失败: {name}")
-                return False
+                assert False, f"有效文件名验证失败: {name}"
         
         for name in invalid_names:
             result = validator.validate_photo_name(name)
             if result['valid']:
                 print(f"❌ 无效文件名应该被拒绝: {name}")
-                return False
+                assert False, f"无效文件名应该被拒绝: {name}"
         
         # 测试阈值验证
         valid_tolerances = ['0.5', '0.6', '0.8']
@@ -103,20 +100,19 @@ def test_input_validation():
             result = validator.validate_tolerance_parameter(tolerance)
             if not result['valid']:
                 print(f"❌ 有效阈值验证失败: {tolerance}")
-                return False
+                assert False, f"有效阈值验证失败: {tolerance}"
         
         for tolerance in invalid_tolerances:
             result = validator.validate_tolerance_parameter(tolerance)
             if result['valid']:
                 print(f"❌ 无效阈值应该被拒绝: {tolerance}")
-                return False
+                assert False, f"无效阈值应该被拒绝: {tolerance}"
         
         print("✅ 输入验证功能测试通过")
-        return True
         
     except Exception as e:
         print(f"❌ 测试失败: {e}")
-        return False
+        raise AssertionError(f"测试失败: {e}") from e
 
 def test_interactive_guide():
     """测试交互式指导"""
@@ -148,11 +144,10 @@ def test_interactive_guide():
         print(f"✅ 目录检查: {dir_result}")
         
         print("✅ 交互式指导测试通过")
-        return True
         
     except Exception as e:
         print(f"❌ 测试失败: {e}")
-        return False
+        raise AssertionError(f"测试失败: {e}") from e
 
 def test_operation_guides():
     """测试操作指南"""
@@ -168,18 +163,17 @@ def test_operation_guides():
             
             if not guide_content or len(guide_content) < 100:
                 print(f"❌ 指南内容为空或过短: {guide_type}")
-                return False
+                assert False, f"指南内容为空或过短: {guide_type}"
             
             if '💡' not in guide_content:
                 print(f"❌ 指南内容缺少建议: {guide_type}")
-                return False
+                assert False, f"指南内容缺少建议: {guide_type}"
         
         print("✅ 操作指南测试通过")
-        return True
         
     except Exception as e:
         print(f"❌ 测试失败: {e}")
-        return False
+        raise AssertionError(f"测试失败: {e}") from e
 
 def test_exception_handler():
     """测试异常处理器"""
@@ -193,11 +187,10 @@ def test_exception_handler():
         print("✅ 友好异常处理器创建成功")
         
         print("✅ 异常处理器测试通过")
-        return True
         
     except Exception as e:
         print(f"❌ 测试失败: {e}")
-        return False
+        raise AssertionError(f"测试失败: {e}") from e
 
 def test_help_integration():
     """测试帮助系统集成"""
@@ -224,7 +217,7 @@ def test_help_integration():
         validation_result = validator.validate_photo_name('张三_1.jpg')
         if not validation_result['valid']:
             print("❌ 验证器工作异常")
-            return False
+            assert False, "验证器工作异常"
         
         helper = TeacherHelper()
         test_error = FileNotFoundError("测试文件不存在")
@@ -232,14 +225,13 @@ def test_help_integration():
         
         if not friendly_msg or len(friendly_msg) < 50:
             print("❌ 辅助器工作异常")
-            return False
+            assert False, "辅助器工作异常"
         
         print("✅ 帮助系统集成测试通过")
-        return True
         
     except Exception as e:
         print(f"❌ 测试失败: {e}")
-        return False
+        raise AssertionError(f"测试失败: {e}") from e
 
 def test_user_friendly_features():
     """测试用户友好特性"""
@@ -260,7 +252,7 @@ def test_user_friendly_features():
         
         if emoji_count < 5:
             print("❌ 表情符号使用不足")
-            return False
+            assert False, "表情符号使用不足"
         
         print(f"✅ 表情符号使用充分: {emoji_count}个")
         
@@ -270,15 +262,14 @@ def test_user_friendly_features():
                 solutions = helper.messages[key]['solutions']
                 if len(solutions) < 2:
                     print(f"❌ {key} 解决方案不足")
-                    return False
+                    assert False, f"{key} 解决方案不足"
         
         print("✅ 解决方案建议充分")
         print("✅ 用户友好特性测试通过")
-        return True
         
     except Exception as e:
         print(f"❌ 测试失败: {e}")
-        return False
+        raise AssertionError(f"测试失败: {e}") from e
 
 def main():
     """主测试函数"""
@@ -303,11 +294,11 @@ def main():
         print("-" * 40)
         
         try:
-            if test_func():
-                passed += 1
-                print(f"✅ {test_name} - 通过")
-            else:
-                print(f"❌ {test_name} - 失败")
+            test_func()
+            passed += 1
+            print(f"✅ {test_name} - 通过")
+        except AssertionError as e:
+            print(f"❌ {test_name} - 失败: {e}")
         except Exception as e:
             print(f"❌ {test_name} - 异常: {e}")
     

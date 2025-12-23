@@ -174,6 +174,10 @@ python run.py --help
 ## 🧪 测试与质量
 
 - 运行全套测试：`python run_all_tests.py`
+- 打包（macOS 控制台 onefile，可生成 release_console/SundayPhotoOrganizer）：`bash scripts/build_mac_app.sh`
+- 打包产物强校验（发布前验收用）：`REQUIRE_PACKAGED_ARTIFACTS=1 python -m pytest -q`
+   - 默认情况下，若未生成 `release_console/SundayPhotoOrganizer`，相关用例会自动跳过（不影响日常开发/CI）。
+   - 也可以使用一键脚本：`python run_all_tests.py --require-packaged-artifacts`
 - 主要测试文件在 [tests/](tests) 目录，涵盖：
    - 基础/修复/集成：如 [tests/test_basic.py](tests/test_basic.py)、[tests/test_integration.py](tests/test_integration.py)
    - 教师友好与上手流：如 [tests/test_teacher_friendly.py](tests/test_teacher_friendly.py)、[tests/test_teacher_onboarding_flow.py](tests/test_teacher_onboarding_flow.py)

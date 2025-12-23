@@ -33,10 +33,9 @@ def test_hardcoding_fixes():
         print(f'  默认日志目录: {DEFAULT_LOG_DIR}')
         print(f'  学生照片目录名: {STUDENT_PHOTOS_DIR}')
         print(f'  课堂照片目录名: {CLASS_PHOTOS_DIR}')
-        return True
     except Exception as e:
         print(f'✗ 硬编码问题测试失败: {e}')
-        return False
+        raise AssertionError(f"硬编码问题测试失败: {e}") from e
 
 def test_import_consistency():
     """测试导入依赖是否一致"""
@@ -47,10 +46,9 @@ def test_import_consistency():
         from file_organizer import FileOrganizer
         from utils import setup_logger, is_supported_image_file
         print('✓ 导入依赖一致性测试通过')
-        return True
     except Exception as e:
         print(f'✗ 导入依赖一致性测试失败: {e}')
-        return False
+        raise AssertionError(f"导入依赖一致性测试失败: {e}") from e
 
 def test_data_structure_consistency():
     """测试数据结构一致性"""
@@ -68,22 +66,22 @@ def test_data_structure_consistency():
         # 检查数据结构
         if not isinstance(students, list):
             print('  数据结构错误: students不是列表')
-            return False
+            assert False, '数据结构错误: students不是列表'
 
         if students:
             first_student = students[0]
             if 'name' in first_student and 'photo_paths' in first_student:
                 print('  数据结构正确: 包含name和photo_paths字段')
-                return True
+                return
             else:
                 print('  数据结构错误: 缺少必要字段')
-                return False
+                assert False, '数据结构错误: 缺少必要字段'
         else:
             print('  提示: 当前没有学生数据，跳过字段检查')
-            return True
+            return
     except Exception as e:
         print(f'✗ 数据结构一致性测试失败: {e}')
-        return False
+        raise AssertionError(f"数据结构一致性测试失败: {e}") from e
 
 def test_dependency_management():
     """测试依赖管理"""
@@ -96,7 +94,7 @@ def test_dependency_management():
         result = subprocess.run([sys.executable, '-m', 'pip', 'list'], capture_output=True, text=True)
         if result.returncode != 0:
             print(f'✗ 依赖管理测试失败: 无法获取包列表')
-            return False
+            assert False, '依赖管理测试失败: 无法获取包列表'
             
         installed = result.stdout.lower()
         required_packages = ['face-recognition', 'pillow', 'numpy', 'tqdm']
@@ -112,13 +110,13 @@ def test_dependency_management():
         
         if not missing_packages:
             print('✓ 依赖管理测试通过')
-            return True
+            return
         else:
             print(f'✗ 依赖管理测试失败: 缺少包 {missing_packages}')
-            return False
+            assert False, f"依赖管理测试失败: 缺少包 {missing_packages}"
     except Exception as e:
         print(f'✗ 依赖管理测试失败: {e}')
-        return False
+        raise AssertionError(f"依赖管理测试失败: {e}") from e
 
 def test_config_loader():
     """测试配置加载器"""
@@ -138,34 +136,37 @@ def test_config_loader():
             print(f'  输出目录: {output_dir}')
             print(f'  日志目录: {log_dir}')
             print(f'  识别阈值: {tolerance}')
-            return True
+            return
         else:
             print('✗ 配置加载器测试失败: 配置值不正确')
-            return False
+            assert False, '配置加载器测试失败: 配置值不正确'
     except Exception as e:
         print(f'✗ 配置加载器测试失败: {e}')
-        return False
+        raise AssertionError(f"配置加载器测试失败: {e}") from e
 
 def main():
     """运行所有测试"""
     print("开始验证代码修复...\n")
     
     all_passed = True
-    
-    if not test_hardcoding_fixes():
-        all_passed = False
-    
-    if not test_import_consistency():
-        all_passed = False
-    
-    if not test_data_structure_consistency():
-        all_passed = False
-    
-    if not test_dependency_management():
-        all_passed = False
-    
-    if not test_config_loader():
-        all_passed = False
+
+    tests = [
+        ("硬编码问题", test_hardcoding_fixes),
+        ("导入依赖一致性", test_import_consistency),
+        ("数据结构一致性", test_data_structure_consistency),
+        ("依赖管理", test_dependency_management),
+        ("配置加载器", test_config_loader),
+    ]
+
+    for name, fn in tests:
+        try:
+            fn()
+        except AssertionError as e:
+            all_passed = False
+            print(f"✗ {name} 断言失败: {e}")
+        except Exception as e:
+            all_passed = False
+            print(f"✗ {name} 测试异常: {e}")
     
     print("\n测试结果:")
     if all_passed:

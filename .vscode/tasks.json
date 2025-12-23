@@ -1,0 +1,51 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "pytest (sunday-photos)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "pytest", "-q"],
+      "options": {
+        "cwd": "${workspaceFolder}/sunday-photos"
+      },
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "build mac console binary (sunday-photos)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["scripts/build_mac_app.sh"],
+      "options": {
+        "cwd": "${workspaceFolder}/sunday-photos"
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "pytest (require packaged artifacts)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "pytest", "-q"],
+      "options": {
+        "cwd": "${workspaceFolder}/sunday-photos",
+        "env": {
+          "REQUIRE_PACKAGED_ARTIFACTS": "1"
+        }
+      },
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "release acceptance (build + require packaged artifacts)",
+      "dependsOn": [
+        "build mac console binary (sunday-photos)",
+        "pytest (require packaged artifacts)"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "group": "test"
+    }
+  ]
+}

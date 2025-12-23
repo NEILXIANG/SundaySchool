@@ -108,13 +108,13 @@ def test_snapshot_diff_and_cleanup():
         assert not (output_dir / "unknown_photos" / "2024-12-21").exists()
 
     print("✓ 增量处理测试通过")
-    return True
+    return
 
 
 def main():
     ok = True
     try:
-        ok = bool(test_snapshot_diff_and_cleanup()) and ok
+        test_snapshot_diff_and_cleanup()
     except AssertionError as e:
         print(f"✗ 断言失败: {e}")
         ok = False

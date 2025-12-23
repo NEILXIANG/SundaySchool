@@ -14,6 +14,8 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 os.chdir(PROJECT_ROOT)
 
@@ -44,7 +46,11 @@ def test_artifacts_exist():
     """检查控制台发布目录和关键文件是否存在"""
     print("🧪 检查控制台发布产物...")
     if _skip_if_missing_release_dir():
-        return True
+        return
+
+    if not EXECUTABLE.exists() and not _require_packaged_artifacts():
+        print("ℹ️ 未发现可执行文件（可能未打包完成），跳过打包产物完整性测试。")
+        pytest.skip("未发现 release_console/SundayPhotoOrganizer（可能未打包），跳过")
 
     required_items = [RELEASE_DIR, EXECUTABLE, DOC_PATH, LAUNCHER]
     all_good = True
@@ -56,36 +62,38 @@ def test_artifacts_exist():
             print(f"❌ 缺少 {item.relative_to(PROJECT_ROOT)}")
             all_good = False
 
-    return all_good
+    assert all_good, "release_console 打包产物不完整"
 
 
 def test_executable_permission():
     """检查可执行权限"""
     print("\n🧪 检查可执行文件权限...")
     if _skip_if_missing_release_dir():
-        return True
+        return
 
     if not EXECUTABLE.exists():
         print("❌ 可执行文件不存在")
-        return False
+        if _require_packaged_artifacts():
+            assert False, "可执行文件不存在"
+        pytest.skip("未发现 release_console/SundayPhotoOrganizer（可能未打包），跳过")
 
     if os.access(EXECUTABLE, os.X_OK):
         print("✅ 可执行权限正常")
-        return True
+        return
 
     print("❌ 缺少执行权限")
-    return False
+    assert False, "缺少执行权限"
 
 
 def test_launcher_script():
     """检查启动脚本内容与权限"""
     print("\n🧪 检查启动脚本...")
     if _skip_if_missing_release_dir():
-        return True
+        return
 
     if not LAUNCHER.exists():
         print("❌ 启动脚本不存在")
-        return False
+        assert False, "启动脚本不存在"
 
     content = LAUNCHER.read_text(encoding="utf-8")
     has_exec_permission = os.access(LAUNCHER, os.X_OK)
@@ -101,18 +109,18 @@ def test_launcher_script():
     else:
         print("❌ 脚本缺少执行权限")
 
-    return references_binary and has_exec_permission
+    assert references_binary and has_exec_permission, "启动脚本内容或权限不符合预期"
 
 
 def test_documentation():
     """检查控制台用户文档"""
     print("\n🧪 检查用户文档...")
     if _skip_if_missing_release_dir():
-        return True
+        return
 
     if not DOC_PATH.exists():
         print("❌ 用户文档不存在")
-        return False
+        assert False, "用户文档不存在"
 
     content = DOC_PATH.read_text(encoding="utf-8")
     required_sections = [
@@ -129,7 +137,7 @@ def test_documentation():
             print(f"❌ 缺少'{section}'部分")
             all_good = False
 
-    return all_good
+    assert all_good, "用户文档缺少必要章节"
 
 
 def main():
@@ -150,8 +158,11 @@ def main():
     results = []
     for test_name, test_func in tests:
         try:
-            result = test_func()
-            results.append((test_name, result))
+            test_func()
+            results.append((test_name, True))
+        except AssertionError as e:
+            print(f"❌ {test_name} 断言失败: {e}")
+            results.append((test_name, False))
         except Exception as e:
             print(f"❌ {test_name}测试出错: {e}")
             results.append((test_name, False))

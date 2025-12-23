@@ -40,12 +40,12 @@ def test_imports():
         
         from utils import setup_logger, is_supported_image_file
         print("✓ utils 导入成功")
-        
-        return True
+
+        return
     except Exception as e:
         print(f"✗ 导入测试失败: {e}")
         traceback.print_exc()
-        return False
+        raise AssertionError(f"导入测试失败: {e}") from e
 
 def test_component_initialization():
     """测试组件初始化"""
@@ -68,12 +68,12 @@ def test_component_initialization():
         from config_loader import ConfigLoader
         cl = ConfigLoader()
         print("✓ ConfigLoader 初始化成功")
-        
-        return True
+
+        return
     except Exception as e:
         print(f"✗ 组件初始化测试失败: {e}")
         traceback.print_exc()
-        return False
+        raise AssertionError(f"组件初始化测试失败: {e}") from e
 
 def test_integration():
     """测试系统集成"""
@@ -103,16 +103,16 @@ def test_integration():
                 
             else:
                 print("✗ 人脸识别器初始化失败")
-                return False
+                assert False, "人脸识别器初始化失败"
         else:
             print("✗ 系统初始化失败")
-            return False
-        
-        return True
+            assert False, "系统初始化失败"
+
+        return
     except Exception as e:
         print(f"✗ 集成测试失败: {e}")
         traceback.print_exc()
-        return False
+        raise AssertionError(f"集成测试失败: {e}") from e
 
 def test_api_methods():
     """测试API方法"""
@@ -130,16 +130,16 @@ def test_api_methods():
                 print("✓ recognize_faces 方法包含 return_details 参数")
             else:
                 print("✗ recognize_faces 方法缺少 return_details 参数")
-                return False
+                assert False, "recognize_faces 方法缺少 return_details 参数"
         else:
             print("✗ recognize_faces 方法不存在")
-            return False
-        
-        return True
+            assert False, "recognize_faces 方法不存在"
+
+        return
     except Exception as e:
         print(f"✗ API方法测试失败: {e}")
         traceback.print_exc()
-        return False
+        raise AssertionError(f"API方法测试失败: {e}") from e
 
 def test_config_integration():
     """测试配置集成"""
@@ -156,12 +156,12 @@ def test_config_integration():
         print(f"✓ 配置加载成功: input_dir={input_dir}")
         print(f"✓ 输出目录: {output_dir}")
         print(f"✓ 识别阈值: {tolerance}")
-        
-        return True
+
+        return
     except Exception as e:
         print(f"✗ 配置集成测试失败: {e}")
         traceback.print_exc()
-        return False
+        raise AssertionError(f"配置集成测试失败: {e}") from e
 
 def main():
     """主测试函数"""
@@ -180,10 +180,10 @@ def main():
     
     for test_name, test_func in tests:
         try:
-            if test_func():
-                passed += 1
-            else:
-                print(f"测试失败: {test_name}")
+            test_func()
+            passed += 1
+        except AssertionError as e:
+            print(f"测试失败: {test_name} - {e}")
         except Exception as e:
             print(f"测试异常: {test_name} - {e}")
     

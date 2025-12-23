@@ -18,8 +18,14 @@ if [ -n "$TARGET_ARCH" ]; then
     echo "Target arch: $TARGET_ARCH"
 fi
 
-# 优先使用项目虚拟环境中的 python（避免使用系统 python 导致依赖不一致）
-PYTHON="$(pwd)/venv/bin/python"
+# 优先使用工作区根目录的 .venv（测试任务也使用它），其次才用 sunday-photos/venv
+PYTHON="$(pwd)/../.venv/bin/python"
+if [ ! -x "$PYTHON" ]; then
+    PYTHON="$(pwd)/.venv/bin/python"
+fi
+if [ ! -x "$PYTHON" ]; then
+    PYTHON="$(pwd)/venv/bin/python"
+fi
 if [ ! -x "$PYTHON" ]; then
     PYTHON="python3"
 fi

@@ -18,6 +18,8 @@ import time
 import tempfile
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 os.chdir(PROJECT_ROOT)
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -56,19 +58,21 @@ def test_executable():
     print("🧪 测试可执行文件...")
 
     if _skip_if_missing_release_console():
-        return True
+        return
     
     executable_path = Path("release_console/SundayPhotoOrganizer")
     if not executable_path.exists():
         print("❌ 可执行文件不存在")
-        return False
+        if _require_packaged_artifacts():
+            assert False, "可执行文件不存在"
+        pytest.skip("未发现 release_console/SundayPhotoOrganizer（可能未打包），跳过")
     
     # 检查文件权限
     if os.access(executable_path, os.X_OK):
         print("✅ 可执行文件权限正常")
     else:
         print("❌ 可执行文件缺少执行权限")
-        return False
+        assert False, "可执行文件缺少执行权限"
     
     # 检查文件大小
     size_mb = executable_path.stat().st_size / (1024 * 1024)
@@ -76,26 +80,28 @@ def test_executable():
     
     if size_mb > 10:  # 至少10MB
         print("✅ 文件大小正常")
-        return True
+        return
     else:
         print("❌ 文件大小异常")
-        return False
+        assert False, "文件大小异常"
 
 def test_console_launch():
     """测试控制台启动"""
     print("\n🧪 测试控制台启动...")
 
     if _skip_if_missing_release_console():
-        return True
+        return
 
     if not _run_console_binary_tests():
         print("ℹ️ 未设置 RUN_CONSOLE_BINARY_TESTS=1，跳过实际启动二进制（仅做静态检查）。")
-        return True
+        return
     
     executable_path = Path("release_console/SundayPhotoOrganizer")
     if not executable_path.exists():
         print("❌ 可执行文件不存在")
-        return False
+        if _require_packaged_artifacts():
+            assert False, "可执行文件不存在"
+        pytest.skip("未发现 release_console/SundayPhotoOrganizer（可能未打包），跳过")
     
     try:
         print("🚀 启动应用程序...")
@@ -124,29 +130,29 @@ def test_console_launch():
         # 检查是否显示了欢迎信息
         if "主日学课堂照片自动整理工具" in result.stdout:
             print("✅ 应用正常启动，显示欢迎信息")
-            return True
+            return
         else:
             print("❌ 应用启动异常，未显示预期信息")
-            return False
+            assert False, "应用启动异常，未显示预期信息"
             
     except subprocess.TimeoutExpired:
         print("✅ 应用正常启动（超时退出是正常的）")
-        return True
+        return
     except Exception as e:
         print(f"❌ 测试过程中出错: {e}")
-        return False
+        raise AssertionError(f"测试过程中出错: {e}") from e
 
 def test_documentation():
     """测试文档"""
     print("\n🧪 测试使用说明文档...")
 
     if _skip_if_missing_release_console():
-        return True
+        return
     
     doc_path = Path("release_console/使用说明.txt")
     if not doc_path.exists():
         print("❌ 使用说明文档不存在")
-        return False
+        assert False, "使用说明文档不存在"
     
     content = doc_path.read_text(encoding='utf-8')
     
@@ -165,47 +171,47 @@ def test_documentation():
         else:
             print(f"❌ 缺少'{item}'说明")
             all_good = False
-    
-    return all_good
+
+    assert all_good, "使用说明文档缺少关键内容"
 
 def test_launcher_script():
     """测试启动脚本"""
     print("\n🧪 测试启动脚本...")
 
     if _skip_if_missing_release_console():
-        return True
+        return
     
     script_path = Path("release_console/启动工具.sh")
     if not script_path.exists():
         print("❌ 启动脚本不存在")
-        return False
+        assert False, "启动脚本不存在"
     
     # 检查执行权限
     if os.access(script_path, os.X_OK):
         print("✅ 启动脚本执行权限正常")
     else:
         print("❌ 启动脚本缺少执行权限")
-        return False
+        assert False, "启动脚本缺少执行权限"
     
     # 检查内容
     content = script_path.read_text(encoding='utf-8')
     if "SundayPhotoOrganizer" in content:
         print("✅ 启动脚本内容正确")
-        return True
+        return
     else:
         print("❌ 启动脚本内容异常")
-        return False
+        assert False, "启动脚本内容异常"
 
 def simulate_teacher_usage():
     """模拟老师使用场景"""
     print("\n🧪 模拟老师使用场景...")
 
     if _skip_if_missing_release_console():
-        return True
+        return
 
     if not _run_console_binary_tests():
         print("ℹ️ 未设置 RUN_CONSOLE_BINARY_TESTS=1，跳过“模拟老师使用”（会运行二进制并产生输出）。")
-        return True
+        return
     
     tmp_home, env = _temp_home_env()
     test_dir = Path(env["HOME"]) / "Desktop" / "主日学照片整理"
@@ -238,15 +244,16 @@ def simulate_teacher_usage():
                     print(f"✅ {subdir} 文件夹已创建")
                 else:
                     print(f"❌ {subdir} 文件夹创建失败")
-            
-            return True
+
+            # 子目录失败不作为硬失败（仅输出提示），但主目录必须存在
+            return
         else:
             print("❌ 文件夹结构创建失败")
-            return False
+            assert False, "文件夹结构创建失败"
             
     except Exception as e:
         print(f"❌ 模拟测试失败: {e}")
-        return False
+        raise AssertionError(f"模拟测试失败: {e}") from e
 
 def main():
     """运行所有测试"""
@@ -265,8 +272,11 @@ def main():
     for test_name, test_func in tests:
         try:
             print(f"\n{'='*20} {test_name} {'='*20}")
-            result = test_func()
-            results.append((test_name, result))
+            test_func()
+            results.append((test_name, True))
+        except AssertionError as e:
+            print(f"❌ {test_name} 断言失败: {e}")
+            results.append((test_name, False))
         except Exception as e:
             print(f"❌ {test_name}测试出错: {e}")
             results.append((test_name, False))

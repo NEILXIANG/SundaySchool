@@ -25,44 +25,42 @@ def test_imports():
         print("✓ config模块导入成功")
     except ImportError as e:
         print(f"✗ config模块导入失败: {e}")
-        return False
+        assert False, f"config模块导入失败: {e}"
     
     try:
         from student_manager import StudentManager
         print("✓ student_manager模块导入成功")
     except ImportError as e:
         print(f"✗ student_manager模块导入失败: {e}")
-        return False
+        assert False, f"student_manager模块导入失败: {e}"
     
     try:
         from face_recognizer import FaceRecognizer
         print("✓ face_recognizer模块导入成功")
     except ImportError as e:
         print(f"✗ face_recognizer模块导入失败: {e}")
-        return False
+        assert False, f"face_recognizer模块导入失败: {e}"
     
     try:
         from file_organizer import FileOrganizer
         print("✓ file_organizer模块导入成功")
     except ImportError as e:
         print(f"✗ file_organizer模块导入失败: {e}")
-        return False
+        assert False, f"file_organizer模块导入失败: {e}"
     
     try:
         from utils import setup_logger, is_supported_image_file
         print("✓ utils模块导入成功")
     except ImportError as e:
         print(f"✗ utils模块导入失败: {e}")
-        return False
+        assert False, f"utils模块导入失败: {e}"
     
     try:
         from config_loader import ConfigLoader
         print("✓ config_loader模块导入成功")
     except ImportError as e:
         print(f"✗ config_loader模块导入失败: {e}")
-        return False
-    
-    return True
+        assert False, f"config_loader模块导入失败: {e}"
 
 def test_student_manager():
     """测试StudentManager基本功能"""
@@ -90,16 +88,14 @@ def test_student_manager():
             student_manager = StudentManager(str(input_dir))
             students = student_manager.get_all_students()
             student_names = student_manager.get_student_names()
-            
-            if len(students) == 2 and len(student_names) == 2:
-                print("✓ StudentManager基本功能正常")
-                return True
-            else:
-                print(f"✗ StudentManager数据不正确: 学生数={len(students)}, 学生名数={len(student_names)}")
-                return False
+
+            assert len(students) == 2 and len(student_names) == 2, (
+                f"StudentManager数据不正确: 学生数={len(students)}, 学生名数={len(student_names)}"
+            )
+            print("✓ StudentManager基本功能正常")
         except Exception as e:
             print(f"✗ StudentManager测试失败: {e}")
-            return False
+            raise AssertionError(f"StudentManager测试失败: {e}") from e
 
 def test_config_loader():
     """测试ConfigLoader基本功能"""
@@ -113,15 +109,13 @@ def test_config_loader():
         log_dir = config_loader.get_log_dir()
         tolerance = config_loader.get_tolerance()
         
-        if input_dir and output_dir and log_dir and tolerance:
-            print("✓ ConfigLoader基本功能正常")
-            return True
-        else:
-            print(f"✗ ConfigLoader配置不正确: input_dir={input_dir}, output_dir={output_dir}, log_dir={log_dir}, tolerance={tolerance}")
-            return False
+        assert input_dir and output_dir and log_dir and tolerance, (
+            f"ConfigLoader配置不正确: input_dir={input_dir}, output_dir={output_dir}, log_dir={log_dir}, tolerance={tolerance}"
+        )
+        print("✓ ConfigLoader基本功能正常")
     except Exception as e:
         print(f"✗ ConfigLoader测试失败: {e}")
-        return False
+        raise AssertionError(f"ConfigLoader测试失败: {e}") from e
 
 def test_config_file():
     """测试配置文件加载"""
@@ -130,41 +124,42 @@ def test_config_file():
     try:
         from config_loader import ConfigLoader
         config_file = PROJECT_ROOT / "config.json"
-        if config_file.exists():
-            config_loader = ConfigLoader(str(config_file))
-            photo_processing = config_loader.get('photo_processing')
-            face_recognition = config_loader.get('face_recognition')
-            
-            if photo_processing and face_recognition:
-                print("✓ 配置文件加载正常")
-                return True
-            else:
-                print(f"✗ 配置文件内容不正确: photo_processing={photo_processing}, face_recognition={face_recognition}")
-                return False
-        else:
-            print("✗ 配置文件不存在")
-            return False
+        assert config_file.exists(), "配置文件不存在"
+
+        config_loader = ConfigLoader(str(config_file))
+        photo_processing = config_loader.get('photo_processing')
+        face_recognition = config_loader.get('face_recognition')
+
+        assert photo_processing and face_recognition, (
+            f"配置文件内容不正确: photo_processing={photo_processing}, face_recognition={face_recognition}"
+        )
+        print("✓ 配置文件加载正常")
     except Exception as e:
         print(f"✗ 配置文件测试失败: {e}")
-        return False
+        raise AssertionError(f"配置文件测试失败: {e}") from e
 
 def main():
     """运行所有测试"""
     print("开始基本测试...\n")
     
     all_passed = True
-    
-    if not test_imports():
-        all_passed = False
-    
-    if not test_student_manager():
-        all_passed = False
-    
-    if not test_config_loader():
-        all_passed = False
-    
-    if not test_config_file():
-        all_passed = False
+
+    tests = [
+        ("模块导入", test_imports),
+        ("StudentManager", test_student_manager),
+        ("ConfigLoader", test_config_loader),
+        ("配置文件", test_config_file),
+    ]
+
+    for name, fn in tests:
+        try:
+            fn()
+        except AssertionError as e:
+            all_passed = False
+            print(f"✗ {name} 断言失败: {e}")
+        except Exception as e:
+            all_passed = False
+            print(f"✗ {name} 测试异常: {e}")
     
     print("\n测试结果:")
     if all_passed:

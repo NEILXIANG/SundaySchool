@@ -44,7 +44,7 @@ def init_worker(known_encodings: List[Any], known_names: List[str], tolerance: f
 
 def recognize_one(image_path: str) -> Tuple[str, Dict[str, Any]]:
     """对子进程中的单张照片执行识别，返回 (path, details_dict)。"""
-    import face_recognition
+    import face_recognition  # pyright: ignore[reportMissingImports]
 
     # 结果结构尽量与 FaceRecognizer.recognize_faces(return_details=True) 对齐
     try:
