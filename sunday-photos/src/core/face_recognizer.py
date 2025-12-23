@@ -6,8 +6,43 @@
 import os
 import logging
 import numpy as np
-import face_recognition
 from .config import DEFAULT_TOLERANCE, MIN_FACE_SIZE
+
+
+try:
+    import face_recognition  # type: ignore
+except Exception as e:  # pragma: no cover
+    _FACE_RECOGNITION_IMPORT_ERROR = e
+
+    class _FaceRecognitionStub:
+        """当 face_recognition 未安装时的占位实现。
+
+        说明：
+        - 生产环境必须安装 face_recognition。
+        - 单元测试可通过 mock/patch 这些方法来避免真实依赖。
+        """
+
+        def _raise(self):
+            raise ModuleNotFoundError(
+                "未安装 face_recognition（人脸识别依赖）。请先安装 requirements.txt 中的依赖。"
+            ) from _FACE_RECOGNITION_IMPORT_ERROR
+
+        def load_image_file(self, *args, **kwargs):
+            self._raise()
+
+        def face_locations(self, *args, **kwargs):
+            self._raise()
+
+        def face_encodings(self, *args, **kwargs):
+            self._raise()
+
+        def compare_faces(self, *args, **kwargs):
+            self._raise()
+
+        def face_distance(self, *args, **kwargs):
+            self._raise()
+
+    face_recognition = _FaceRecognitionStub()  # type: ignore
 
 logger = logging.getLogger(__name__)
 

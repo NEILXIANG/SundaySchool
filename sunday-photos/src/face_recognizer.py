@@ -5,7 +5,33 @@
 - 保留内存清理关键字，满足内容扫描测试（实际逻辑在 core 里）。
 """
 
-import face_recognition  # noqa: F401
+try:
+	import face_recognition  # type: ignore # noqa: F401
+except Exception as e:  # pragma: no cover
+	_FACE_RECOGNITION_IMPORT_ERROR = e
+
+	class _FaceRecognitionStub:
+		def _raise(self):
+			raise ModuleNotFoundError(
+				"未安装 face_recognition（人脸识别依赖）。请先安装 requirements.txt 中的依赖。"
+			) from _FACE_RECOGNITION_IMPORT_ERROR
+
+		def load_image_file(self, *args, **kwargs):
+			self._raise()
+
+		def face_locations(self, *args, **kwargs):
+			self._raise()
+
+		def face_encodings(self, *args, **kwargs):
+			self._raise()
+
+		def compare_faces(self, *args, **kwargs):
+			self._raise()
+
+		def face_distance(self, *args, **kwargs):
+			self._raise()
+
+	face_recognition = _FaceRecognitionStub()  # type: ignore
 
 from core.face_recognizer import FaceRecognizer  # noqa: F401
 

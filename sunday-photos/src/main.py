@@ -7,6 +7,7 @@ import os
 import sys
 import logging
 import argparse
+import re
 from pathlib import Path
 from datetime import datetime
 from tqdm import tqdm
@@ -19,7 +20,7 @@ from utils import setup_logger, is_supported_image_file, get_photo_date
 from student_manager import StudentManager
 from face_recognizer import FaceRecognizer
 from file_organizer import FileOrganizer
-from config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_LOG_DIR, DEFAULT_TOLERANCE, CLASS_PHOTOS_DIR
+from config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_LOG_DIR, DEFAULT_TOLERANCE, CLASS_PHOTOS_DIR, MIN_FACE_SIZE
 from config_loader import ConfigLoader
 from core.incremental_state import (
     build_class_photos_snapshot,
@@ -27,6 +28,19 @@ from core.incremental_state import (
     load_snapshot,
     save_snapshot,
 )
+
+from core.recognition_cache import (
+    CacheKey,
+    compute_params_fingerprint,
+    load_date_cache,
+    normalize_cache_for_fingerprint,
+    lookup_result,
+    store_result,
+    prune_entries,
+    save_date_cache_atomic,
+    invalidate_date_cache,
+)
+from core.parallel_recognizer import parallel_recognize
 
 
 class SimplePhotoOrganizer:
@@ -182,7 +196,12 @@ class SimplePhotoOrganizer:
             for root, _, files in os.walk(date_dir):
                 for file in files:
                     if is_supported_image_file(file):
-                        photo_files.append(os.path.join(root, file))
+                        p = Path(root) / file
+                        try:
+                            if p.is_file() and p.stat().st_size > 0:
+                                photo_files.append(str(p))
+                        except Exception:
+                            continue
 
         self.logger.info(f"✓ 本次需要处理 {len(photo_files)} 张照片")
         self.stats['total_photos'] = len(photo_files)
@@ -202,7 +221,7 @@ class SimplePhotoOrganizer:
                     shutil.rmtree(date_dir, ignore_errors=True)
 
     def process_photos(self, photo_files):
-        """处理照片，进行人脸识别"""
+        """处理照片，进行人脸识别（支持日期级缓存与可选并行）。"""
         self.logger.info(f"[步骤 3/4] 正在进行人脸识别...")
 
         recognition_results = {}
@@ -214,44 +233,143 @@ class SimplePhotoOrganizer:
         no_face_count = 0
         error_count = 0
 
+        def _apply_result(photo_path: str, result: dict) -> None:
+            nonlocal no_face_count, error_count
+
+            recognized_students = result.get('recognized_students') or []
+            status = result.get('status')
+
+            if status == 'success':
+                recognition_results[photo_path] = recognized_students
+                self.stats['recognized_photos'] += 1
+                self.stats['students_detected'].update(recognized_students)
+
+                student_names = ", ".join(recognized_students)
+                self.logger.debug(f"识别到: {os.path.basename(photo_path)} -> {student_names}")
+            elif status == 'no_faces_detected':
+                no_face_photos.append(photo_path)
+                no_face_count += 1
+                self.logger.debug(f"无人脸: {os.path.basename(photo_path)}")
+            elif status == 'no_matches_found':
+                unknown_photos.append(photo_path)
+                self.stats['unknown_photos'] += 1
+                self.logger.debug(f"未识别到已知学生: {os.path.basename(photo_path)}")
+            else:
+                error_photos.append(photo_path)
+                error_count += 1
+                msg = result.get('message', '')
+                self.logger.error(f"识别出错: {os.path.basename(photo_path)} - {msg}")
+
+            self.stats['processed_photos'] += 1
+
+        def _extract_date_and_rel(photo_path: str) -> tuple[str, str]:
+            p = Path(photo_path)
+            try:
+                rel = p.relative_to(self.photos_dir).as_posix()
+            except Exception:
+                rel = p.name
+            parts = rel.split('/')
+            if parts and re.fullmatch(r"\d{4}-\d{2}-\d{2}", parts[0] or ""):
+                return parts[0], rel
+            return get_photo_date(photo_path), rel
+
+        params_fingerprint = compute_params_fingerprint(
+            {
+                'tolerance': float(getattr(self.face_recognizer, 'tolerance', DEFAULT_TOLERANCE)),
+                'min_face_size': int(MIN_FACE_SIZE),
+            }
+        )
+        date_to_cache = {}
+        keep_rel_paths_by_date = {}
+        photo_to_key = {}
+        to_recognize = []
+        cache_hit_count = 0
+
         # 使用进度条显示处理进度
         with tqdm(total=len(photo_files), desc="识别照片", unit="张") as pbar:
             for photo_path in photo_files:
                 try:
-                    # 识别人脸（获取详细状态）
-                    result = self.face_recognizer.recognize_faces(photo_path, return_details=True)
-                    recognized_students = result['recognized_students']
-                    
-                    # 根据状态进行分类
-                    if result['status'] == 'success':
-                        recognition_results[photo_path] = recognized_students
-                        self.stats['recognized_photos'] += 1
-                        self.stats['students_detected'].update(recognized_students)
+                    # 跳过 0 字节占位文件（避免真实流程误报）
+                    try:
+                        if os.path.getsize(photo_path) <= 0:
+                            continue
+                    except Exception:
+                        continue
 
-                        # 记录识别到的学生
-                        student_names = ", ".join(recognized_students)
-                        self.logger.debug(f"识别到: {os.path.basename(photo_path)} -> {student_names}")
-                    elif result['status'] == 'no_faces_detected':
-                        no_face_photos.append(photo_path)
-                        no_face_count += 1
-                        self.logger.debug(f"无人脸: {os.path.basename(photo_path)}")
-                    elif result['status'] == 'no_matches_found':
-                        unknown_photos.append(photo_path)
-                        self.stats['unknown_photos'] += 1
-                        self.logger.debug(f"未识别到已知学生: {os.path.basename(photo_path)}")
-                    elif result['status'] == 'error':
-                        error_photos.append(photo_path)
-                        error_count += 1
-                        self.logger.error(f"识别出错: {os.path.basename(photo_path)} - {result['message']}")
+                    date, rel_path = _extract_date_and_rel(photo_path)
+                    st = os.stat(photo_path)
+                    key = CacheKey(date=date, rel_path=rel_path, size=int(st.st_size), mtime=int(st.st_mtime))
 
-                    self.stats['processed_photos'] += 1
+                    if date not in date_to_cache:
+                        raw_cache = load_date_cache(self.output_dir, date)
+                        date_to_cache[date] = normalize_cache_for_fingerprint(raw_cache, date, params_fingerprint)
+                        keep_rel_paths_by_date[date] = set()
+                    keep_rel_paths_by_date[date].add(rel_path)
+
+                    cached = lookup_result(date_to_cache[date], key)
+                    if cached is not None:
+                        cache_hit_count += 1
+                        _apply_result(photo_path, cached)
+                        pbar.update(1)
+                    else:
+                        to_recognize.append(photo_path)
+                        photo_to_key[photo_path] = key
 
                 except Exception as e:
                     self.logger.error(f"处理照片 {photo_path} 失败: {str(e)}")
                     error_photos.append(photo_path)
                     error_count += 1
+                    self.stats['processed_photos'] += 1
+                    pbar.update(1)
 
-                pbar.update(1)
+            if to_recognize:
+                self.logger.info(f"✓ 识别缓存命中: {cache_hit_count} 张；待识别: {len(to_recognize)} 张")
+
+                parallel_cfg = ConfigLoader().get_parallel_recognition()
+                can_parallel = bool(parallel_cfg.get('enabled')) and len(to_recognize) >= int(parallel_cfg.get('min_photos', 0))
+
+                if can_parallel:
+                    try:
+                        for photo_path, result in parallel_recognize(
+                            to_recognize,
+                            known_encodings=getattr(self.face_recognizer, 'known_encodings', []),
+                            known_names=getattr(self.face_recognizer, 'known_student_names', []),
+                            tolerance=float(getattr(self.face_recognizer, 'tolerance', DEFAULT_TOLERANCE)),
+                            min_face_size=int(MIN_FACE_SIZE),
+                            workers=int(parallel_cfg.get('workers', 1)),
+                            chunk_size=int(parallel_cfg.get('chunk_size', 1)),
+                        ):
+                            _apply_result(photo_path, result)
+                            key = photo_to_key.get(photo_path)
+                            if key is not None:
+                                store_result(date_to_cache[key.date], key, result)
+                            pbar.update(1)
+                    except Exception as e:
+                        self.logger.warning(f"并行识别失败，将回退串行识别: {str(e)}")
+                        for photo_path in to_recognize:
+                            result = self.face_recognizer.recognize_faces(photo_path, return_details=True)
+                            _apply_result(photo_path, result)
+                            key = photo_to_key.get(photo_path)
+                            if key is not None:
+                                store_result(date_to_cache[key.date], key, result)
+                            pbar.update(1)
+                else:
+                    for photo_path in to_recognize:
+                        result = self.face_recognizer.recognize_faces(photo_path, return_details=True)
+                        _apply_result(photo_path, result)
+                        key = photo_to_key.get(photo_path)
+                        if key is not None:
+                            store_result(date_to_cache[key.date], key, result)
+                        pbar.update(1)
+            else:
+                self.logger.info(f"✓ 识别缓存命中: {cache_hit_count} 张；待识别: 0 张")
+
+        for date, cache in date_to_cache.items():
+            try:
+                prune_entries(cache, keep_rel_paths_by_date.get(date, set()))
+                save_date_cache_atomic(self.output_dir, date, cache)
+            except Exception:
+                continue
 
         self.logger.info(f"✓ 人脸识别完成")
         self.logger.info(f"  - 识别到学生的照片: {self.stats['recognized_photos']} 张")
@@ -309,6 +427,10 @@ class SimplePhotoOrganizer:
 
             # 2b. 同步删除/重建：先清理输出中涉及的日期目录
             self._cleanup_output_for_dates(sorted(changed_dates | deleted_dates))
+
+            # 2c. 删除同步：同时清理该日期的识别缓存（缓存删除失败不阻断主流程）
+            for date in sorted(deleted_dates):
+                invalidate_date_cache(self.output_dir, date)
 
             # 若本次没有任何需要处理的照片（可能是“无变化”或“仅删除”）
             if not photo_files:

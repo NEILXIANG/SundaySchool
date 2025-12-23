@@ -19,9 +19,10 @@ class ConfigLoader:
         self.config_file = config_file
         self.config_data = {}
         
-        # 默认配置文件位置
+        # 默认配置文件位置：项目根目录的 config.json（sunday-photos/config.json）
+        # 说明：本文件位于 src/core/，上溯两级为项目根目录。
         if not self.config_file:
-            self.config_file = Path(__file__).parent.parent / "config.json"
+            self.config_file = Path(__file__).resolve().parents[2] / "config.json"
         
         # 尝试加载配置文件
         self.load_config()
@@ -78,6 +79,40 @@ class ConfigLoader:
     def get_tolerance(self):
         """获取人脸识别阈值配置"""
         return self.get('tolerance', 0.6)
+
+    def get_parallel_recognition(self):
+        """获取并行识别配置。
+
+        约定：
+        - 未配置时使用保守默认值
+        - 环境变量 SUNDAY_PHOTOS_NO_PARALLEL=1 可强制关闭（便于排障/低内存机器）
+        """
+        raw = self.get('parallel_recognition', {}) or {}
+        try:
+            enabled = bool(raw.get('enabled', False))
+            workers = int(raw.get('workers', 4))
+            chunk_size = int(raw.get('chunk_size', 12))
+            min_photos = int(raw.get('min_photos', 30))
+        except Exception:
+            enabled, workers, chunk_size, min_photos = False, 4, 12, 30
+
+        if os.environ.get('SUNDAY_PHOTOS_NO_PARALLEL', '').strip().lower() in ('1', 'true', 'yes', 'y', 'on'):
+            enabled = False
+
+        # 最小保护
+        if workers < 1:
+            workers = 1
+        if chunk_size < 1:
+            chunk_size = 1
+        if min_photos < 0:
+            min_photos = 0
+
+        return {
+            'enabled': enabled,
+            'workers': workers,
+            'chunk_size': chunk_size,
+            'min_photos': min_photos,
+        }
     
     def get_all_config(self):
         """获取所有配置"""
