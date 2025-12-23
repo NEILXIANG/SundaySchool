@@ -1,6 +1,6 @@
 # Release Acceptance Checklist
 
-**Version**: v1.3.0  
+**Version**: v0.4.0  
 **Updated**: 2025-12-23
 
 Purpose: Ensure the "teacher-ready release package" passes rigorous validation before delivery, preventing issues such as: missing executables, inconsistent documentation, missing directories after running, or teachers not knowing what to do next.
@@ -150,4 +150,4 @@ Recommended acceptance sequence:
 
 ---
 
-*Last Updated: 2025-12-23 | Version: v1.3.0*
+*Last Updated: 2025-12-23 | Version: v0.4.0*

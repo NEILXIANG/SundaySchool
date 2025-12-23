@@ -1,6 +1,6 @@
 # 测试指南 / Testing Guide
 
-**版本**: v1.3.0  
+**版本**: v0.4.0  
 **更新日期**: 2025-12-23
 
 ## 运行方式 / How to Run
@@ -29,7 +29,7 @@
   - `tests/test_all_teacher_features.py`: 教师功能集成验证
   - `tests/test_comprehensive.py`: 综合场景覆盖
 
-### 新功能测试（v1.3.0）
+### 新功能测试（v0.4.0）
 - **未知人脸聚类** Unknown Face Clustering
   - `tests/test_clustering.py`: 聚类算法单元测试
   - `tests/test_integration_clustering.py`: 聚类端到端流程

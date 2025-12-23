@@ -29,7 +29,7 @@
   - 支持多编码融合（每学生多张参考照，自动选择最佳匹配）
   - 识别准确率 >95%（参考照质量良好时）
   
-- **智能聚类** / Intelligent Clustering (v1.3.0)：
+- **智能聚类** / Intelligent Clustering (v0.4.0)：
   - 未知人脸自动聚类，相似人脸归入 `Unknown_Person_X` 组
   - 贪婪算法 + 严格阈值(0.45)，避免误聚类
   - 应用场景：访客/家长/新学生自动归档
@@ -151,7 +151,7 @@ output/
 │   └── 2025-12-21/
 │       └── group_103045.jpg
 ├── unknown_photos/           # 未识别照片
-│   ├── Unknown_Person_1/     # 聚类组（v1.3.0）
+│   ├── Unknown_Person_1/     # 聚类组（v0.4.0）
 │   │   └── 2025-12-21/
 │   │       ├── visitor_a.jpg
 │   │       └── visitor_b.jpg

@@ -1,6 +1,6 @@
 # 开发与打包指南 (Developer Guide)
 
-**版本**: v1.3.0  
+**版本**: v0.4.0  
 **更新日期**: 2025-12-23
 
 面向开发者与发布维护者，涵盖本地调试、架构说明、打包与 CI 工作流。
@@ -32,7 +32,7 @@ sunday-photos/
 │   │   ├── parallel_recognizer.py # 并行识别（多进程）
 │   │   ├── incremental_state.py # 增量处理（快照对比）
 │   │   ├── recognition_cache.py # 识别缓存（按日期分片）
-│   │   ├── clustering.py        # 未知人脸聚类（v1.3.0）
+│   │   ├── clustering.py        # 未知人脸聚类（v0.4.0）
 │   │   ├── config_loader.py     # 配置加载器
 │   │   └── utils.py             # 工具函数
 │   ├── cli/                     # 命令行入口
@@ -230,7 +230,7 @@ SimplePhotoOrganizer (src/core/main.py)
 - 快照：`logs/reference_index.json`（记录 rel_path/size/mtime/status/cache）
 - 优势：参考照未变化时复用，提升 3-5倍 启动速度
 
-**5. 未知人脸聚类**（v1.3.0）：
+**5. 未知人脸聚类**（v0.4.0）：
 - 算法：贪婪聚类（O(n²)）
 - 阈值：0.45（比识别阈值0.6更严格）
 - 输出：`{cluster_name: [photo_paths]}`
@@ -444,7 +444,7 @@ cd release_console
 
 **4. 打包发布**：
 - 创建发布包（包含可执行文件 + 启动脚本 + 使用说明）
-- 命名规范：`SundayPhotoOrganizer_v1.3.0_macOS_x86_64.zip`
+- 命名规范：`SundayPhotoOrganizer_v0.4.0_macOS_x86_64.zip`
 
 **5. 发布说明**：
 - 附带《老师使用指南》（中英文）
