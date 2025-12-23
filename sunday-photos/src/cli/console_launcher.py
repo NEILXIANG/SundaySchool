@@ -176,15 +176,14 @@ class ConsolePhotoOrganizer:
         
         config_file = self.app_directory / "config.json"
         if config_file.exists():
-            print(f"⚙️ 已检测到配置文件，将沿用现有配置: {config_file}")
-            print("   如需调整识别准确度，请修改：face_recognition.tolerance（默认0.6，建议0.45~0.75）")
+            # 老师无需理解/修改配置；保留该文件主要用于一致性与排障。
+            print(f"⚙️ 已检测到配置文件，将继续使用: {config_file.name}")
             return config_file
 
         with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(config_data, f, indent=4, ensure_ascii=False)
 
-        print(f"⚙️ 配置文件已创建: {config_file}")
-        print("   可选：修改 face_recognition.tolerance 调整识别准确度（默认0.6，建议0.45~0.75）")
+        print(f"⚙️ 配置文件已创建: {config_file.name}（无需手动修改）")
         return config_file
 
     def _format_friendly_error(self, e: Exception, context: str = "") -> str:
@@ -223,8 +222,6 @@ class ConsolePhotoOrganizer:
             tolerance = config_loader.get_tolerance()
             if hasattr(organizer, 'face_recognizer') and organizer.face_recognizer:
                 organizer.face_recognizer.tolerance = tolerance
-
-            print(f"🎛️ 当前识别阈值 tolerance = {tolerance}")
             
             print("📸 开始识别人脸并分类照片...")
             print("   ⏳ 这可能需要几分钟时间，请耐心等待...")
@@ -292,7 +289,7 @@ class ConsolePhotoOrganizer:
             print("   1) 确认 student_photos/ 与 class_photos/ 里都有照片")
             print("   2) 学生照片命名：姓名.jpg 或 姓名_2.jpg")
             print("   3) 照片格式：jpg / jpeg / png")
-            print("   4) 如识别不准：可编辑桌面目录下 config.json 调整 tolerance")
+            print("   4) 如识别不准：给该学生补 2-3 张清晰正脸参考照")
             return False
     
     def display_results(self, results, elapsed_time, pipeline_stats=None):

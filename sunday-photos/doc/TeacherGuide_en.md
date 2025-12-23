@@ -32,12 +32,6 @@ If macOS blocks the first run: System Settings → Privacy & Security → Open A
 ## Important note (to avoid surprises)
 - The app may move photos from `class_photos/` into date folders like `YYYY-MM-DD/`. This is expected (it enables incremental processing).
 
-## Adjust accuracy (optional)
-- Edit `Desktop/主日学照片整理/config.json`:
-  - `face_recognition.tolerance` (default 0.6)
-  - Lower = stricter (fewer false matches, may miss some)
-  - Suggested range: 0.45 ~ 0.75
-
 ## Need help?
 - Send the newest log file from `Desktop/主日学照片整理/logs/`.
 
