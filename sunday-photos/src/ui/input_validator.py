@@ -4,8 +4,9 @@
 """
 
 import os
-import re
 from pathlib import Path
+
+from core.utils import is_ignored_fs_entry
 
 class InputValidator:
     """输入验证器"""
@@ -16,87 +17,61 @@ class InputValidator:
     
     def setup_validation_rules(self):
         """设置验证规则"""
-        self.photo_name_pattern = re.compile(
-            r'^(?P<name>[A-Za-z0-9\u4e00-\u9fa5]+)(?:_(?P<seq>[1-9]\d*))?\.(jpg|jpeg|png)$',
-            re.IGNORECASE
-        )
         self.supported_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff'}
     
     def setup_error_messages(self):
         """设置错误消息"""
         self.error_messages = {
-            'photo_name': {
-                'title': '📸 学生照片文件名格式不正确',
-                'correct_format': '正确格式：姓名[可选_序号].扩展名',
-                'examples': ['Alice.jpg', 'Bob_2.png', '张三.jpg', '李四_1.jpg'],
+            'student_photos_layout': {
+                'title': '📸 学生参考照放置方式不正确',
+                'correct_format': '唯一正确方式：student_photos/学生名/（文件夹）里放照片（文件名随意）',
+                'examples': [
+                    'input/student_photos/Alice(Senior)/a.jpg',
+                    'input/student_photos/Bob(Junior)/IMG_0001.png',
+                    'input/student_photos/Charlie/1.jpg'
+                ],
                 'common_mistakes': [
-                    '使用特殊符号：Alice!.jpg',
-                    '序号格式错误：张三_01.jpg',
-                    '扩展名错误：张三_1.txt'
+                    '把照片直接放在 student_photos 根目录（旧方式）',
+                    '在学生文件夹里再建更深一层子文件夹（不支持嵌套）',
+                    '学生文件夹为空或没有图片'
                 ]
-            }
+            },
         }
     
-    def validate_photo_name(self, filename):
-        """验证照片文件名"""
-        is_valid = bool(self.photo_name_pattern.match(filename))
-        
-        if not is_valid:
-            return {
-                'valid': False,
-                'message': self.get_photo_name_error_message(filename)
-            }
-        
-        return {
-            'valid': True,
-            'name': self.extract_student_name(filename),
-            'sequence': self.extract_sequence_number(filename)
-        }
-    
-    def extract_student_name(self, filename):
-        """提取学生姓名"""
-        match = self.photo_name_pattern.match(filename)
-        if match:
-            return match.group('name')
-        return None
-    
-    def extract_sequence_number(self, filename):
-        """提取序号"""
-        match = self.photo_name_pattern.match(filename)
-        if match:
-            seq = match.group('seq')
-            if seq is not None:
-                return int(seq)
-        return None
-    
-    def get_photo_name_error_message(self, filename):
-        """获取照片文件名错误消息"""
-        msg = self.error_messages['photo_name']
-        
+    def get_student_photos_layout_error_message(self, dir_path: str, detail: str = "") -> str:
+        """获取学生参考照目录结构错误消息"""
+        msg = self.error_messages['student_photos_layout']
+
         error_msg = f"""
 {msg['title']}
 
-📁 错误文件：{filename}
+📂 当前位置：{dir_path}
+"""
 
-✅ 正确格式：{msg['correct_format']}
+        if detail:
+            error_msg += f"\n❌ 发现问题：\n{detail}\n"
 
-📝 示例：
+        error_msg += f"""
+✅ 唯一正确方式：
+{msg['correct_format']}
+
+📝 正确示例：
 """
         for example in msg['examples']:
             error_msg += f"   • {example}\n"
-        
+
         error_msg += "\n❌ 常见错误：\n"
         for mistake in msg['common_mistakes']:
             error_msg += f"   • {mistake}\n"
-        
+
         error_msg += """
 💡 修复建议：
-    1. 使用真实姓名（中文或英文）
-    2. 如需多张参考照，可添加序号：姓名_序号
-    3. 序号从1开始，不要用01、02这样的格式
-    4. 使用照片文件的扩展名(.jpg或.png)
+   1. 在 student_photos 里为每个学生建立一个文件夹（文件夹名用于区分学生）
+   2. 把该学生的参考照放进对应文件夹（文件名随意）
+   3. 不要把照片直接放在 student_photos 根目录
+   4. 不要在学生文件夹里再建更深一层子文件夹
 """
-        
+
         return error_msg
     
     def validate_directory_exists(self, dir_path, dir_name="文件夹"):
@@ -194,73 +169,87 @@ class InputValidator:
         return {'valid': True}
     
     def validate_student_photos_directory(self, dir_path):
-        """验证学生照片目录"""
+        """验证学生参考照目录（文件夹模式，唯一用法）。"""
         dir_result = self.validate_directory_exists(dir_path, "学生照片文件夹")
         if not dir_result['valid']:
             return dir_result
-        
-        # 检查目录中是否有照片
-        photo_files = []
-        for file in os.listdir(dir_path):
-            file_path = os.path.join(dir_path, file)
-            if os.path.isfile(file_path):
-                ext = Path(file).suffix.lower()
-                if ext in self.supported_extensions:
-                    photo_files.append(file)
-        
-        if not photo_files:
+
+        base = Path(dir_path)
+
+        def _is_hidden(p: Path) -> bool:
+            return is_ignored_fs_entry(p)
+
+        # 1) 根目录禁止直接放图片
+        root_images = [
+            p.name
+            for p in base.iterdir()
+            if p.is_file() and (p.suffix.lower() in self.supported_extensions) and (not _is_hidden(p))
+        ]
+        if root_images:
+            shown = "\n".join([f"   • {n}" for n in sorted(root_images)[:8]])
+            detail = "student_photos 根目录发现图片文件（请移动到对应学生文件夹）：\n" + shown
             return {
                 'valid': False,
-                'message': f"""
-📁 学生照片文件夹为空
-
-📂 文件夹路径：{dir_path}
-
-💡 解决办法：
-   1. 将学生照片文件放入此文件夹
-   2. 确保照片文件格式正确(.jpg, .png等)
-   3. 检查是否放错了文件夹
-
-📸 照片要求：
-    • 文件名格式：姓名[可选_序号].jpg（如：Alice.jpg 或 张三_1.jpg）
-    • 照片清晰，包含完整人脸
-    • 每个学生至少1-2张照片
-"""
+                'message': self.get_student_photos_layout_error_message(dir_path, detail=detail),
             }
-        
-        # 检查文件名格式
-        invalid_files = []
-        valid_files = []
-        
-        for photo_file in photo_files:
-            validation = self.validate_photo_name(photo_file)
-            if validation['valid']:
-                valid_files.append(photo_file)
-            else:
-                invalid_files.append(photo_file)
-        
-        if invalid_files:
+
+        # 2) 必须存在至少 1 个学生文件夹
+        student_dirs = [p for p in base.iterdir() if p.is_dir() and not _is_hidden(p)]
+        student_dirs.sort(key=lambda p: p.name)
+        if not student_dirs:
+            # 允许没有任何参考照：程序仍可运行（课堂照片将全部归入 unknown）。
+            return {
+                'valid': True,
+                'student_count': 0,
+                'photo_count': 0,
+                'message': (
+                    "⚠️ 还没有找到任何学生参考照（student_photos 里没有学生文件夹）。\n"
+                    "程序仍可以继续运行：课堂照片会全部归入 unknown。\n"
+                    "💡 建议：为每位学生建立文件夹并放 2–5 张清晰参考照，以提升识别准确度。"
+                ),
+            }
+
+        empty_students = []
+        nested_students = []
+        total_photos = 0
+        for sd in student_dirs:
+            nested = [p for p in sd.iterdir() if p.is_dir() and not _is_hidden(p)]
+            if nested:
+                nested_students.append(sd.name)
+                continue
+
+            photos = [
+                p
+                for p in sd.iterdir()
+                if p.is_file() and (p.suffix.lower() in self.supported_extensions) and (not _is_hidden(p))
+            ]
+            if not photos:
+                empty_students.append(sd.name)
+                continue
+
+            total_photos += len(photos)
+
+        if nested_students:
+            shown = "\n".join([f"   • {n}" for n in nested_students[:8]])
+            detail = "以下学生文件夹里又包含子文件夹（不支持嵌套）：\n" + shown
             return {
                 'valid': False,
-                'message': f"""
-📁 部分学生照片文件名不正确
-
-📂 文件夹路径：{dir_path}
-
-✅ 正确命名的文件：{len(valid_files)}个
-❌ 错误命名的文件：{len(invalid_files)}个
-
-错误的文件名：
-"""
-                + '\n'.join([f"   • {file}" for file in invalid_files[:5]])
-                + (f"\n   ... 还有{len(invalid_files)-5}个文件" if len(invalid_files) > 5 else "")
-                + self.get_photo_name_error_message("示例文件名")
+                'message': self.get_student_photos_layout_error_message(dir_path, detail=detail),
             }
-        
+
+        if empty_students:
+            shown = "\n".join([f"   • {n}" for n in empty_students[:8]])
+            detail = "以下学生文件夹为空或没有图片：\n" + shown
+            return {
+                'valid': False,
+                'message': self.get_student_photos_layout_error_message(dir_path, detail=detail),
+            }
+
         return {
             'valid': True,
-            'photo_count': len(valid_files),
-            'message': f"✅ 找到{len(valid_files)}张格式正确的学生照片"
+            'student_count': len(student_dirs),
+            'photo_count': total_photos,
+            'message': f"✅ 找到 {len(student_dirs)} 个学生文件夹，共 {total_photos} 张参考照（文件夹模式）",
         }
     
     def validate_tolerance_parameter(self, tolerance_str):
@@ -327,9 +316,8 @@ def show_operation_guide(guide_type):
    • 背景：简洁背景，避免杂乱
 
 📝 命名规范：
-    • 格式：姓名.jpg 或 姓名_序号.jpg（序号可选）
-    • 示例：张三.jpg、张三_2.jpg、LiSi.jpg
-    • 建议：如使用序号，从 1 开始，避免前导零（如 _01）
+    • 唯一方式：在 student_photos 里为每个学生建文件夹：student_photos/学生名/
+    • 学生文件夹内照片文件名随意（只要不重名）
 
 🚫 避免问题：
    • 避免多人合照
@@ -349,7 +337,7 @@ def show_operation_guide(guide_type):
 🏗️ 项目结构：
 sunday-photos/
 ├── input/                  # 输入数据主文件夹
-│   ├── student_photos/     # 学生参考照片（姓名或姓名_序号）
+│   ├── student_photos/     # 学生参考照片（学生名一级子文件夹）
 │   └── class_photos/       # 课堂合照（按日期子目录，如 2025-12-08/）
 ├── output/                 # 整理后的输出（按学生/日期归档）
 ├── src/                    # 程序源码
@@ -360,9 +348,10 @@ sunday-photos/
 📂 具体操作：
     1️⃣ 创建 input 文件夹（如果不存在）
     2️⃣ 在 input 中创建 student_photos 文件夹
-    3️⃣ 将学生照片放入 student_photos（如 Alice.jpg 或 张三_1.jpg）
-    4️⃣ 在 input 中创建 class_photos/日期 子文件夹（如 2025-12-08）
-    5️⃣ 将课堂合照放入对应日期的子文件夹
+    3️⃣ 在 student_photos 里为每个学生创建文件夹（如 Alice(Senior)/、Bob/）
+    4️⃣ 把该学生参考照放进对应学生文件夹（文件名随意）
+    5️⃣ 在 input 中创建 class_photos/日期 子文件夹（如 2025-12-08）
+    6️⃣ 将课堂合照放入对应日期的子文件夹
 
 💡 注意事项：
     • 文件夹名称必须准确

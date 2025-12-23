@@ -2,8 +2,10 @@
 
 ## 📦 Deliverables
 Console/CLI distribution only, located under `release_console/`:
-1. **SundayPhotoOrganizer** (executable, already chmod +x)
-2. **启动工具.sh** (launcher script; double-click or run via terminal)
+1. **SundayPhotoOrganizer** (macOS executable, already chmod +x)
+2. **SundayPhotoOrganizer.exe** (Windows executable)
+3. **启动工具.sh** (macOS launcher script; double-click or run via terminal)
+4. **Launch_SundayPhotoOrganizer.bat** (Windows launcher; double-click)
 3. **使用说明.txt** (Chinese user guide)
 4. **USAGE_EN.txt** (English user guide)
 
@@ -26,8 +28,8 @@ sunday-photos/
 
 Runtime folders created automatically (Desktop):
 ```
-Desktop/主日学照片整理/
-├── student_photos/            # Reference photos (e.g., 张三.jpg)
+Desktop/SundaySchoolPhotoOrganizer/
+├── student_photos/            # Reference photos (folder-only: student_photos/<student_name>/...)
 ├── class_photos/              # Classroom photos (e.g., 2024-12-21/group.jpg)
 ├── output/                    # Results (student/date/group_103045.jpg)
 └── logs/                      # Runtime logs (safe to clear)
@@ -37,38 +39,40 @@ Desktop/主日学照片整理/
 ```
 input/
 ├── student_photos/
-│   ├── 张三.jpg
-│   ├── 张三_2.jpg
-│   └── LiSi.png
+│   ├── Alice/
+│   │   ├── ref_01.jpg
+│   │   └── ref_02.png
+│   └── Bob/
+│       └── img_0001.jpg
 └── class_photos/
     ├── 2024-12-21/
-    │   ├── 活动合影.jpg
-    │   └── 游戏时间.png
+  │   ├── group_photo.jpg
+    │   └── game_time.png
     └── 2024-12-28/
-        └── 小组讨论.jpg
+        └── discussion.jpg
 ```
 
 ### 📤 Output example (organized)
 ```
 output/
-├── 张三/
+├── Alice/
 │   ├── 2024-12-21/
-│   │   ├── 活动合影_103045.jpg
-│   │   └── 游戏时间_104823.jpg
+│   │   ├── group_photo_103045.jpg
+│   │   └── game_time_104823.jpg
 │   └── 2024-12-28/
-│       └── 小组讨论_101010.jpg
-├── 李四/
+│       └── discussion_101010.jpg
+├── Bob/
 │   └── 2024-12-21/
-│       └── 活动合影_103045.jpg
-└── 未知照片/
+│       └── group_photo_103045.jpg
+└── unknown_photos/
     └── 2024-12-21/
-        └── 模糊照片_105632.jpg
+    └── blurry_105632.jpg
 ```
 
 ## 🚀 Teacher Workflow
 - release_console/: packaged deliverables (exe + launcher + guides)
-- Desktop/主日学照片整理/ (auto-created on first run):
-  - student_photos/: reference photos named `Name` or `Name_index` (张三.jpg, 张三_2.jpg, LiSi.png)
+- Desktop/SundaySchoolPhotoOrganizer/ (auto-created on first run):
+  - student_photos/: folder-only reference photos: `student_photos/<student_name>/...` (filenames can be anything)
   - class_photos/: classroom photos; date subfolders recommended (2024-12-21/photo.jpg)
   - output/: organized results (student → date)
   - logs/: run logs
@@ -76,17 +80,19 @@ output/
 ### Input rules (source run scenario)
 - Default input root: `input/`
 - Reference photos: put in `input/student_photos/`
-  - Naming: `Name` or `Name_index` (index optional, starts at 1), Chinese/English supported
-  - Examples: 张三.jpg, 张三_2.jpg, LiSi.jpg
+  - Folder-only: create one folder per student: `input/student_photos/<student_name>/`
+  - Put that student's reference photos inside (filenames can be anything)
+  - Up to 5 reference photos per student will be used (recommended 2–5 clear photos)
+  - Examples: input/student_photos/Alice/ref_01.jpg, input/student_photos/Bob/img_0001.jpg
 - Classroom photos: put in `input/class_photos/`; date subfolders recommended
-  - Example: `input/class_photos/2024-12-21/活动合影.jpg`
+  - Example: `input/class_photos/2024-12-21/group_photo.jpg`
   - Without subfolders also works; program will group by detected date
 - Output: written to `output/`, organized by student → date; reports generated
 
 ## ▶️ Launch Methods
-- Double-click executable: `release_console/SundayPhotoOrganizer`
-- Terminal: `./release_console/SundayPhotoOrganizer`
-- Launcher script: double-click or run `./release_console/启动工具.sh`
+- macOS: double-click `release_console/SundayPhotoOrganizer` or `release_console/启动工具.sh`
+- macOS terminal: `./release_console/SundayPhotoOrganizer` (after chmod +x if needed)
+- Windows: double-click `release_console/SundayPhotoOrganizer.exe` or `release_console/Launch_SundayPhotoOrganizer.bat`
 
 Note: Older builds may have used an onedir layout like `release_console/SundayPhotoOrganizer/SundaySchool`. Current releases use onefile: `release_console/SundayPhotoOrganizer`.
 
@@ -97,7 +103,7 @@ macOS first-run gatekeeper: if blocked, go to System Settings → Privacy & Secu
 - Full regression: `python run_all_tests.py`
 
 ## 💡 Tips
-- Accuracy improves with 2–3 clear frontal reference photos per student.
+- Accuracy improves with 2–5 clear reference photos per student.
 - If the terminal says photos are missing, check folder names and file naming.
 - Safe to rerun multiple times; it will continue organizing newly added photos.
 

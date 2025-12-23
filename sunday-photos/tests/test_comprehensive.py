@@ -9,6 +9,7 @@ import unittest
 import os
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import logging
@@ -62,7 +63,7 @@ class TestComprehensive(unittest.TestCase):
         self.organizer.initialize()
         
         # 验证学生管理器加载了0个学生
-        self.assertEqual(len(self.organizer.student_manager.students_data), 0)
+        self.assertEqual(len(self.organizer.student_manager.get_all_students()), 0)
         
         # 运行处理流程
         # 由于没有照片，应该直接完成且不报错
@@ -81,10 +82,12 @@ class TestComprehensive(unittest.TestCase):
     def test_empty_class_photos_directory(self):
         """测试有学生但无课堂照片的情况"""
         # 创建一个学生参考照
-        Path(os.path.join(self.student_photos_dir, 'StudentA.jpg')).touch()
+        student_dir = Path(self.student_photos_dir) / 'StudentA'
+        student_dir.mkdir(parents=True, exist_ok=True)
+        (student_dir / 'a.jpg').touch()
         
         self.organizer.initialize()
-        self.assertEqual(len(self.organizer.student_manager.students_data), 1)
+        self.assertEqual(len(self.organizer.student_manager.get_all_students()), 1)
         
         # 模拟扫描照片返回空列表
         # 注意：SimplePhotoOrganizer 没有 _scan_photos 方法，它是直接在 run() 或 process_photos() 中处理
@@ -98,6 +101,31 @@ class TestComprehensive(unittest.TestCase):
         )
         
         self.assertEqual(stats['total'], 0)
+
+    def test_reference_photo_selection_uses_latest_mtime_top_5(self):
+        """当某学生参考照超过 5 张时，应选择最近修改时间最新的 5 张。"""
+        student_dir = Path(self.student_photos_dir) / 'StudentA'
+        student_dir.mkdir(parents=True, exist_ok=True)
+
+        # 创建 7 张参考照，并用 utime 控制 mtime（p7 最新，p1 最旧）
+        base_ts = time.time()
+        created = []
+        for i in range(1, 8):
+            p = student_dir / f"p{i}.jpg"
+            p.touch()
+            ts = base_ts - (8 - i) * 10
+            os.utime(p, (ts, ts))
+            created.append(p)
+
+        self.organizer.initialize()
+        info = self.organizer.student_manager.get_student_by_name('StudentA')
+        self.assertIsNotNone(info)
+
+        selected_names = [Path(p).name for p in info['photo_paths']]
+        self.assertEqual(len(selected_names), 5)
+
+        # 期望：按 mtime 倒序取前 5 => p7..p3
+        self.assertEqual(selected_names, ['p7.jpg', 'p6.jpg', 'p5.jpg', 'p4.jpg', 'p3.jpg'])
 
     def test_invalid_image_files(self):
         """测试无效/损坏的图片文件"""
@@ -113,14 +141,13 @@ class TestComprehensive(unittest.TestCase):
 
     def test_special_filenames(self):
         """测试特殊文件名的处理（中文、空格、特殊字符）"""
-        # 创建带有特殊字符的学生名和照片名
-        # 注意：StudentManager 会按 _ 分割文件名，所以 Name_With_Underscore 会被截断为 Name
-        # 我们调整测试用例以符合实际逻辑
+        # 创建带有特殊字符的学生名（学生名来自文件夹名，文件名可随意）
         special_names = ['张三', 'John Doe', 'Student#1']
-        # Name_With_Underscore -> Name
         
         for name in special_names:
-            Path(os.path.join(self.student_photos_dir, f"{name}.jpg")).touch()
+            sd = Path(self.student_photos_dir) / name
+            sd.mkdir(parents=True, exist_ok=True)
+            (sd / 'ref.jpg').touch()
             
         self.organizer.initialize()
         
@@ -131,16 +158,21 @@ class TestComprehensive(unittest.TestCase):
     def test_large_number_of_students(self):
         """压力测试：大量学生"""
         # 清理之前可能存在的学生
-        for f in os.listdir(self.student_photos_dir):
-            os.remove(os.path.join(self.student_photos_dir, f))
+        for p in Path(self.student_photos_dir).iterdir():
+            if p.is_file():
+                p.unlink()
+            else:
+                shutil.rmtree(p, ignore_errors=True)
             
         # 创建50个学生
         for i in range(50):
-            Path(os.path.join(self.student_photos_dir, f"Student{i}.jpg")).touch()
+            sd = Path(self.student_photos_dir) / f"Student{i}"
+            sd.mkdir(parents=True, exist_ok=True)
+            (sd / 'ref.jpg').touch()
             
         # 重新初始化以加载新学生
         self.organizer.student_manager = StudentManager(self.input_dir)
-        self.assertEqual(len(self.organizer.student_manager.students_data), 50)
+        self.assertEqual(len(self.organizer.student_manager.get_all_students()), 50)
 
     def test_duplicate_photos(self):
         """测试重复照片的处理"""
@@ -234,7 +266,9 @@ class TestComprehensive(unittest.TestCase):
         # 模拟 face_recognition 加载图片时内存不足
         with patch('face_recognition.load_image_file', side_effect=MemoryError("Out of memory")):
             # 创建一个学生和照片
-            Path(os.path.join(self.student_photos_dir, 'StudentA.jpg')).touch()
+            sd = Path(self.student_photos_dir) / 'StudentA'
+            sd.mkdir(parents=True, exist_ok=True)
+            (sd / 'ref.jpg').touch()
             
             # 初始化时加载学生编码
             self.organizer.initialize()

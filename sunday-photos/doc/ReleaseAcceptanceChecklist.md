@@ -9,31 +9,44 @@
 
 ## A. 必备产物
 
-在 `sunday-photos/release_console/` 下必须存在：
+在 `sunday-photos/release_console/` 下必须存在（按平台）：
 
-- `SundayPhotoOrganizer`（macOS 控制台可执行文件）
-- `启动工具.sh`（双击入口脚本，或老师按照说明运行）
-- `使用说明.txt`（老师版简明说明，零参数口径）
+- macOS：
+  - `SundayPhotoOrganizer`（macOS 控制台可执行文件）
+  - `启动工具.sh`（双击入口脚本，或老师按照说明运行）
+- Windows：
+  - `SundayPhotoOrganizer.exe`（Windows 控制台可执行文件）
+  - `Launch_SundayPhotoOrganizer.bat`（双击入口脚本，保持窗口不闪退）
+- 通用：
+  - `使用说明.txt`（老师版简明说明，零参数口径）
 
-可选（占位/示例目录；老师实际使用桌面 `主日学照片整理/`）：
+可选（占位/示例目录；老师实际使用桌面 `SundaySchoolPhotoOrganizer/`）：
 - `input/`（如需提供源码模式示例，可包含 `student_photos/`、`class_photos/`）
 - `output/`（可为空）
 - `logs/`（可为空）
 
 验收点：
-- 可执行文件具备执行权限；在 macOS 上能正常启动。
+- macOS：可执行文件具备执行权限；能正常启动。
+- Windows：可执行文件能正常启动；.bat 启动脚本能拉起程序且不会秒退。
 
 ---
 
 ## B. 运行行为（老师端零参数）
 
 首次运行：
-- 在桌面创建 `主日学照片整理/`（或说明中约定的同名目录）。
+- 在桌面创建 `SundaySchoolPhotoOrganizer/`（或说明中约定的同名目录）。
 - 自动创建/确认以下子目录存在：
   - `student_photos/`、`class_photos/`、`output/`、`logs/`
 - 若缺少必要照片：
   - 输出必须是“非技术描述 + 下一步怎么做 + 日志在哪里”
   - 程序应安全退出（不产生误删/误移动）
+
+缺少学生参考照（允许继续）：
+- student_photos 可以暂时为空，程序仍可继续整理。
+- 验收点：必须明确提示“课堂照片会全部归入 unknown”，并给出“如何补参考照提升准确度”的下一步。
+
+缺少课堂照片（必须退出）：
+- class_photos 为空时应提示下一步并安全退出。
 
 正常整理：
 - 处理完成后，提示“已完成 + 输出在哪里”。
@@ -68,6 +81,7 @@
 推荐验收顺序：
 1) 构建打包产物（macOS）：
    - 使用仓库内脚本构建，并确认产物落到 `release_console/`。
+  - Windows 产物需在 Windows 上构建（PyInstaller 不支持跨平台交叉编译）。
 2) 严格模式跑测试（要求打包产物存在）：
    - 在 VS Code 里运行任务：`release acceptance (build + require packaged artifacts)`
    - 或使用等价命令（见仓库测试说明）。

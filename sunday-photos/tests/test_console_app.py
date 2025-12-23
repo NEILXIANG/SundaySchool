@@ -214,7 +214,7 @@ def simulate_teacher_usage():
         return
     
     tmp_home, env = _temp_home_env()
-    test_dir = Path(env["HOME"]) / "Desktop" / "主日学照片整理"
+    test_dir = Path(env["HOME"]) / "Desktop" / "SundaySchoolPhotoOrganizer"
     
     try:
         # 运行一次程序创建文件夹结构

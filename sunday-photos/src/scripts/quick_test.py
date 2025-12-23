@@ -80,7 +80,7 @@ except Exception as e:
 try:
     from ui.input_validator import InputValidator
     validator = InputValidator()
-    result = validator.validate_photo_name("张三.jpg")
+    result = validator.validate_tolerance_parameter("0.6")
     print(f"✓ 输入验证正常: {result['valid']}")
 except Exception as e:
     print(f"✗ 输入验证失败: {e}")

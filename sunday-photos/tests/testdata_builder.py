@@ -251,9 +251,10 @@ def build_dataset(
     if net_testdata_enabled() and net_testdata_strict() and not downloaded_bytes:
         raise RuntimeError("联网测试数据：缓存中没有可用图片字节（严格模式）")
 
-    # Students: 1 photo each
+    # Students: folder-based layout (single canonical way)
+    # - input/student_photos/<student_name>/ref_01.jpg
     for i, name in enumerate(student_names):
-        p = student_dir / f"{name}.jpg"
+        p = student_dir / name / "ref_01.jpg"
         if rnd.random() < empty_file_ratio:
             write_empty_file(p)
         else:

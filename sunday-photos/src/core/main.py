@@ -20,6 +20,7 @@ from tqdm import tqdm
 import shutil
 
 from .utils import setup_logger, is_supported_image_file, is_supported_nonempty_image_path, get_photo_date, ensure_directory_exists
+from .utils import is_ignored_fs_entry
 from .config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_LOG_DIR, DEFAULT_TOLERANCE, CLASS_PHOTOS_DIR, STUDENT_PHOTOS_DIR, MIN_FACE_SIZE
 from .config_loader import ConfigLoader
 from .incremental_state import (
@@ -238,6 +239,8 @@ class SimplePhotoOrganizer:
             return
 
         for top in self.output_dir.iterdir():
+            if is_ignored_fs_entry(top):
+                continue
             if not top.is_dir():
                 continue
             for date in dates:
@@ -311,6 +314,8 @@ class SimplePhotoOrganizer:
             {
                 'tolerance': float(getattr(self.face_recognizer, 'tolerance', DEFAULT_TOLERANCE)),
                 'min_face_size': int(MIN_FACE_SIZE),
+                # 参考照变化必须触发缓存失效（补/删/替换参考照应立刻生效）
+                'reference_fingerprint': str(getattr(self.face_recognizer, 'reference_fingerprint', '')),
             }
         )
         date_to_cache = {}
@@ -404,7 +409,7 @@ class SimplePhotoOrganizer:
         self.logger.info(f"✓ 人脸识别完成")
         self.logger.info(f"  - 识别到学生的照片: {self.stats['recognized_photos']} 张")
         self.logger.info(f"  - 无人脸照片: {no_face_count} 张")
-        self.logger.info(f"  - 未知照片: {self.stats['unknown_photos']} 张")
+        self.logger.info(f"  - unknown_photos: {self.stats['unknown_photos']} 张")
         self.logger.info(f"  - 处理出错照片: {error_count} 张")
         if self.stats['students_detected']:
             students_line = ', '.join(sorted(self.stats['students_detected']))
@@ -507,7 +512,7 @@ class SimplePhotoOrganizer:
 
         self.logger.info(f"总照片数: {self.stats['total_photos']}")
         self.logger.info(f"成功识别: {self.stats['recognized_photos']}")
-        self.logger.info(f"未知照片: {self.stats['unknown_photos']}")
+        self.logger.info(f"unknown_photos: {self.stats['unknown_photos']}")
 
         if self.stats['students_detected']:
             self.logger.info(f"识别到的学生: {', '.join(sorted(self.stats['students_detected']))}")

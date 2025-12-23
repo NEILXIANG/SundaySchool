@@ -38,6 +38,10 @@ Thumbs.db
 # Logs
 logs/*.log
 
+# Reference cache (auto-generated)
+logs/reference_index.json
+logs/reference_encodings/
+
 # Output directory (temporary files)
 output/
 

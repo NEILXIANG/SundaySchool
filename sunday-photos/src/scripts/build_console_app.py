@@ -124,7 +124,7 @@ def create_console_guide():
 3. 完成！
 
 📁 文件夹位置：
-程序会在桌面创建 "主日学照片整理" 文件夹，包含：
+程序会在桌面创建 "SundaySchoolPhotoOrganizer" 文件夹，包含：
 - student_photos（学生照片）
 - class_photos（课堂照片）  
 - output（整理结果）
@@ -132,7 +132,7 @@ def create_console_guide():
 
 📸 照片准备：
 1. 学生照片：放入 student_photos 文件夹
-    命名：姓名.jpg 或 姓名_序号.jpg（序号可选，如：张三.jpg、张三_2.jpg、LiSi.jpg）
+    放法（唯一方式）：student_photos/学生名/ 里放照片（文件名随意）
 2. 课堂照片：放入 class_photos 文件夹
    可以是任何 .jpg 或 .png 文件
 
@@ -191,6 +191,42 @@ read
     launcher_path.write_text(launcher_content, encoding='utf-8')
     os.chmod(launcher_path, 0o755)
     print(f"✅ 启动脚本已创建: {launcher_path}")
+
+    # Windows launcher (.bat)
+    launcher_bat = """@echo off
+setlocal
+
+REM Sunday School Photo Organizer - Windows Launcher
+REM Keeps the window open so teachers can read messages.
+
+chcp 65001 >nul
+
+set "DIR=%~dp0"
+cd /d "%DIR%"
+
+set "EXE=%DIR%SundayPhotoOrganizer.exe"
+if not exist "%EXE%" set "EXE=%DIR%SundayPhotoOrganizer"
+
+if not exist "%EXE%" (
+  echo [ERROR] Cannot find SundayPhotoOrganizer executable in:
+  echo   %DIR%
+  echo.
+  echo Expected file:
+  echo   SundayPhotoOrganizer.exe
+  echo.
+  pause
+  exit /b 1
+)
+
+"%EXE%"
+echo.
+echo Press any key to exit...
+pause >nul
+"""
+
+    launcher_bat_path = Path('release_console/Launch_SundayPhotoOrganizer.bat')
+    launcher_bat_path.write_text(launcher_bat, encoding='utf-8')
+    print(f"✅ Windows 启动脚本已创建: {launcher_bat_path}")
 
 if __name__ == "__main__":
     success = main()

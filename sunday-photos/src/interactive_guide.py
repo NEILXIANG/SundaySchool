@@ -233,65 +233,16 @@ class InteractiveGuide:
             print(f"❌ 学生照片文件夹不存在: {student_photos_dir}")
             return False
         
-        # 列出所有照片文件
         from input_validator import validator
-        photo_files = []
-        
-        for file in os.listdir(student_photos_dir):
-            file_path = os.path.join(student_photos_dir, file)
-            if os.path.isfile(file_path):
-                ext = Path(file).suffix.lower()
-                if ext in ['.jpg', '.jpeg', '.png', '.bmp']:
-                    photo_files.append(file)
-        
-        if not photo_files:
-            print("❌ 学生照片文件夹中没有找到照片文件")
-            print("\n💡 请将学生照片放入文件夹，并按照以下格式命名:")
-            print("   • Alice.jpg")
-            print("   • Bob_1.jpg")
-            print("   • 张三.jpg 或 张三_1.jpg")
-            print("\n📸 照片要求:")
-            print("   • 清晰的人脸照片")
-            print("   • 使用真实姓名")
-            print("   • 命名：姓名.jpg 或 姓名_序号.jpg（序号可选）")
+
+        result = validator.validate_student_photos_directory(student_photos_dir)
+        if not result.get('valid'):
+            print(result.get('message', '❌ 学生参考照检查失败'))
             return False
-        
-        print(f"✅ 找到 {len(photo_files)} 张照片文件")
-        
-        # 检查文件名格式
-        valid_photos = []
-        invalid_photos = []
-        
-        for photo_file in photo_files:
-            validation = validator.validate_photo_name(photo_file)
-            if validation['valid']:
-                valid_photos.append(validation)
-            else:
-                invalid_photos.append(photo_file)
-        if invalid_photos:
-            print(f"❌ {len(invalid_photos)} 张照片文件名格式不正确:")
-            for photo in invalid_photos[:3]:
-                print(f"   • {photo}")
-            if len(invalid_photos) > 3:
-                print(f"   ... 还有 {len(invalid_photos)-3} 张")
-            
-            print("\n💡 正确的命名格式:")
-            print("   • Alice.jpg 或 Alice_1.jpg")
-            print("   • 张三.jpg 或 张三_1.png")
-            if self._prompt_yes_no("\n🔄 是否显示详细的重命名指导？(y/n): ", default=False):
-                self.show_rename_guide()
-            
-            return False
-        
-        # 统计学生数量
-        students = set()
-        for photo in valid_photos:
-            students.add(photo['name'])
-        
-        print(f"✅ {len(valid_photos)} 张照片命名格式正确")
-        print(f"✅ 涉及 {len(students)} 名学生")
-        print(f"📋 学生名单: {', '.join(list(students)[:5])}{'...' if len(students) > 5 else ''}")
-        
+
+        print(result.get('message', '✅ 学生参考照检查通过'))
+        print("💡 放法提醒（唯一方式）：student_photos/学生名/ 里放照片，文件名随意")
+        print("💡 每个学生最多使用 5 张参考照（超过会自动只用 5 张）")
         return True
     
     def check_class_photos(self):
@@ -321,8 +272,8 @@ class InteractiveGuide:
         for root, _, files in os.walk(class_photos_dir):
             for file in files:
                 file_path = os.path.join(root, file)
-                ext = Path(file).suffix.lower()
-                if ext in ['.jpg', '.jpeg', '.png', '.bmp']:
+                from core.utils import is_supported_nonempty_image_path
+                if is_supported_nonempty_image_path(file_path):
                     photo_files.append(file_path)
         
         if not photo_files:
@@ -403,7 +354,7 @@ class InteractiveGuide:
    1. 打开文件资源管理器
    2. 找到学生照片文件
    3. 右键点击文件 → 选择"重命名"
-   4. 输入新名称（如：张三_1.jpg）
+    4. 输入新名称（如：Alice_1.jpg）
    5. 按回车键确认
 
 🍎 Mac系统：
@@ -416,12 +367,12 @@ class InteractiveGuide:
 
 📝 命名示例：
    ✅ 正确格式：
-        • 张三.jpg
-        • 张三_2.jpg
-        • LiSi.jpg
+    • Alice.jpg
+    • Alice_2.jpg
+    • Bob.jpg
    
    ❌ 错误格式：
-      • 张三_01.jpg (序号前导零)
+        • Alice_01.jpg (序号前导零)
         • .jpg (没有姓名)
 
 💡 批量重命名技巧：
@@ -431,7 +382,7 @@ class InteractiveGuide:
 
 ⚠️ 注意事项：
    • 使用学生真实姓名
-    • 同一学生多张参考照时，用下划线加序号区分（如 张三_2.jpg）
+    • 同一学生多张参考照时，用下划线加序号区分（如 Alice_2.jpg）
     • 序号从1开始，不要用0
         """)
 
@@ -511,7 +462,7 @@ def show_operation_guide(guide_type):
 
 📝 文件命名：
     • 格式：姓名[可选_序号].扩展名
-    • 示例：张三.jpg, 李四_2.png
+    • 示例：Alice.jpg, Bob_2.png
     • 要求：中文或英文名字，序号从1开始（可省略）
     • 注意：名字和序号之间用下划线连接（如使用序号）
 
@@ -533,14 +484,15 @@ def show_operation_guide(guide_type):
 🏗️ 标准项目结构：
 sunday-photos/
 ├── 📂 input/                     # 输入数据主文件夹
-│   ├── 📂 student_photos/        # 学生参考照片
-│   │   ├── 张三.jpg
-│   │   ├── 张三_2.jpg
-│   │   ├── LiSi.jpg
-│   │   └── 王五_1.jpg
+│   ├── 📂 student_photos/        # 学生参考照片（folder-only: one folder per student）
+│   │   ├── Alice/
+│   │   │   ├── ref_01.jpg
+│   │   │   └── ref_02.jpg
+│   │   └── Bob/
+│   │       └── img_0001.jpg
 │   └── 📂 class_photos/          # 待整理的课堂照片
-│       ├── 2024-12-21/活动.jpg
-│       ├── 2024-12-21/合照.jpg
+│       ├── 2024-12-21/group_photo.jpg
+│       ├── 2024-12-21/game_time.jpg
 │       └── 2024-12-28/...
 ├── 📂 output/                    # 整理后的输出（学生/日期分层）
 ├── 📂 src/                       # 程序源码
@@ -556,8 +508,8 @@ sunday-photos/
 
 步骤2：创建学生照片文件夹
     • 在input内创建student_photos文件夹
-    • 将所有学生参考照片放入此文件夹
-    • 确保文件名格式正确：姓名 或 姓名_序号.jpg
+    • 为每个学生创建一个文件夹：student_photos/<student_name>/
+    • 把该学生参考照放进对应文件夹（文件名随意）
 
 步骤3：创建课堂照片文件夹
     • 在input内创建class_photos文件夹

@@ -140,25 +140,16 @@ class TeacherFriendlyTester:
             print("❌ 学生照片文件夹不存在")
             return False
         
-        photos = [f for f in os.listdir(student_photos_dir) 
-                 if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-        
-        if not photos:
-            print("⚠️ 学生照片文件夹中没有找到照片（可选，建议添加参考照提升识别准确度）")
-            return True
-        
-        print(f"✅ 找到 {len(photos)} 张学生照片")
-        
-        # 检查文件名格式（允许姓名或姓名_序号）
+        # 文件夹模式：student_photos/学生名/ 里放图片
         try:
             from ui.input_validator import validator
-            for photo in photos[:3]:
-                result = validator.validate_photo_name(photo)
-                if not result['valid']:
-                    print(f"❌ 照片文件名格式不正确: {photo}")
-                    print("💡 建议使用：姓名.jpg 或 姓名_序号.jpg（如：Alice.jpg 或 张三_1.jpg）")
-                    return False
+            result = validator.validate_student_photos_directory(student_photos_dir)
+            if not result['valid']:
+                print(result.get('message', ''))
+                return False
+            print(result.get('message', '✅ 学生参考照目录结构正常'))
         except Exception:
+            # 该测试偏“体验检查”，不因校验器导入失败而阻断
             pass
         
         print("✅ 学生照片检查通过")

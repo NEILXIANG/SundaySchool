@@ -9,7 +9,7 @@
 你是资深 Python 工程师 + 测试工程师 + 产品工程师。你在一个现有仓库上做增量改造（不是新建项目）。请遵循“最少改动、口径一致、可验证”的原则。
 
 【仓库背景】
-- 项目：主日学照片整理工具（面向老师）
+- 项目：Sunday School photo organizer (for teachers)
 - 技术：Python + pytest；发布为 macOS 控制台可执行（PyInstaller）
 
 【最重要的产品原则（必须遵守）】
@@ -21,7 +21,7 @@
 
 【现有老师端约定】
 - 老师双击运行打包程序。
-- 程序在桌面创建 `主日学照片整理/`，并包含：
+- 程序在桌面创建 `SundaySchoolPhotoOrganizer/`，并包含：
   - `student_photos/`（学生参考照）
   - `class_photos/`（课堂照片）
   - `output/`（输出）

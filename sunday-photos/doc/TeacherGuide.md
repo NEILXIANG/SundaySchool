@@ -11,8 +11,12 @@
 
 > 若 macOS 第一次运行被阻止：系统设置 → 隐私与安全性 → 仍要打开。
 
+## 运行方式（Windows）
+- 双击 `release_console/Launch_SundayPhotoOrganizer.bat`（推荐，会尽量保持窗口不闪退）。
+- 或双击 `release_console/SundayPhotoOrganizer.exe`。
+
 ## 第一次运行会发生什么
-- 程序会在桌面创建文件夹：`主日学照片整理/`
+- 程序会在桌面创建文件夹：`SundaySchoolPhotoOrganizer/`
 - 并自动生成这些子文件夹：
   - `student_photos/`：学生参考照
   - `class_photos/`：课堂照片
@@ -20,10 +24,11 @@
   - `logs/`：日志（遇到问题时用）
 
 ## 放照片（老师只需要做这一步）
-- 学生参考照：放到 `桌面/主日学照片整理/student_photos/`
-  - 命名：`姓名.jpg` 或 `姓名_序号.jpg`（如：张三.jpg、张三_2.jpg）
-- 课堂照片：放到 `桌面/主日学照片整理/class_photos/`
-  - 建议按日期建子目录：`2025-12-21/照片.jpg`
+- 学生参考照：放到 `Desktop/SundaySchoolPhotoOrganizer/student_photos/`
+  - 唯一方式：为每个学生创建一个文件夹：`student_photos/<student_name>/...`（文件名随意）
+  - 示例：`student_photos/Alice/ref_01.jpg`、`student_photos/Bob/img_0001.png`
+- 课堂照片：放到 `Desktop/SundaySchoolPhotoOrganizer/class_photos/`
+  - 建议按日期建子目录：`2025-12-21/group_photo.jpg`
 
 ## 再次运行
 - 再双击运行一次，程序会开始识别与分类。
@@ -38,7 +43,7 @@
   1) 给该学生补 2-3 张清晰正脸参考照（清晰、正脸、无遮挡、不要太小）
   2) 参考照尽量“只拍这个学生一个人”，不要用多人合照当参考照
   3) 课堂照尽量光线充足、人脸不要太小/太模糊（必要时换更清晰的原图）
-- 需要求助：请把 `桌面/主日学照片整理/logs/` 里最新的日志文件发给技术支持。
+- 需要求助：请把 `Desktop/SundaySchoolPhotoOrganizer/logs/` 里最新的日志文件发给技术支持。
 
 ---
 

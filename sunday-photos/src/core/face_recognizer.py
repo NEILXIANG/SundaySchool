@@ -6,6 +6,9 @@
 import os
 import logging
 import numpy as np
+import hashlib
+import json
+from pathlib import Path
 from .config import DEFAULT_TOLERANCE, MIN_FACE_SIZE
 
 
@@ -65,26 +68,114 @@ class FaceRecognizer:
         self.students_encodings = {}
         self.known_student_names = []
         self.known_encodings = []
+
+        # 参考照增量缓存（提升速度 + 支持增删 diff）
+        self._ref_cache_dir = self._resolve_ref_cache_dir()
+        self._ref_snapshot_path = self._resolve_ref_snapshot_path()
+        self.reference_fingerprint = ""  # 用于识别缓存失效（参考照变化即变化）
         
         # 加载所有学生的面部编码
         self.load_student_encodings()
 
+    def _resolve_ref_cache_dir(self) -> Path:
+        """参考照编码缓存目录（跟随 input_dir/logs，打包版也可用）。"""
+        try:
+            input_dir = Path(getattr(self.student_manager, 'input_dir'))
+        except Exception:
+            input_dir = Path(".")
+        d = input_dir / "logs" / "reference_encodings"
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            # 缓存失败不影响主流程
+            pass
+        return d
+
+    def _resolve_ref_snapshot_path(self) -> Path:
+        try:
+            input_dir = Path(getattr(self.student_manager, 'input_dir'))
+        except Exception:
+            input_dir = Path(".")
+        p = input_dir / "logs" / "reference_index.json"
+        return p
+
+    def _load_ref_snapshot(self) -> dict:
+        try:
+            if self._ref_snapshot_path.exists():
+                return json.loads(self._ref_snapshot_path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+        return {}
+
+    def _save_ref_snapshot(self, snapshot: dict) -> None:
+        try:
+            self._ref_snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self._ref_snapshot_path.with_suffix(self._ref_snapshot_path.suffix + ".tmp")
+            tmp.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+            tmp.replace(self._ref_snapshot_path)
+        except Exception:
+            # 缓存失败不影响主流程
+            return
+
+    def _rel_to_input(self, photo_path: str) -> str:
+        try:
+            input_dir = Path(getattr(self.student_manager, 'input_dir'))
+            return Path(photo_path).resolve().relative_to(input_dir.resolve()).as_posix()
+        except Exception:
+            return Path(photo_path).as_posix()
+
+    def _make_reference_fingerprint(self, selected_items: list[dict]) -> str:
+        """基于“被采用的参考照集合”的稳定指纹（用于识别缓存失效）。"""
+        payload = json.dumps(selected_items, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return hashlib.sha1(payload).hexdigest()
+
     def _refresh_known_faces(self):
-        """刷新缓存的学生姓名和编码列表，避免重复构造列表"""
-        self.known_student_names = list(self.students_encodings.keys())
-        self.known_encodings = [data['encoding'] for data in self.students_encodings.values()]
+        """刷新缓存的学生姓名和编码列表。
+
+        多编码融合策略：known_encodings/known_student_names 按 encoding 展开对齐。
+        并行识别与串行识别都会取全局最小距离，从而自然实现 min-distance。
+        """
+        names: list[str] = []
+        encs: list[Any] = []
+        for student_name in sorted(self.students_encodings.keys()):
+            data = self.students_encodings[student_name]
+            for enc in data.get('encodings', []) or []:
+                names.append(student_name)
+                encs.append(enc)
+        self.known_student_names = names
+        self.known_encodings = encs
     
     def load_student_encodings(self):
         """加载所有学生的面部编码。
 
-        策略：
-        - 每个学生可能有多张参考照：使用第一张“成功检测到人脸”的照片生成编码
-        - 参考照为 0 字节/不存在/无法检测人脸：跳过并尝试下一张
+        策略（文件夹模式 + 多编码融合）：
+        - 每个学生最多使用 5 张参考照（由 StudentManager 预筛选）
+        - 对每张参考照尝试提取 encoding：成功则加入该学生 encodings
+        - 多编码融合（min-distance）：识别时会取全局最小距离对应的学生名
+        - 增量/缓存：参考照未变化时复用上次提取的 encoding，避免重复计算
         - 允许“空数据集”：没有任何学生编码时，系统仍可运行，但识别结果会倾向未知
         """
         students = self.student_manager.get_all_students()
         loaded_count = 0
         failed_count = 0
+
+        prev = self._load_ref_snapshot()
+        prev_items_by_rel: dict[str, dict] = {}
+        for student_name, items in (prev.get('students') or {}).items():
+            if not isinstance(items, list):
+                continue
+            for it in items:
+                rel = it.get('rel_path')
+                if isinstance(rel, str):
+                    prev_items_by_rel[rel] = it
+
+        next_snapshot: dict = {
+            'version': 1,
+            'mode': 'student_folder_only',
+            'max_photos_per_student': 5,
+            'students': {},
+        }
+        selected_for_fingerprint: list[dict] = []
         
         for student_info in students:
             student_name = student_info.get('name', '')
@@ -95,8 +186,8 @@ class FaceRecognizer:
                 failed_count += 1
                 continue
                 
-            # 尝试加载每张照片，使用第一张成功的照片
-            encoding_loaded = False
+            encodings: list[Any] = []
+            student_items: list[dict] = []
             for photo_path in photo_paths:
                 if not os.path.exists(photo_path):
                     logger.warning(f"学生 {student_name} 的参考照片不存在: {photo_path}")
@@ -111,63 +202,109 @@ class FaceRecognizer:
                 except Exception:
                     pass
                 
+                rel = self._rel_to_input(photo_path)
+                try:
+                    st = os.stat(photo_path)
+                    mtime = int(st.st_mtime)
+                    size = int(st.st_size)
+                except Exception:
+                    mtime = 0
+                    size = 0
+
+                selected_for_fingerprint.append({'rel_path': rel, 'mtime': mtime, 'size': size})
+
+                prev_item = prev_items_by_rel.get(rel)
+                if prev_item and int(prev_item.get('mtime', -1)) == mtime and int(prev_item.get('size', -1)) == size:
+                    status = prev_item.get('status')
+                    cache_file = prev_item.get('cache')
+                    if status == 'ok' and isinstance(cache_file, str):
+                        cache_path = self._ref_cache_dir / cache_file
+                        try:
+                            if cache_path.exists():
+                                enc = np.load(str(cache_path))
+                                encodings.append(enc)
+                                student_items.append({'rel_path': rel, 'mtime': mtime, 'size': size, 'status': 'ok', 'cache': cache_file})
+                                continue
+                        except Exception:
+                            pass
+                    if status in ('no_face', 'error'):
+                        # 未变化的失败参考照：直接沿用失败状态，避免重复计算
+                        student_items.append({'rel_path': rel, 'mtime': mtime, 'size': size, 'status': str(status)})
+                        continue
+
                 image = None
                 face_locations = None
-                
+
                 try:
-                    # 加载图片并获取面部编码
                     image = face_recognition.load_image_file(photo_path)
                     face_locations = face_recognition.face_locations(image)
-                    
+
                     if not face_locations:
                         logger.warning(f"在照片中未检测到人脸: {photo_path}")
-                        # 释放内存后继续尝试下一张照片
+                        student_items.append({'rel_path': rel, 'mtime': mtime, 'size': size, 'status': 'no_face'})
                         if image is not None:
                             del image
                         if face_locations is not None:
                             del face_locations
                         continue
-                    
-                    # 使用第一个检测到的人脸
+
                     face_encoding = face_recognition.face_encodings(image, face_locations)[0]
-                    
-                    self.students_encodings[student_name] = {
-                        'name': student_name,
-                        'encoding': face_encoding
-                    }
-                    loaded_count += 1
-                    encoding_loaded = True
-                    break  # 成功加载一张照片后就停止尝试其他照片
-                    
+
+                    # 写入 per-photo 缓存
+                    cache_key = hashlib.sha1(f"{rel}|{mtime}|{size}".encode("utf-8")).hexdigest()
+                    cache_file = f"{cache_key}.npy"
+                    cache_path = self._ref_cache_dir / cache_file
+                    try:
+                        np.save(str(cache_path), face_encoding)
+                    except Exception:
+                        cache_file = ""
+
+                    encodings.append(face_encoding)
+                    student_items.append({'rel_path': rel, 'mtime': mtime, 'size': size, 'status': 'ok', 'cache': cache_file})
+
                 except MemoryError:
                     logger.error(
                         f"处理学生 {student_name} 的照片时内存不足: {photo_path}。"
                         "请关闭其他程序或分批处理照片后重试。"
                     )
+                    student_items.append({'rel_path': rel, 'mtime': mtime, 'size': size, 'status': 'error', 'error': 'memory'})
                     if image is not None:
                         del image
                     if face_locations is not None:
                         del face_locations
+                    # 内存不足时不再继续尝试更多参考照（避免雪崩）
                     break
                 except Exception as e:
                     logger.error(f"加载学生 {student_name} 的照片 {photo_path} 失败: {str(e)}")
-                    # 释放内存后继续尝试下一张照片
+                    student_items.append({'rel_path': rel, 'mtime': mtime, 'size': size, 'status': 'error', 'error': str(e)[:120]})
                     if image is not None:
                         del image
                     if face_locations is not None:
                         del face_locations
                     continue
-                
-                # 即使成功也释放内存
+
                 if image is not None:
                     del image
                 if face_locations is not None:
                     del face_locations
-            
-            if not encoding_loaded:
+
+            next_snapshot['students'][student_name] = student_items
+
+            if encodings:
+                self.students_encodings[student_name] = {
+                    'name': student_name,
+                    'encodings': encodings,
+                }
+                loaded_count += 1
+            else:
                 failed_count += 1
         
         self._refresh_known_faces()
+
+        # 写入 snapshot，并生成 reference_fingerprint（用于识别缓存失效）
+        self.reference_fingerprint = self._make_reference_fingerprint(selected_for_fingerprint)
+        next_snapshot['reference_fingerprint'] = self.reference_fingerprint
+        self._save_ref_snapshot(next_snapshot)
 
         logger.info(f"成功加载 {loaded_count} 名学生的面部编码，失败 {failed_count} 名")
         
@@ -524,7 +661,7 @@ class FaceRecognizer:
             if student_name in self.students_encodings:
                 self.students_encodings[student_name] = {
                     'name': student_name,
-                    'encoding': face_encoding
+                    'encodings': [face_encoding]
                 }
                 self._refresh_known_faces()
                 
@@ -568,13 +705,15 @@ class FaceRecognizer:
     
     def load_reference_photos(self, input_dir):
         """加载参考照片并生成人脸编码"""
-        if not input_dir.exists() or not any(input_dir.iterdir()):
+        from .utils import is_supported_nonempty_image_path
+
+        if not input_dir.exists() or not any(is_supported_nonempty_image_path(p) for p in input_dir.iterdir()):
             logger.warning("⚠️ 输入目录为空或不存在，请检查 input/student_photos 文件夹。")
             return {}
 
         face_encodings = {}
         for photo in input_dir.iterdir():
-            if photo.suffix.lower() in ['.jpg', '.jpeg', '.png']:
+            if is_supported_nonempty_image_path(photo):
                 # 模拟加载人脸编码逻辑
                 face_encodings[photo] = {"encoding": [0.1, 0.2, 0.3]}  # 示例编码
         

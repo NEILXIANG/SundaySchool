@@ -76,12 +76,12 @@ def test_student_manager():
         student_photos_dir = input_dir / "student_photos"
         student_photos_dir.mkdir(parents=True)
         
-        # 创建测试图片文件（真实可打开 JPEG，避免 0 字节文件被主流程忽略导致测试变脆）
+        # 创建测试图片文件（文件夹模式：student_photos/<学生名>/...）
         from testdata_builder import write_jpeg
 
-        write_jpeg(student_photos_dir / "Student1_1.jpg", "Student1_1", seed=1)
-        write_jpeg(student_photos_dir / "Student1_2.jpg", "Student1_2", seed=2)
-        write_jpeg(student_photos_dir / "Student2_1.jpg", "Student2_1", seed=3)
+        write_jpeg(student_photos_dir / "Student1" / "a.jpg", "Student1_a", seed=1)
+        write_jpeg(student_photos_dir / "Student1" / "b.jpg", "Student1_b", seed=2)
+        write_jpeg(student_photos_dir / "Student2" / "1.jpg", "Student2_1", seed=3)
         
         try:
             # 测试StudentManager

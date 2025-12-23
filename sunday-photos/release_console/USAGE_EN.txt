@@ -2,11 +2,11 @@ Sunday School Photo Organizer - Console Edition (English)
 
 🚀 Quick Start (3 steps)
 1) Double-click "SundayPhotoOrganizer" (or run ./SundayPhotoOrganizer in Terminal).
-2) When prompted, place photos into the auto-created desktop folder "主日学照片整理".
+2) When prompted, place photos into the auto-created desktop folder "SundaySchoolPhotoOrganizer".
 3) Run the app again to process; the output folder opens automatically.
 
-📁 Folders created on first run (Desktop/主日学照片整理)
-- student_photos: Reference photos per student. Name as "Name" or "Name_number" (ZhangSan.jpg, ZhangSan_2.jpg, LiSi.png).
+📁 Folders created on first run (Desktop/SundaySchoolPhotoOrganizer)
+- student_photos: Reference photos (folder-only): student_photos/<student_name>/... (filenames can be anything).
 - class_photos: Classroom photos. Prefer date subfolders (2024-12-21/group.jpg). jpg/png supported.
 - output: Sorted results, organized by student → date.
 - logs: Run logs; safe to clear.

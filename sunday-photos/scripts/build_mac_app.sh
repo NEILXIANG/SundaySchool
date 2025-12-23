@@ -37,7 +37,7 @@ if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
     exit 1
 fi
 
-# 打包命令（控制台 onefile）：生成 dist/SundayPhotoOrganizer
+# 打包命令（控制台 onefile）：PyInstaller 会先生成 dist/SundayPhotoOrganizer
 SPEC_FILE="SundayPhotoOrganizer.spec"
 
 "$PYTHON" -m PyInstaller \
@@ -48,7 +48,7 @@ SPEC_FILE="SundayPhotoOrganizer.spec"
 
 # 打包完成后，准备发布目录并预创建老师需要的空目录
 if [ $? -eq 0 ]; then
-    echo "🎉 打包成功！可执行文件位于 dist/ 目录下。"
+    echo "🎉 打包成功！中间产物位于 dist/，已复制到 release_console/ 作为交付目录。"
 
     RELEASE_DIR="release_console"
     APP_NAME="SundayPhotoOrganizer"

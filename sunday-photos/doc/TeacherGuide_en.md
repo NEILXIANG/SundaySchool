@@ -10,9 +10,13 @@ Goal: minimal steps, minimal confusion.
 
 If macOS blocks the first run: System Settings → Privacy & Security → Open Anyway.
 
+## Run (Windows)
+- Double-click `release_console/Launch_SundayPhotoOrganizer.bat` (recommended; keeps the window open).
+- Or double-click `release_console/SundayPhotoOrganizer.exe`.
+
 ## What happens on first run
 - The app creates this folder on your Desktop:
-  - `Desktop/主日学照片整理/`
+  - `Desktop/SundaySchoolPhotoOrganizer/`
 - It also creates:
   - `student_photos/` (student reference photos)
   - `class_photos/` (classroom photos)
@@ -20,9 +24,10 @@ If macOS blocks the first run: System Settings → Privacy & Security → Open A
   - `logs/` (logs for troubleshooting)
 
 ## Put photos in the right place
-- Student references: `Desktop/主日学照片整理/student_photos/`
-  - File names: `Name.jpg` or `Name_2.jpg` (e.g., ZhangSan.jpg, ZhangSan_2.jpg)
-- Classroom photos: `Desktop/主日学照片整理/class_photos/`
+- Student references: `Desktop/SundaySchoolPhotoOrganizer/student_photos/`
+  - Folder-only (single supported layout): `student_photos/<student_name>/...` (filenames can be anything)
+  - Examples: `student_photos/Alice/ref_01.jpg`, `student_photos/Bob/img_0001.png`
+- Classroom photos: `Desktop/SundaySchoolPhotoOrganizer/class_photos/`
   - Date subfolders recommended: `2025-12-21/photo.jpg`
 
 ## Run again
@@ -33,7 +38,7 @@ If macOS blocks the first run: System Settings → Privacy & Security → Open A
 - The app may move photos from `class_photos/` into date folders like `YYYY-MM-DD/`. This is expected (it enables incremental processing).
 
 ## Need help?
-- Send the newest log file from `Desktop/主日学照片整理/logs/`.
+- Send the newest log file from `Desktop/SundaySchoolPhotoOrganizer/logs/`.
 
 ---
 

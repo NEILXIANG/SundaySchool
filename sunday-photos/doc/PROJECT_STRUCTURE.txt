@@ -3,7 +3,7 @@ sunday-photos 项目结构 / Project Structure（控制台版 Console）
 说明 / Notes:
 - 仅控制台/命令行，无 GUI / Console-only, no GUI.
 - 默认输入 input/（兼容 classroom_dir）/ default input input/ (classroom_dir accepted).
-- student_photos 命名：姓名 或 姓名_序号 / Name or Name_index.
+- student_photos 唯一方式：student_photos/学生名/（文件夹）里放照片（文件名随意）；每位学生最多使用 5 张参考照（超过则取最近修改时间最新的 5 张）。
 - class_photos 建议日期子目录 / Date subfolders recommended.
 
 ================================================================================
@@ -11,17 +11,20 @@ sunday-photos 项目结构 / Project Structure（控制台版 Console）
 sunday-photos/
 ├── input/                               # 输入 Input
 │   ├── student_photos/                  # 参考照 Reference photos
-│   │   ├── 张三.jpg / ZhangSan.jpg      # 姓名命名 Named by student
-│   │   └── LiSi_2.png                   # 多张 _序号 Multiple with _index
+│   │   ├── Alice(Senior)/               # Student folder
+│   │   │   ├── a.jpg
+│   │   │   └── IMG_0001.png
+│   │   └── Bob/                         # Another student
+│   │       └── ref.jpg
 │   └── class_photos/                    # 课堂照 Classroom photos
 │       ├── 2024-12-21/                  # 日期子目录 Date folder
-│       │   └── 活动合影.jpg / group.jpg
-│       └── 零散照片.jpg / loose.jpg
+│       │   └── group_photo.jpg
+│       └── loose.jpg
 ├── output/                              # 输出 Output (auto)
-│   ├── 张三/ / ZhangSan/                # 按学生 By student
+│   ├── Alice/                           # By student
 │   │   └── 2024-12-21/                  # 按日期 By date
-│   ├── 未知照片/ / Unknown/             # 未匹配 Unmatched
-│   └── 整理报告.txt / report.txt        # 运行报告 Run report
+│   ├── unknown_photos/ / Unknown/      # 未匹配 Unmatched
+│   └── report.txt                       # Run report
 ├── logs/                                # 日志 Logs
 │   └── sunday_photos_20241221.log       # 按日期日志 Dated log
 ├── src/                                 # 源码 Source
@@ -56,7 +59,7 @@ sunday-photos/
 ================================================================================
 使用步骤（源码） / Usage (source):
 1) pip install -r requirements.txt
-2) 参考照 input/student_photos，课堂照 input/class_photos（建议日期子目录）
+2) 参考照 input/student_photos/学生名/，课堂照 input/class_photos（建议日期子目录）
 3) python run.py
 4) 查看 output/
 

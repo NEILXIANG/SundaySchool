@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
-from .utils import DATE_DIR_PATTERN, is_supported_nonempty_image_path
+from .utils import DATE_DIR_PATTERN, is_supported_nonempty_image_path, is_ignored_fs_entry
 
 
 STATE_DIR_NAME = ".state"
@@ -48,6 +48,8 @@ def iter_date_directories(class_photos_dir: Path) -> List[Path]:
         return []
     date_dirs: List[Path] = []
     for child in class_photos_dir.iterdir():
+        if is_ignored_fs_entry(child):
+            continue
         if child.is_dir() and DATE_DIR_PATTERN.match(child.name):
             date_dirs.append(child)
     return sorted(date_dirs, key=lambda p: p.name)

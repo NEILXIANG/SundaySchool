@@ -34,10 +34,11 @@
 - 输入 Input：
   ```
   input/
-  ├── student_photos/      # 姓名 或 姓名_序号.jpg / Name or Name_index.jpg
+  ├── student_photos/      # 唯一方式：student_photos/学生名/ 里放参考照（文件名随意）
   └── class_photos/        # 推荐日期子目录 / date subfolders recommended
   ```
-  格式 formats: jpg/png, ≤5MB。
+  格式 formats: jpg/png；单张大小不做限制（超大图片可能占用更多内存，资源不足时程序会提示并跳过）。
+  参考照数量：每位学生最多使用 5 张（建议 2–5 张，越清晰越好）。
 - 输出 Output：
   ```
   output/

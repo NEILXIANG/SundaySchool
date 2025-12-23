@@ -6,7 +6,7 @@
 - 核心代码：`sunday-photos/src/`（入口 `src/cli/run.py`，核心逻辑 `src/core/`）。
 - 打包脚本：`sunday-photos/scripts/build_mac_app.sh`（macOS 控制台 onefile，可读 `TARGET_ARCH`）。
 - 发布目录：`sunday-photos/release_console/`（可执行文件 `SundayPhotoOrganizer` + 启动脚本 + 使用说明）。
-- Windows 产物：`sunday-photos/dist/`（pyinstaller onefile）。
+- Windows 产物：交付目录为 `sunday-photos/release_console/`（`SundayPhotoOrganizer.exe` + `Launch_SundayPhotoOrganizer.bat`）；`sunday-photos/dist/` 仅为 PyInstaller 的中间产物目录。
 
 ## 本地开发与测试
 1) Python 3.14，推荐使用虚拟环境：
@@ -32,12 +32,20 @@ TARGET_ARCH=arm64  bash scripts/build_mac_app.sh
 ```
 产物：`release_console/SundayPhotoOrganizer`（onefile 可执行文件）。
 
+## 本地打包（Windows）
+在 Windows 上使用 PowerShell 运行（PyInstaller 不支持跨平台交叉编译）：
+```powershell
+cd sunday-photos
+powershell -ExecutionPolicy Bypass -File scripts\build_windows_console_app.ps1
+```
+产物：`release_console/SundayPhotoOrganizer.exe`（onefile 可执行文件）。
+
 > 说明：旧版本可能是 onedir 结构 `release_console/SundayPhotoOrganizer/SundaySchool`；当前脚本输出为 onefile。
 
 ## GitHub Actions 工作流
 - macOS x86_64: `.github/workflows/macos-x86-build.yml`（runner macos-12，产物名 `macos-x86_64`，路径 `sunday-photos/release_console/`）。
 - macOS arm64: `.github/workflows/macos-arm-build.yml`（runner macos-14，产物名 `macos-arm64`，路径同上）。
-- Windows x86_64: `.github/workflows/windows-build.yml`（runner windows-latest，产物名 `windows-x86_64`，路径 `sunday-photos/dist/`）。
+- Windows x86_64: `.github/workflows/windows-build.yml`（runner windows-latest，产物名 `windows-x86_64`，路径 `sunday-photos/release_console/`）。
 - 触发：`workflow_dispatch` 手动；进入对应 workflow 页面点击 “Run workflow”。
 
 ## 配置与参数

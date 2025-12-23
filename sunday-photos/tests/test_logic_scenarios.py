@@ -62,24 +62,25 @@ class TestLogicScenarios(unittest.TestCase):
         """测试场景1: 学生有多张参考照片"""
         print("\n🧪 测试场景1: 多张参考照片逻辑")
         
-        # 准备数据：ZhangSan 有两张照片
+        # 准备数据：ZhangSan 有两张照片（同一学生最多可用 5 张）
         self.student_manager.get_all_students.return_value = [
             {
                 'name': 'ZhangSan', 
                 'photo_paths': [
-                    str(self.student_photos_dir / 'ZhangSan_1.jpg'),
-                    str(self.student_photos_dir / 'ZhangSan_2.jpg')
+                    str(self.student_photos_dir / 'ZhangSan' / 'a.jpg'),
+                    str(self.student_photos_dir / 'ZhangSan' / 'b.jpg')
                 ]
             }
         ]
         
         # 创建虚拟文件
-        (self.student_photos_dir / 'ZhangSan_1.jpg').touch()
-        (self.student_photos_dir / 'ZhangSan_2.jpg').touch()
+        (self.student_photos_dir / 'ZhangSan').mkdir(parents=True, exist_ok=True)
+        (self.student_photos_dir / 'ZhangSan' / 'a.jpg').touch()
+        (self.student_photos_dir / 'ZhangSan' / 'b.jpg').touch()
         
         # 模拟 face_recognition 行为：
         # - 第一张照片检测不到人脸 => 跳过
-        # - 第二张照片检测到人脸且尺寸足够大 => 生成编码并写入 students_encodings
+        # - 第二张照片检测到人脸且尺寸足够大 => 生成编码并写入 students_encodings['encodings']
         mock_locations.side_effect = [[], [(10, 100, 100, 10)]]
         mock_encodings.side_effect = [[self.encoding_zhang]] # 只有第二次调用会用到这个
         
@@ -91,8 +92,9 @@ class TestLogicScenarios(unittest.TestCase):
         self.assertEqual(mock_load_image.call_count, 2)
         # 最终应该成功加载了 ZhangSan
         self.assertIn('ZhangSan', recognizer.students_encodings)
-        # 编码应该是第二张照片的
-        np.testing.assert_array_equal(recognizer.students_encodings['ZhangSan']['encoding'], self.encoding_zhang)
+        # 编码应该来自第二张照片
+        self.assertGreaterEqual(len(recognizer.students_encodings['ZhangSan'].get('encodings') or []), 1)
+        np.testing.assert_array_equal(recognizer.students_encodings['ZhangSan']['encodings'][0], self.encoding_zhang)
         print("✅ 成功处理多张参考照片，自动跳过无效照片")
 
     @patch('face_recognition.load_image_file')
@@ -108,8 +110,8 @@ class TestLogicScenarios(unittest.TestCase):
         # 初始化识别器（会加载空学生列表），随后手动注入 known faces
         recognizer = FaceRecognizer(self.student_manager)
         recognizer.students_encodings = {
-            'ZhangSan': {'name': 'ZhangSan', 'encoding': self.encoding_zhang},
-            'LiSi': {'name': 'LiSi', 'encoding': self.encoding_li}
+            'ZhangSan': {'name': 'ZhangSan', 'encodings': [self.encoding_zhang]},
+            'LiSi': {'name': 'LiSi', 'encodings': [self.encoding_li]}
         }
         recognizer._refresh_known_faces()
         print(f"DEBUG: known_names={recognizer.known_student_names}")
@@ -204,7 +206,7 @@ class TestLogicScenarios(unittest.TestCase):
         
         recognizer = FaceRecognizer(self.student_manager, tolerance=0.6)
         recognizer.students_encodings = {
-            'ZhangSan': {'name': 'ZhangSan', 'encoding': self.encoding_zhang}
+            'ZhangSan': {'name': 'ZhangSan', 'encodings': [self.encoding_zhang]}
         }
         recognizer._refresh_known_faces()
         

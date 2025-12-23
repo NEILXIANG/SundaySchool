@@ -112,6 +112,30 @@ class TeacherHelper:
                     '使用图片转换工具或在线转换',
                     '避免使用损坏的照片文件'
                 ]
+            },
+
+            # Windows 常见：路径过长
+            'path_too_long': {
+                'title': '📏 文件路径太长（Windows 常见）',
+                'explanation': 'Windows 在某些情况下对文件路径长度有限制，路径太深时会导致复制/写入失败。',
+                'solutions': [
+                    '把工作目录放得更“浅”：例如把桌面文件夹改放到 C:/SundaySchoolPhotoOrganizer/（或把工程目录移到更短路径）',
+                    '缩短学生文件夹名/照片文件名（避免超长名字）',
+                    '避免过深的日期/多层子目录',
+                    '如有条件：在 Windows 系统设置中启用“长路径支持”（需要管理员权限）'
+                ]
+            },
+
+            # 控制台编码问题
+            'console_encoding': {
+                'title': '🔤 控制台文字显示异常（可能是编码问题）',
+                'explanation': '在 Windows 的某些终端/字体设置下，中文/特殊符号可能显示为乱码，但不一定影响实际整理结果。',
+                'solutions': [
+                    '优先使用 Windows Terminal 或 PowerShell 打开并运行',
+                    '双击运行时请尽量使用提供的 .bat 启动脚本（会尝试切换到 UTF-8）',
+                    '如果仍乱码：在终端里执行 chcp 65001 后再运行',
+                    '如需要求助：请优先发送 logs/ 里的最新日志（日志是 UTF-8）'
+                ]
             }
         }
     
@@ -119,12 +143,22 @@ class TeacherHelper:
         """获取友好的错误信息"""
         error_str = str(error)
         error_type = type(error).__name__
+
+        # Windows path-too-long: WinError 206 / ENAMETOOLONG
+        try:
+            winerror = getattr(error, 'winerror', None)
+        except Exception:
+            winerror = None
         
         # 根据错误类型返回相应的友好消息
         if error_type == "FileNotFoundError" or "找不到文件" in error_str:
             return self.format_message('file_not_found', context)
         elif error_type == "PermissionError" or "Permission denied" in error_str or "权限" in error_str:
             return self.format_message('permission_denied', context)
+        elif winerror == 206 or "WinError 206" in error_str or "File name too long" in error_str or "ENAMETOOLONG" in error_str:
+            return self.format_message('path_too_long', context)
+        elif error_type == "UnicodeEncodeError" or "UnicodeEncodeError" in error_str:
+            return self.format_message('console_encoding', context)
         elif error_type == "MemoryError" or "内存" in error_str:
             return self.format_message('memory_error', context)
         elif "face_recognition" in error_str.lower():
@@ -204,7 +238,7 @@ class TeacherHelper:
    • logs/ - 程序运行日志
 
 📸 照片要求：
-    • 学生照片：姓名.jpg 或 姓名_序号.jpg（序号可选，如：张三.jpg、张三_2.jpg、LiSi.jpg）
+    • 学生参考照（唯一方式）：student_photos/学生名/ 里放照片（文件名随意）
    • 照片清晰度：确保人脸清晰可见
     • 照片格式：推荐使用 .jpg/.png
 
@@ -213,29 +247,25 @@ class TeacherHelper:
    • 高级模式：python src/main.py [参数]
 """,
             
-            'photo_naming': """
-📸 学生照片命名指南
+                'photo_naming': """
+📸 学生参考照放置指南（唯一方式）
 
-📝 正确命名格式：
-    • 姓名.扩展名（只有 1 张参考照时）
-    • 姓名_序号.扩展名（同一学生多张参考照时，序号可选）
-    • 示例：张三.jpg、张三_2.jpg、LiSi.png
+✅ 正确放法：
+    • 在 input/student_photos 里为每个学生创建一个文件夹：
+        input/student_photos/Alice(Senior)/
+        input/student_photos/Bob(Junior)/
+    • 把该学生的参考照片放进对应文件夹
+    • 文件名随意（不用改名），只要不重名即可
 
-❌ 错误示例：
-    • .jpg （没有姓名）
-    • 张三__.jpg（文件名异常）
-    • 张三.txt（不是图片格式）
+❌ 常见错误：
+    • 把照片直接放在 input/student_photos 根目录
+    • 在学生文件夹里再建更深一层子文件夹
+    • 学生文件夹为空
 
 💡 最佳实践：
-   • 使用学生真实姓名
-   • 每个学生至少准备1-2张照片
-   • 照片中只有学生本人，避免多人合照
-   • 照片清晰，表情自然
-
-🔄 重命名方法：
-   1. Windows：右键文件 → 重命名
-   2. Mac：单击文件 → 按回车键重命名
-   3. 批量重命名可使用专业工具
+    • 每个学生准备 2-5 张不同角度的清晰正脸照
+    • 参考照尽量只拍该学生本人（避免多人合照）
+    • 遮挡少、光线好、人脸不要太小
 """,
             
             'troubleshooting': """

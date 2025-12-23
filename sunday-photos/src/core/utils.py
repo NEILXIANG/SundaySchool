@@ -85,6 +85,34 @@ def setup_logger(log_dir=None, enable_color_console=False):
 DATE_DIR_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+def is_ignored_fs_entry(path: Path) -> bool:
+    """Return True for OS-generated metadata/hidden entries.
+
+    Purpose: avoid treating platform junk files as real photos/folders.
+
+    Examples:
+    - macOS zip metadata: __MACOSX/, .DS_Store, Icon\r, ._AppleDouble files
+    - Windows Explorer metadata: Thumbs.db, desktop.ini
+    """
+    name = path.name
+    if not name:
+        return False
+    if name.startswith('.'):
+        return True
+
+    lower = name.lower()
+    if lower in {"__macosx", ".ds_store", "thumbs.db", "desktop.ini"}:
+        return True
+    # AppleDouble sidecar files can look like images (e.g. ._IMG_0001.jpg)
+    if lower.startswith("._"):
+        return True
+    # Finder custom icon marker in some archives
+    if name == "Icon\r":
+        return True
+
+    return False
+
+
 def _get_date_from_directory(photo_path: str):
     """优先从目录名(yyyy-mm-dd)推断日期"""
     path_obj = Path(photo_path)
@@ -152,6 +180,8 @@ def is_supported_nonempty_image_path(path) -> bool:
     """
     try:
         p = Path(path)
+        if is_ignored_fs_entry(p):
+            return False
         if not p.is_file():
             return False
         if p.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:

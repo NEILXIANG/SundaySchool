@@ -11,11 +11,11 @@
 - Place photos into the auto-created desktop folder, rerun to organize; output opens automatically.
 
 【文件夹位置 | Folder location】
-- 桌面/Desktop：Desktop/主日学照片整理
+- 桌面/Desktop：Desktop/SundaySchoolPhotoOrganizer
 
-【自动创建的文件夹 | Auto-created folders】Desktop/主日学照片整理
-- student_photos：学生照片（学生参考照），命名“姓名”或“姓名_序号”（张三.jpg、张三_2.jpg、LiSi.png）
-	student_photos: reference photos, named "Name" or "Name_number" (ZhangSan.jpg, ZhangSan_2.jpg, LiSi.png)
+【自动创建的文件夹 | Auto-created folders】Desktop/SundaySchoolPhotoOrganizer
+	- student_photos：学生照片（学生参考照，唯一方式：student_photos/学生名/ 里放照片，文件名随意）
+	student_photos: reference photos (folder-only): student_photos/<student_name>/... (filenames can be anything)
 - class_photos：课堂照片（课堂照），建议按日期子目录（2024-12-21/合影.jpg）
 	class_photos: classroom photos, date subfolders recommended (2024-12-21/group.jpg)
 - output：整理结果，按学生 → 日期分层
@@ -40,7 +40,7 @@
 	The app may move photos into YYYY-MM-DD date folders; this is expected.
 
 【常见问题 | FAQ】
-- 很快结束 / finishes too fast：检查桌面/主日学照片整理 的目录与命名
+- 很快结束 / finishes too fast：检查桌面/SundaySchoolPhotoOrganizer 的目录与放置方式
 - 识别不准 / poor matches：
 	1) 为该学生多放 2-3 张清晰正脸参考照（只拍该学生一个人）
 	2) 课堂照尽量光线足、人脸不要太小/太模糊

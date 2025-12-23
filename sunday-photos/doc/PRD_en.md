@@ -54,10 +54,11 @@ python src/run.py \
 ### Input
 ```
 input/
-├── student_photos/      # Reference: Name or Name_index.jpg
+├── student_photos/      # Folder-only: student_photos/<student_name>/... (filenames can be anything)
 └── class_photos/        # Classroom photos; date subfolders recommended (e.g., 2025-12-21/xxx.jpg)
 ```
-Formats: .jpg / .png, <= 5MB each.
+Formats: .jpg / .png. No per-photo size limit (very large images may use more memory; the program will warn/skip if resources are insufficient).
+Reference photos: up to 5 per student (recommended 2–5 clear photos).
 
 ### Output
 ```

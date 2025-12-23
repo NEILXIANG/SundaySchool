@@ -6,7 +6,7 @@ For developers and release maintainers: local dev, packaging, and CI workflows.
 - Source: `sunday-photos/src/` (entry `src/cli/run.py`, core logic in `src/core/`).
 - macOS packaging script: `sunday-photos/scripts/build_mac_app.sh` (console onefile, honors `TARGET_ARCH`).
 - Release dir: `sunday-photos/release_console/` (executable `SundayPhotoOrganizer` + launcher + docs).
-- Windows output: `sunday-photos/dist/` (pyinstaller onefile).
+- Windows output: `sunday-photos/release_console/` (onefile `SundayPhotoOrganizer.exe` + `Launch_SundayPhotoOrganizer.bat`).
 
 ## Local dev & test
 1) Python 3.14, create venv:
@@ -32,12 +32,20 @@ TARGET_ARCH=arm64  bash scripts/build_mac_app.sh
 ```
 Output: `release_console/SundayPhotoOrganizer` (onefile executable).
 
+## Local packaging (Windows)
+Run on Windows (PyInstaller cannot cross-compile):
+```powershell
+cd sunday-photos
+powershell -ExecutionPolicy Bypass -File scripts\build_windows_console_app.ps1
+```
+Output: `release_console/SundayPhotoOrganizer.exe` (onefile executable).
+
 Note: Older builds may have used an onedir layout like `release_console/SundayPhotoOrganizer/SundaySchool`. Current script outputs onefile.
 
 ## GitHub Actions
 - macOS x86_64: `.github/workflows/macos-x86-build.yml` (runner macos-12, artifact `macos-x86_64`, path `sunday-photos/release_console/`).
 - macOS arm64: `.github/workflows/macos-arm-build.yml` (runner macos-14, artifact `macos-arm64`, path same as above).
-- Windows x86_64: `.github/workflows/windows-build.yml` (runner windows-latest, artifact `windows-x86_64`, path `sunday-photos/dist/`).
+- Windows x86_64: `.github/workflows/windows-build.yml` (runner windows-latest, artifact `windows-x86_64`, path `sunday-photos/release_console/`).
 - Trigger: `workflow_dispatch` (manual “Run workflow” in Actions UI).
 
 ## Config & params

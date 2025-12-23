@@ -116,24 +116,28 @@ class TeacherHelpSystemTester:
         
         try:
             from ui.input_validator import validator
-            
-            # 测试照片文件名验证
-            valid_names = ['张三_1.jpg', '李四.jpg', 'Alice.jpg', 'Bob_2.png']
-            invalid_names = ['Alice!.jpg', '张三__1.jpg', '张三_01.jpg']
-            
-            for name in valid_names:
-                result = validator.validate_photo_name(name)
-                if not result['valid']:
-                    print(f"❌ 有效文件名验证失败: {name}")
-                    return False
-            print("✅ 有效文件名验证通过")
-            
-            for name in invalid_names:
-                result = validator.validate_photo_name(name)
-                if result['valid']:
-                    print(f"❌ 无效文件名应该被拒绝: {name}")
-                    return False
-            print("✅ 无效文件名验证通过")
+
+            # 测试学生参考照目录结构验证（文件夹模式，唯一用法）
+            student_photos_dir = Path(self.temp_dir) / "input" / "student_photos"
+            student_photos_dir.mkdir(parents=True, exist_ok=True)
+
+            # 错误：根目录放图片
+            (student_photos_dir / "张三.jpg").touch()
+            result = validator.validate_student_photos_directory(str(student_photos_dir))
+            if result['valid']:
+                print("❌ student_photos 根目录放图片应该被拒绝")
+                return False
+
+            # 正确：student_photos/学生名/ 里放图片
+            (student_photos_dir / "张三.jpg").unlink()
+            sd = student_photos_dir / "张三(大班)"
+            sd.mkdir(parents=True, exist_ok=True)
+            (sd / "a.jpg").touch()
+            result = validator.validate_student_photos_directory(str(student_photos_dir))
+            if not result['valid']:
+                print("❌ 正确的 student_photos 文件夹模式被错误拒绝")
+                return False
+            print("✅ 学生参考照目录结构验证通过")
             
             # 测试目录验证
             test_dir = self.temp_dir
@@ -335,9 +339,19 @@ class TeacherHelpSystemTester:
             from ui.teacher_helper import TeacherHelper
             
             # 模拟一个完整的用户帮助场景
-            validation_result = validator.validate_photo_name('张三_1.jpg')
-            if not validation_result['valid']:
-                print("❌ 验证器和辅助器协作失败")
+            tolerance_result = validator.validate_tolerance_parameter('0.6')
+            if not tolerance_result['valid']:
+                print("❌ 验证器和辅助器协作失败（阈值验证异常）")
+                return False
+
+            student_photos_dir = Path(self.temp_dir) / "input2" / "student_photos"
+            student_photos_dir.mkdir(parents=True, exist_ok=True)
+            sd = student_photos_dir / "Alice"
+            sd.mkdir(parents=True, exist_ok=True)
+            (sd / "ref.jpg").touch()
+            layout_result = validator.validate_student_photos_directory(str(student_photos_dir))
+            if not layout_result['valid']:
+                print("❌ 验证器和辅助器协作失败（目录结构验证异常）")
                 return False
             
             helper = TeacherHelper()

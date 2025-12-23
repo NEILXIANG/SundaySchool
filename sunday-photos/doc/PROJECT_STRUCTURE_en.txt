@@ -3,7 +3,7 @@ sunday-photos Project Structure (Console Edition)
 Notes:
 - Console/CLI only; no GUI.
 - Input root defaults to input/ (old classroom_dir is still accepted).
-- student_photos/ holds reference photos, named Name or Name_index.jpg (e.g., ZhangSan.jpg or ZhangSan_1.jpg).
+- student_photos/ (folder-only): put photos under student folders: student_photos/<student_name>/... (filenames can be anything). Up to 5 reference photos per student.
 - class_photos/ holds classroom photos, preferably by date folders.
 
 ================================================================================
@@ -11,8 +11,11 @@ Notes:
 sunday-photos/
 ├── input/                               # Input assets to process
 │   ├── student_photos/                  # Reference photos of known students
-│   │   ├── ZhangSan.jpg                 # Example: named by student
-│   │   └── LiSi_2.png                   # Example: multiple photos with _index
+│   │   ├── ZhangSan/                    # Student folder (folder name = student name)
+│   │   │   ├── a.jpg
+│   │   │   └── IMG_0001.png
+│   │   └── LiSi/
+│   │       └── ref.jpg
 │   └── class_photos/                    # Classroom photos to organize
 │       ├── 2024-12-21/                  # Recommended date subfolder
 │       │   └── group.jpg

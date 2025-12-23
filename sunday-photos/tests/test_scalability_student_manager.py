@@ -33,8 +33,9 @@ def _create_dummy_photos(base_dir: Path, student_count: int = 30) -> None:
     student_photos = base_dir / "student_photos"
     student_photos.mkdir(parents=True, exist_ok=True)
     for i in range(1, student_count + 1):
-        name = f"Student{i:02d}_1.jpg"
-        (student_photos / name).write_bytes(b"fake-image-data")
+        student_name = f"Student{i:02d}"
+        (student_photos / student_name).mkdir(parents=True, exist_ok=True)
+        (student_photos / student_name / "ref.jpg").write_bytes(b"fake-image-data")
 
     # 课堂照片目录仅用于传递路径给识别函数
     class_photos = base_dir / "class_photos"

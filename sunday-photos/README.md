@@ -36,16 +36,19 @@
 ```
 sunday-photos/
 ├── input/                      # 输入根目录
-│   ├── student_photos/         # 学生参考照（姓名 或 姓名_序号）
-│   │   ├── 张三.jpg            # 示例：单张参考照
-│   │   └── LiSi_2.png          # 示例：多张参考照用序号
+│   ├── student_photos/         # 学生参考照（folder-only: student_photos/<student_name>/...）
+│   │   ├── Alice/              # Example student folder
+│   │   │   ├── ref_01.jpg
+│   │   │   └── ref_02.png
+│   │   └── Bob/
+│   │       └── img_0001.jpg
 │   └── class_photos/           # 课堂照片（建议按日期子目录）
 │       ├── 2024-12-21/         # 示例：按日期分子目录
-│       │   └── 活动合影.jpg
-│       └── 零散照片.png        # 若不分日期也可直接放根目录
+│       │   └── group_photo.jpg
+│       └── loose_photo.png     # 若不分日期也可直接放根目录
 ├── output/                     # 整理结果：学生/日期分层 + 报告
-│   ├── 张三/2024-12-21/...     # 示例：学生/日期/照片
-│   ├── 未知照片/2024-12-21/... # 未匹配人脸的照片
+│   ├── Alice/2024-12-21/...    # 示例：学生/日期/照片
+│   ├── unknown_photos/2024-12-21/... # 未匹配人脸的照片
 │   └── 20241221_整理报告.txt    # 示例：自动生成的报告
 ├── logs/                       # 运行日志（可清空）
 ├── src/                        # 源码入口
@@ -68,32 +71,34 @@ sunday-photos/
 ```
 input/
 ├── student_photos/
-│   ├── 张三.jpg          # 学生“张三”的参考照
-│   ├── 张三_2.jpg        # 同一学生的第二张参考照
-│   └── LiSi.png         # 英文姓名也可
+│   ├── Alice/
+│   │   ├── ref_01.jpg
+│   │   └── ref_02.jpg
+│   └── Bob/
+│       └── img_0001.png
 └── class_photos/
    ├── 2024-12-21/
-   │   ├── 活动合影.jpg
-   │   └── 游戏时间.png
+   │   ├── group_photo.jpg
+   │   └── game_time.png
    └── 2024-12-28/
-      └── 小组讨论.jpg
+      └── discussion.jpg
 ```
 
 ### 📤 output 目录示例
 ```
 output/
-├── 张三/
+├── Alice/
 │   ├── 2024-12-21/
-│   │   ├── 活动合影_103045.jpg
-│   │   └── 游戏时间_104823.jpg
+│   │   ├── group_photo_103045.jpg
+│   │   └── game_time_104823.jpg
 │   └── 2024-12-28/
-│       └── 小组讨论_101010.jpg
-├── 李四/
+│       └── discussion_101010.jpg
+├── Bob/
 │   └── 2024-12-21/
-│       └── 活动合影_103045.jpg
-└── 未知照片/
+│       └── group_photo_103045.jpg
+└── unknown_photos/
    └── 2024-12-21/
-      └── 模糊照片_105632.jpg
+   └── blurry_105632.jpg
 ```
 
 **目录作用说明**
@@ -108,33 +113,35 @@ output/
 **input 目录示例（源码运行）**
 ```
 input/
-├── student_photos/          # 学生参考照（姓名 或 姓名_序号）
-│   ├── 张三.jpg
-│   ├── 张三_2.jpg
-│   └── LiSi.jpg
+├── student_photos/          # Reference (folder-only): student_photos/<student_name>/...
+│   ├── Alice/
+│   │   ├── ref_01.jpg
+│   │   └── ref_02.png
+│   └── Bob/
+│       └── img_0001.jpg
 └── class_photos/            # 课堂照，建议按日期子目录
    ├── 2024-12-21/
-   │   ├── 活动合影.jpg
-   │   └── 游戏时间.png
+   │   ├── group_photo.jpg
+   │   └── game_time.png
    └── 2024-12-28/
-      └── 小组讨论.jpg
+      └── discussion.jpg
 ```
 
 **output 目录示例（学生/日期分层）**
 ```
 output/
-├── 张三/
+├── Alice/
 │   ├── 2024-12-21/
-│   │   ├── 活动合影_103045.jpg
-│   │   └── 游戏时间_104823.jpg
+│   │   ├── group_photo_103045.jpg
+│   │   └── game_time_104823.jpg
 │   └── 2024-12-28/
-│       └── 小组讨论_101010.jpg
-├── 李四/
+│       └── discussion_101010.jpg
+├── Bob/
 │   └── 2024-12-21/
-│       └── 活动合影_103045.jpg
-└── 未知照片/
+│       └── group_photo_103045.jpg
+└── unknown_photos/
    └── 2024-12-21/
-      └── 模糊照片_105632.jpg
+   └── blurry_105632.jpg
 ```
 
 
@@ -155,9 +162,9 @@ output/
 - macOS：双击 `release_console/启动工具.sh`（推荐），或双击 `release_console/SundayPhotoOrganizer`
 
 ### 2) 放照片（只需要这一步）
-首次运行会在桌面创建：`主日学照片整理/`
-- `student_photos/`：学生参考照（`姓名.jpg` 或 `姓名_2.jpg`）
-- `class_photos/`：课堂照片（建议按日期子目录 `2025-12-21/照片.jpg`）
+首次运行会在桌面创建：`SundaySchoolPhotoOrganizer/`
+- `student_photos/`：学生参考照（folder-only：`student_photos/<student_name>/...`，文件名随意）
+- `class_photos/`：课堂照片（建议按日期子目录 `2025-12-21/group_photo.jpg`）
 
 ### 3) 再运行一次
 整理完成后会自动打开 `output/`。
@@ -170,8 +177,8 @@ output/
 ## 🧑‍💻 开发者（源码运行）使用
 
 ### 第一步：准备学生照片
-1. 📁 将所有学生的参考照片放入 `input/student_photos/` 目录
-2. 🏷️ 照片文件名格式：姓名 或 姓名_序号.jpg（如：`张三.jpg`、`张三_2.jpg`）
+1. 📁 在 `input/student_photos/` 下为每个学生创建文件夹：`input/student_photos/<student_name>/`
+2. 🏷️ 文件名随意（不用改名），每位学生最多使用 5 张（按修改时间取最新 5 张）
 3. 📸 每个学生可以提供多张不同角度的参考照片
 
 ### 第二步：放入待整理照片
@@ -227,17 +234,17 @@ python run.py --help
 
 ```
 output/
-├── 张三/                              # 学生个人文件夹
-│   ├── 2024-12-21_班级活动_103045.jpg
-│   ├── 2024-12-21_小组讨论_103146.jpg
-│   └── 2024-12-21_个人展示_103254.jpg
-├── 李四/
-│   ├── 2024-12-21_班级活动_103045.jpg
-│   └── 2024-12-21_游戏时间_104823.jpg
-├── 王五/
-│   └── 2024-12-21_班级活动_103045.jpg
-├── 未知照片/                          # 未识别到人脸的照片
-│   └── 模糊照片_105632.jpg
+├── Alice/                             # Student folder
+│   ├── 2024-12-21_group_photo_103045.jpg
+│   ├── 2024-12-21_discussion_103146.jpg
+│   └── 2024-12-21_showcase_103254.jpg
+├── Bob/
+│   ├── 2024-12-21_group_photo_103045.jpg
+│   └── 2024-12-21_game_time_104823.jpg
+├── Charlie/
+│   └── 2024-12-21_group_photo_103045.jpg
+├── unknown_photos/                    # Unmatched photos
+│   └── blurry_105632.jpg
 ├── 整理报告.txt                        # 基础整理报告
 └── 智能分析报告.txt                    # 智能分析结果
 ```
@@ -339,7 +346,7 @@ A: 1) 检查照片文件大小，避免过大照片
    3) 调整识别参数优化速度
 
 ### Q: 如何处理同名学生？
-A: 1) 使用更具体的文件夹名 (如: "张三_大班")
+A: 1) 使用更具体的文件夹名 (如: "Alice_Senior")
    2) 在文件夹中放入唯一参考照片
 
 ### Q: 某些照片未被识别？
@@ -352,7 +359,7 @@ A: 1) 检查照片中是否包含清晰人脸
 ## 📞 技术支持
 
 如果遇到问题：
-1. 🔍 老师（打包版）：查看桌面 `主日学照片整理/logs/` 目录中最新的日志文件
+1. 🔍 老师（打包版）：查看桌面 `SundaySchoolPhotoOrganizer/logs/` 目录中最新的日志文件
 2. 🔍 开发者（源码）：查看 `logs/` 目录中的日志文件
 2. 📊 查看生成的分析报告
 3. 💡 使用 `python run.py --help` 查看帮助

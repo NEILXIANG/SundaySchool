@@ -6,10 +6,18 @@
 import os
 from pathlib import Path
 import logging
-from collections import defaultdict
 from .config import STUDENT_PHOTOS_DIR, SUPPORTED_IMAGE_EXTENSIONS
+from .utils import is_ignored_fs_entry
 
 logger = logging.getLogger(__name__)
+
+
+class StudentPhotosLayoutError(ValueError):
+    """学生参考照目录结构错误。
+
+    仅支持：student_photos/<学生名>/*.jpg|png...
+    不支持：student_photos 根目录直接放图片；不支持更深层嵌套。
+    """
 
 
 class StudentManager:
@@ -32,36 +40,111 @@ class StudentManager:
         self.load_students()
     
     def load_students(self):
-        """从 student_photos 目录加载学生信息，按文件名前缀识别学生
+        """从 student_photos 目录加载学生信息。
 
-        :return: 学生数据字典，包含学生姓名和对应的参考照片路径
+        单一输入规范（老师唯一用法）：
+        - input/student_photos/<学生名>/*.jpg|jpeg|png
+
+        规则：
+        - 学生名取一级子文件夹名；文件名不参与归组
+        - 每个学生最多使用 5 张参考照（超过则仅使用“最近修改时间”最新的 5 张）
+        - student_photos 根目录禁止直接放图片；发现即报错
+        - 第一版不支持更深层嵌套目录
         """
         try:
             if not self.students_photos_dir.exists():
                 logger.warning(f"student_photos目录不存在: {self.students_photos_dir}")
                 return
-            
-            # 按学生姓名分组照片路径
-            student_photos = defaultdict(list)
-            
-            for img_path in self.students_photos_dir.iterdir():
-                if img_path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS and img_path.is_file():
-                    stem = img_path.stem
-                    # 文件名格式: 学生姓名_任意字符.jpg
-                    if '_' in stem:
-                        student_name = stem.split('_')[0]
-                    else:
-                        student_name = stem
-                    student_photos[student_name].append(img_path)
-            
-            # 存入 self.students_data
-            for name, paths in student_photos.items():
-                self.students_data[name] = {
-                    'name': name,
-                    'photo_paths': [str(p) for p in paths],
-                    'encoding': None  # 将在人脸识别模块中加载
+
+            def _list_images(dir_path: Path) -> list[Path]:
+                imgs: list[Path] = []
+                for p in dir_path.iterdir():
+                    if is_ignored_fs_entry(p):
+                        continue
+                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+                        imgs.append(p)
+                return imgs
+
+            def _sort_images_for_selection(imgs: list[Path]) -> list[Path]:
+                # 规则：优先取“最近修改时间”最新的照片；mtime 相同时按文件名升序保证稳定。
+                def _key(p: Path):
+                    try:
+                        mtime = p.stat().st_mtime
+                    except OSError:
+                        mtime = 0
+                    return (-mtime, p.name)
+
+                return sorted(imgs, key=_key)
+
+            # 1) 根目录禁止直接放图片（避免两套规则并存）
+            root_images = _list_images(self.students_photos_dir)
+            if root_images:
+                examples = "\n".join([f"  - {p.name}" for p in sorted(root_images)[:8]])
+                raise StudentPhotosLayoutError(
+                    "学生参考照目录结构不正确：检测到 student_photos 根目录存在图片文件。\n"
+                    "\n"
+                    "✅ 唯一正确方式：为每个学生建立文件夹，再把该学生照片放进去：\n"
+                    "  student_photos/Alice(Senior)/any_name.jpg\n"
+                    "  student_photos/Bob(Junior)/a.png\n"
+                    "\n"
+                    "❌ 目前发现这些根目录图片（请移动到对应学生文件夹）：\n"
+                    f"{examples}"
+                )
+
+            # 2) 读取一级子文件夹作为学生列表
+            student_dirs = [
+                p for p in self.students_photos_dir.iterdir() if p.is_dir() and not is_ignored_fs_entry(p)
+            ]
+            student_dirs.sort(key=lambda p: p.name)
+            if not student_dirs:
+                # 允许没有任何参考照：程序仍可运行（所有课堂照片将进入 unknown）。
+                # 由上层入口（如 console_launcher）决定是否强制要求老师提供参考照。
+                logger.warning(
+                    "student_photos 里没有找到任何学生文件夹；将视为未提供学生参考照（可继续运行，识别结果会全部归入 unknown）。"
+                )
+                self.students = []
+                return
+
+            empty_students: list[str] = []
+            self.students_data = {}
+            for student_dir in student_dirs:
+                # 第一版：不支持更深层嵌套目录
+                nested_dirs = [p for p in student_dir.iterdir() if p.is_dir() and not is_ignored_fs_entry(p)]
+                if nested_dirs:
+                    raise StudentPhotosLayoutError(
+                        f"发现嵌套目录：{student_dir.name}/ 下还有子文件夹。\n\n"
+                        "✅ 参考照必须直接放在 student_photos/学生名/ 下，不要再建更深一层文件夹。"
+                    )
+
+                images = _list_images(student_dir)
+                if not images:
+                    empty_students.append(student_dir.name)
+                    continue
+
+                # 稳定策略：按“最近修改时间”倒序，最多取前 5 张
+                images = _sort_images_for_selection(images)
+                selected = images[:5]
+                if len(images) > 5:
+                    logger.warning(
+                        "学生 %s 参考照 %s 张，超过上限 5 张，将仅使用最近修改时间最新的 5 张",
+                        student_dir.name,
+                        len(images),
+                    )
+
+                self.students_data[student_dir.name] = {
+                    'name': student_dir.name,
+                    'photo_paths': [str(p) for p in selected],
+                    'encoding': None,  # 兼容旧字段：实际编码由 FaceRecognizer 生成
                 }
-            
+
+            if empty_students:
+                shown = "\n".join([f"  - {n}" for n in empty_students[:12]])
+                more = "" if len(empty_students) <= 12 else f"\n  ... 还有 {len(empty_students) - 12} 个"
+                raise StudentPhotosLayoutError(
+                    "以下学生文件夹里没有任何图片，请为每个学生至少放 1 张清晰正脸参考照：\n"
+                    f"{shown}{more}"
+                )
+
             logger.info(f"成功加载 {len(self.students_data)} 名学生信息")
             
         except Exception as e:

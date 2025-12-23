@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""主日学照片整理工具 - 控制台版本（打包版入口）
+"""Sunday School Photo Organizer - Console Edition (Packaged Entry)
 
 面向老师的设计目标：最少操作、最少疑惑。
 
-行为概览：
-- 首次运行：在桌面创建“主日学照片整理/”目录结构并提示放照片
-- 再次运行：读取配置并整理照片；完成后自动打开 output/
+Behavior overview:
+- First run: create a Desktop folder and show where to put photos
+- Next runs: organize photos; open output/ when finished
 
-重要说明：
-- 程序可能会把 class_photos 根目录的照片按日期移动到 YYYY-MM-DD/ 子目录（正常现象，用于增量处理）
+Note:
+- The program may move photos under class_photos/ into YYYY-MM-DD/ subfolders (normal; used for incremental processing)
 """
 
 import sys
@@ -17,6 +17,7 @@ from pathlib import Path
 import json
 import time
 from datetime import datetime
+import platform
 
 # 添加src目录到Python路径
 SRC_DIR = Path(__file__).resolve().parents[1]
@@ -24,6 +25,8 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from config import UNKNOWN_PHOTOS_DIR
+from core.platform_paths import get_desktop_dir
+from core.utils import is_supported_nonempty_image_path
 
 
 def _try_get_teacher_helper():
@@ -36,7 +39,7 @@ def _try_get_teacher_helper():
 
 class ConsolePhotoOrganizer:
     def __init__(self):
-        self.app_directory = Path.home() / "Desktop" / "主日学照片整理"
+        self.app_directory = get_desktop_dir() / "SundaySchoolPhotoOrganizer"
         self.setup_complete = False
         self.teacher_helper = _try_get_teacher_helper()
 
@@ -61,18 +64,26 @@ class ConsolePhotoOrganizer:
         
     def print_header(self):
         """打印欢迎信息"""
+        # Best-effort: make Windows console output UTF-8 friendly.
+        if sys.platform == "win32":
+            try:
+                sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+                sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
         # 兼容测试中对欢迎信息的检查：保留该关键字符串
         print("主日学课堂照片自动整理工具")
         self._print_divider()
         run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
         print("这是一款给老师用的‘零门槛’整理工具：按提示放照片，然后运行即可。")
         print(f"本次运行编号：{run_id}")
-        print(f"工作文件夹（在桌面）：{self.app_directory}")
+        print(f"Work folder (Desktop): {self.app_directory}")
         self._print_tip("隐私说明：照片只在本机处理，不会自动上传到网络。")
         self._print_tip("安全说明：程序不会删除照片；只会把结果复制到 output/。为了便于下次继续整理，课堂照片可能会被归档到 class_photos/ 里的日期子文件夹（例如 YYYY-MM-DD/）。")
         print("三步完成：")
-        print(f"  ① 把学生参考照放进：{self.app_directory / 'student_photos'}")
-        print(f"  ② 把课堂照片放进：{self.app_directory / 'class_photos'}")
+        print(f"  ① Student reference photos: {self.app_directory / 'student_photos'}")
+        print(f"  ② Classroom photos: {self.app_directory / 'class_photos'}")
         print("  ③ 再运行一次（我会自动把结果放到 output/ 并尝试打开）")
         self._print_divider()
     
@@ -99,25 +110,26 @@ class ConsolePhotoOrganizer:
             if directory.name == "student_photos":
                 self._ensure_instruction_file(
                     directory,
-                    """学生照片文件夹
-请将学生的参考照片放在这里。
+                                        """Student reference photos
+Put reference photos under ONE folder per student:
 
-照片命名：姓名.jpg 或 姓名_序号.jpg（序号可选）
-示例：张三.jpg、张三_2.jpg、LiSi.jpg
+    student_photos/Alice/
+    student_photos/Bob/
 
-每个学生至少需要1张包含清晰人脸的照片。
+Filenames can be anything.
+Up to 5 reference photos per student will be used (if more than 5, the newest 5 by modified time will be used).
 """
                 )
             elif directory.name == "class_photos":
                 self._ensure_instruction_file(
                     directory,
-                    """课堂照片文件夹
-请需要整理的课堂照片放在这里。
+                                        """Classroom photos
+Put classroom/group photos here.
 
-可以是单个人或多人的课堂照片。
-程序会自动识别照片中的学生并分类。
+You may optionally organize by date folders, e.g.:
+    class_photos/2025-12-21/group_photo.jpg
 
-支持格式：.jpg、.jpeg、.png
+Supported formats: .jpg / .jpeg / .png
 """
                 )
         
@@ -142,24 +154,27 @@ class ConsolePhotoOrganizer:
         student_photos_dir = self.app_directory / "student_photos"
         class_photos_dir = self.app_directory / "class_photos"
         
-        # 检查学生照片
-        student_extensions = ['*.jpg', '*.jpeg', '*.png', '*.JPG', '*.JPEG', '*.PNG']
-        student_photos = []
-        for ext in student_extensions:
-            student_photos.extend(student_photos_dir.glob(ext))
+        # Student reference photos: folder-only layout, so scan recursively
+        student_photos = [
+            p
+            for p in student_photos_dir.rglob("*")
+            if is_supported_nonempty_image_path(p)
+        ]
         
-        # 检查课堂照片
-        class_photos = []
-        for ext in student_extensions:
-            class_photos.extend(class_photos_dir.glob(ext))
+        # Classroom photos (allow directly under class_photos or under date subfolders)
+        class_photos = [
+            p
+            for p in class_photos_dir.rglob("*")
+            if is_supported_nonempty_image_path(p)
+        ]
         
         print(f"已找到：学生参考照 {len(student_photos)} 张；课堂照片 {len(class_photos)} 张")
         
         if len(student_photos) == 0:
             self._print_warn("还没有找到学生参考照。")
-            self._print_next("把每位学生的清晰正脸照放进下面这个文件夹")
+            self._print_next("Create one folder per student under the folder below, then put clear face photos inside")
             print(f"  {student_photos_dir}")
-            self._print_tip("照片命名支持：张三.jpg 或 张三_2.jpg（序号可选）")
+            self._print_tip("Example: student_photos/Alice/ref_01.jpg (filenames can be anything)")
             return False
         
         if len(class_photos) == 0:
@@ -261,19 +276,21 @@ class ConsolePhotoOrganizer:
             # 显示文件位置
             output_dir = self.app_directory / "output"
             print(f"结果文件夹：{output_dir}")
-            self._print_tip("如果看到 unknown_photos/，那是‘没认出来’的照片；通常补 2-3 张更清晰的学生参考照就会改善。")
+            self._print_tip("If you see unknown_photos/, those are unrecognized photos; adding 2–3 clearer reference photos usually helps.")
             
             # 询问是否打开文件夹
             try:
                 import subprocess
-                import platform
 
                 print("我来帮你打开结果文件夹...")
                 
                 if platform.system() == "Darwin":  # macOS
                     subprocess.run(['open', str(output_dir)])
                 elif platform.system() == "Windows":
-                    subprocess.run(['explorer', str(output_dir)])
+                    try:
+                        os.startfile(str(output_dir))  # type: ignore[attr-defined]
+                    except Exception:
+                        subprocess.run(['explorer', str(output_dir)])
                 else:  # Linux
                     subprocess.run(['xdg-open', str(output_dir)])
                     
@@ -300,7 +317,7 @@ class ConsolePhotoOrganizer:
             print(self._format_friendly_error(e, context=context))
             print("\n你可以按下面顺序检查：")
             print("  1) 确认 student_photos/ 与 class_photos/ 里都放了照片")
-            print("  2) 学生参考照命名：张三.jpg 或 张三_2.jpg（序号可选）")
+            print("  2) Reference photos: put them in student_photos/<student_name>/ (folder); filenames can be anything")
             print("  3) 识别不准：给该学生补 2-3 张更清晰的正脸参考照")
             print(f"  4) 需要求助：把 logs 里最新日志发给同工/技术支持：{self.app_directory / 'logs'}")
             return False
