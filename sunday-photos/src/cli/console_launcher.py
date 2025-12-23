@@ -295,7 +295,7 @@ class ConsolePhotoOrganizer:
 
             print("\n")
             self._print_divider()
-            print("[错误] 程序遇到问题（先别慌）")
+            print("[错误] 程序遇到问题（不用紧张）")
             self._print_divider()
             print(self._format_friendly_error(e, context=context))
             print("\n你可以按下面顺序检查：")
