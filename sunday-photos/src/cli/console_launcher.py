@@ -184,7 +184,7 @@ class ConsolePhotoOrganizer:
             from main import SimplePhotoOrganizer
             from config_loader import ConfigLoader
             
-            # 创建/读取配置文件（存在则不覆盖，支持老师调参）
+            # 创建/读取配置文件（存在则不覆盖；主要用于一致性与排障，老师无需调参）
             config_file = self.create_config_file()
             
             config_loader = ConfigLoader(str(config_file))

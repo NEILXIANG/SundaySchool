@@ -84,9 +84,11 @@ output/
 - Output: written to `output/`, organized by student → date; reports generated
 
 ## ▶️ Launch Methods
-- Double-click executable: `release_console/SundayPhotoOrganizer/SundaySchool`
-- Terminal: `./release_console/SundayPhotoOrganizer/SundaySchool`
+- Double-click executable: `release_console/SundayPhotoOrganizer`
+- Terminal: `./release_console/SundayPhotoOrganizer`
 - Launcher script: double-click or run `./release_console/启动工具.sh`
+
+Note: Older builds may have used an onedir layout like `release_console/SundayPhotoOrganizer/SundaySchool`. Current releases use onefile: `release_console/SundayPhotoOrganizer`.
 
 macOS first-run gatekeeper: if blocked, go to System Settings → Privacy & Security → "Open Anyway".
 

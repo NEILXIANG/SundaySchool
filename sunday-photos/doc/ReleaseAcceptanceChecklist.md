@@ -14,7 +14,9 @@
 - `SundayPhotoOrganizer`（macOS 控制台可执行文件）
 - `启动工具.sh`（双击入口脚本，或老师按照说明运行）
 - `使用说明.txt`（老师版简明说明，零参数口径）
-- `input/`（包含空目录占位：`student_photos/`、`class_photos/`）
+
+可选（占位/示例目录；老师实际使用桌面 `主日学照片整理/`）：
+- `input/`（如需提供源码模式示例，可包含 `student_photos/`、`class_photos/`）
 - `output/`（可为空）
 - `logs/`（可为空）
 

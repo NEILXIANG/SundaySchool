@@ -4,8 +4,8 @@ For developers and release maintainers: local dev, packaging, and CI workflows.
 
 ## Key structure
 - Source: `sunday-photos/src/` (entry `src/cli/run.py`, core logic in `src/core/`).
-- macOS packaging script: `sunday-photos/scripts/build_mac_app.sh` (onedir, honors `TARGET_ARCH`).
-- Release dir: `sunday-photos/release_console/SundayPhotoOrganizer/` (binary `SundaySchool`, with input/output/logs).
+- macOS packaging script: `sunday-photos/scripts/build_mac_app.sh` (console onefile, honors `TARGET_ARCH`).
+- Release dir: `sunday-photos/release_console/` (executable `SundayPhotoOrganizer` + launcher + docs).
 - Windows output: `sunday-photos/dist/` (pyinstaller onefile).
 
 ## Local dev & test
@@ -26,11 +26,13 @@ For developers and release maintainers: local dev, packaging, and CI workflows.
 ## Local packaging (macOS)
 ```bash
 cd sunday-photos
-bash scripts/build_mac_app.sh               # onedir for current arch
+bash scripts/build_mac_app.sh               # onefile for current arch
 TARGET_ARCH=x86_64 bash scripts/build_mac_app.sh
 TARGET_ARCH=arm64  bash scripts/build_mac_app.sh
 ```
-Output: `release_console/SundayPhotoOrganizer/SundaySchool` (onedir with deps).
+Output: `release_console/SundayPhotoOrganizer` (onefile executable).
+
+Note: Older builds may have used an onedir layout like `release_console/SundayPhotoOrganizer/SundaySchool`. Current script outputs onefile.
 
 ## GitHub Actions
 - macOS x86_64: `.github/workflows/macos-x86-build.yml` (runner macos-12, artifact `macos-x86_64`, path `sunday-photos/release_console/`).

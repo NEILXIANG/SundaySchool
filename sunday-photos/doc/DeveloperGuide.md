@@ -4,8 +4,8 @@
 
 ## 项目结构要点
 - 核心代码：`sunday-photos/src/`（入口 `src/cli/run.py`，核心逻辑 `src/core/`）。
-- 打包脚本：`sunday-photos/scripts/build_mac_app.sh`（macOS onedir，可读 `TARGET_ARCH`）。
-- 发布目录：`sunday-photos/release_console/SundayPhotoOrganizer/`（可执行名 `SundaySchool`，含输入/输出/日志目录）。
+- 打包脚本：`sunday-photos/scripts/build_mac_app.sh`（macOS 控制台 onefile，可读 `TARGET_ARCH`）。
+- 发布目录：`sunday-photos/release_console/`（可执行文件 `SundayPhotoOrganizer` + 启动脚本 + 使用说明）。
 - Windows 产物：`sunday-photos/dist/`（pyinstaller onefile）。
 
 ## 本地开发与测试
@@ -26,11 +26,13 @@
 ## 本地打包（macOS）
 ```bash
 cd sunday-photos
-bash scripts/build_mac_app.sh          # 默认当前架构 onedir，输出到 release_console/
+bash scripts/build_mac_app.sh          # 默认当前架构 onefile，输出到 release_console/
 TARGET_ARCH=x86_64 bash scripts/build_mac_app.sh
 TARGET_ARCH=arm64  bash scripts/build_mac_app.sh
 ```
-产物：`release_console/SundayPhotoOrganizer/SundaySchool`（含依赖的 onedir 目录）。
+产物：`release_console/SundayPhotoOrganizer`（onefile 可执行文件）。
+
+> 说明：旧版本可能是 onedir 结构 `release_console/SundayPhotoOrganizer/SundaySchool`；当前脚本输出为 onefile。
 
 ## GitHub Actions 工作流
 - macOS x86_64: `.github/workflows/macos-x86-build.yml`（runner macos-12，产物名 `macos-x86_64`，路径 `sunday-photos/release_console/`）。

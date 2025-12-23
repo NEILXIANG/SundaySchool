@@ -146,6 +146,11 @@ output/
 - 中文：[doc/TeacherGuide.md](doc/TeacherGuide.md)
 - English: [doc/TeacherGuide_en.md](doc/TeacherGuide_en.md)
 
+补充文档：
+- 发布前验收清单：[doc/ReleaseAcceptanceChecklist.md](doc/ReleaseAcceptanceChecklist.md)
+- 反向 PRD（从现有实现倒推需求与边界）：[doc/PRD_reverse.md](doc/PRD_reverse.md)
+- AI 提示词模板（用于后续迭代/修复）：[doc/AI_prompt_templates.md](doc/AI_prompt_templates.md)
+
 ### 1) 运行
 - macOS：双击 `release_console/启动工具.sh`（推荐），或双击 `release_console/SundayPhotoOrganizer`
 
