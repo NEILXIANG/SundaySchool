@@ -65,7 +65,7 @@ class ConsolePhotoOrganizer:
         print("主日学课堂照片自动整理工具")
         self._print_divider()
         run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
-        print("这是一款给老师用的‘傻瓜式’整理工具：按提示放照片，然后运行即可。")
+        print("这是一款给老师用的‘零门槛’整理工具：按提示放照片，然后运行即可。")
         print(f"本次运行编号：{run_id}")
         print(f"工作文件夹（在桌面）：{self.app_directory}")
         self._print_tip("隐私说明：照片只在本机处理，不会自动上传到网络。")
