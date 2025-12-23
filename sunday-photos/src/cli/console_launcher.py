@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
-"""
-主日学照片整理工具 - 控制台版本
-自动处理照片，无需用户任何操作
+"""主日学照片整理工具 - 控制台版本（打包版入口）
+
+面向老师的设计目标：最少操作、最少疑惑。
+
+行为概览：
+- 首次运行：在桌面创建“主日学照片整理/”目录结构并提示放照片
+- 再次运行：读取配置并整理照片；完成后自动打开 output/
+
+重要说明：
+- 程序可能会把 class_photos 根目录的照片按日期移动到 YYYY-MM-DD/ 子目录（正常现象，用于增量处理）
 """
 
 import sys
@@ -18,10 +25,20 @@ if str(SRC_DIR) not in sys.path:
 
 from config import UNKNOWN_PHOTOS_DIR
 
+
+def _try_get_teacher_helper():
+    """Best-effort import for friendly teacher-facing error messages."""
+    try:
+        from ui.teacher_helper import TeacherHelper
+        return TeacherHelper()
+    except Exception:
+        return None
+
 class ConsolePhotoOrganizer:
     def __init__(self):
         self.app_directory = Path.home() / "Desktop" / "主日学照片整理"
         self.setup_complete = False
+        self.teacher_helper = _try_get_teacher_helper()
         
     def print_header(self):
         """打印欢迎信息"""
@@ -29,6 +46,7 @@ class ConsolePhotoOrganizer:
         print("=" * 60)
         print("👋 欢迎使用！本工具将自动为您整理主日学课堂照片")
         print("📍 工作目录:", self.app_directory)
+        print("📝 提示：程序可能会把课堂照片按日期移动到 YYYY-MM-DD/ 子目录（正常现象）")
         print("=" * 60)
         print()
     
@@ -141,7 +159,7 @@ class ConsolePhotoOrganizer:
         return True
     
     def create_config_file(self):
-        """创建配置文件"""
+        """创建配置文件（如已存在则不覆盖）。"""
         config_data = {
             "input_dir": str(self.app_directory),
             "output_dir": str(self.app_directory / "output"),
@@ -157,11 +175,22 @@ class ConsolePhotoOrganizer:
         }
         
         config_file = self.app_directory / "config.json"
+        if config_file.exists():
+            print(f"⚙️ 已检测到配置文件，将沿用现有配置: {config_file}")
+            print("   如需调整识别准确度，请修改：face_recognition.tolerance（默认0.6，建议0.45~0.75）")
+            return config_file
+
         with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(config_data, f, indent=4, ensure_ascii=False)
-        
+
         print(f"⚙️ 配置文件已创建: {config_file}")
+        print("   可选：修改 face_recognition.tolerance 调整识别准确度（默认0.6，建议0.45~0.75）")
         return config_file
+
+    def _format_friendly_error(self, e: Exception, context: str = "") -> str:
+        if self.teacher_helper is None:
+            return f"❌ 处理过程中出现错误: {e}\n📍 {context}" if context else f"❌ 处理过程中出现错误: {e}"
+        return self.teacher_helper.get_friendly_error(e, context=context)
     
     def process_photos(self):
         """处理照片"""
@@ -175,7 +204,7 @@ class ConsolePhotoOrganizer:
             from main import SimplePhotoOrganizer
             from config_loader import ConfigLoader
             
-            # 创建配置文件
+            # 创建/读取配置文件（存在则不覆盖，支持老师调参）
             config_file = self.create_config_file()
             
             print("📋 加载配置...")
@@ -194,6 +223,8 @@ class ConsolePhotoOrganizer:
             tolerance = config_loader.get_tolerance()
             if hasattr(organizer, 'face_recognizer') and organizer.face_recognizer:
                 organizer.face_recognizer.tolerance = tolerance
+
+            print(f"🎛️ 当前识别阈值 tolerance = {tolerance}")
             
             print("📸 开始识别人脸并分类照片...")
             print("   ⏳ 这可能需要几分钟时间，请耐心等待...")
@@ -243,16 +274,25 @@ class ConsolePhotoOrganizer:
             except Exception as e:
                 print(f"⚠️ 无法自动打开文件夹: {e}")
                 print(f"📂 请手动打开: {output_dir}")
-            
-                return True
+
+            return True
             
         except Exception as e:
-            print(f"❌ 处理过程中出现错误: {e}")
-            print("💡 可能的解决方案:")
-            print("   1. 检查照片格式是否正确 (.jpg, .jpeg, .png)")
-            print("   2. 确保学生照片命名格式正确 (姓名_序号.jpg)")
-            print("   3. 检查照片是否损坏")
-            print("   4. 重新运行程序")
+            context = ""
+            try:
+                context = f"桌面目录：{self.app_directory}；日志目录：{self.app_directory / 'logs'}"
+            except Exception:
+                pass
+
+            print("\n" + "=" * 60)
+            print("😕 程序遇到了问题")
+            print("=" * 60)
+            print(self._format_friendly_error(e, context=context))
+            print("\n💡 建议按以下顺序排查：")
+            print("   1) 确认 student_photos/ 与 class_photos/ 里都有照片")
+            print("   2) 学生照片命名：姓名.jpg 或 姓名_2.jpg")
+            print("   3) 照片格式：jpg / jpeg / png")
+            print("   4) 如识别不准：可编辑桌面目录下 config.json 调整 tolerance")
             return False
     
     def display_results(self, results, elapsed_time, pipeline_stats=None):

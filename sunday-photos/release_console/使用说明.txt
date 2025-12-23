@@ -35,6 +35,15 @@
 - 可多次运行，仅整理新增课堂照；结束后自动打开 output
 	Re-run anytime; only new classroom photos are organized; output auto-opens.
 
+【可选：调整识别准确度 | Optional: adjust accuracy】
+- 桌面/Desktop 的“主日学照片整理”目录下有 config.json
+- 修改 face_recognition.tolerance（默认 0.6，建议 0.45–0.75；越低越严格）
+	Edit config.json under Desktop folder; change face_recognition.tolerance (default 0.6; suggested 0.45–0.75; lower = stricter)
+
+【重要说明 | Important note】
+- 程序可能会把 class_photos 根目录照片按日期移动到 YYYY-MM-DD/ 子目录，这是正常现象
+	The app may move photos into YYYY-MM-DD date folders; this is expected.
+
 【常见问题 | FAQ】
 - 很快结束 / finishes too fast：检查桌面/主日学照片整理 的目录与命名
 - 识别不准 / poor matches：为该学生多放 2-3 张清晰正脸参考照
