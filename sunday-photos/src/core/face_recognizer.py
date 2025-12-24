@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 class FaceRecognizer:
     """人脸识别器"""
     
-    def __init__(self, student_manager, tolerance=None):
+    def __init__(self, student_manager, tolerance=None, min_face_size=None):
         """初始化人脸识别器。
 
         参数：
@@ -63,8 +63,11 @@ class FaceRecognizer:
 
         if tolerance is None:
             tolerance = DEFAULT_TOLERANCE
+        if min_face_size is None:
+            min_face_size = MIN_FACE_SIZE
         self.student_manager = student_manager
         self.tolerance = tolerance
+        self.min_face_size = int(min_face_size)
         self.students_encodings = {}
         self.known_student_names = []
         self.known_encodings = []
@@ -362,7 +365,7 @@ class FaceRecognizer:
             sizeable_locations = []
             for location in face_locations:
                 top, right, bottom, left = location
-                if (bottom - top) >= MIN_FACE_SIZE and (right - left) >= MIN_FACE_SIZE:
+                if (bottom - top) >= self.min_face_size and (right - left) >= self.min_face_size:
                     sizeable_locations.append(location)
                 else:
                     logger.debug(

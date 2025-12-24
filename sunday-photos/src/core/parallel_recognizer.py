@@ -9,10 +9,14 @@
 from __future__ import annotations
 
 import os
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Iterator, List, Tuple
 
 import numpy as np
+
+
+logger = logging.getLogger(__name__)
 
 
 # 子进程全局只读缓存（initializer 设置）

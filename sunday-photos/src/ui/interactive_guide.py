@@ -5,6 +5,7 @@
 
 import os
 import sys
+import logging
 from pathlib import Path
 
 from core.config import (
@@ -13,6 +14,9 @@ from core.config import (
     DEFAULT_LOG_DIR,
     DEFAULT_TOLERANCE,
 )
+
+
+logger = logging.getLogger(__name__)
 
 class InteractiveGuide:
     """交互式指导类"""

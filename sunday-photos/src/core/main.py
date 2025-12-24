@@ -25,7 +25,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module='face_recognition
 
 from .utils import setup_logger, is_supported_image_file, is_supported_nonempty_image_path, get_photo_date, ensure_directory_exists
 from .utils import is_ignored_fs_entry
-from .config import DEFAULT_CONFIG
+from .config import DEFAULT_CONFIG, UNKNOWN_PHOTOS_DIR
 from .config_loader import ConfigLoader
 from .incremental_state import (
     build_class_photos_snapshot,
@@ -70,7 +70,8 @@ class ServiceContainer:
             from .face_recognizer import FaceRecognizer
             sm = self.get_student_manager()
             tolerance = self.config.get('tolerance') if self.config else None
-            self._services['face_recognizer'] = FaceRecognizer(sm, tolerance)
+            min_face_size = self.config.get('min_face_size') if self.config else None
+            self._services['face_recognizer'] = FaceRecognizer(sm, tolerance, min_face_size)
         return self._services['face_recognizer']
 
     def get_file_organizer(self):
@@ -85,7 +86,7 @@ class SimplePhotoOrganizer:
     """
     照片整理器主类（支持依赖注入容器）
     """
-    def __init__(self, input_dir=None, output_dir=None, log_dir=None, classroom_dir=None, service_container=None):
+    def __init__(self, input_dir=None, output_dir=None, log_dir=None, classroom_dir=None, service_container=None, config_file=None):
         if input_dir is None:
             input_dir = DEFAULT_CONFIG['input_dir']
         if output_dir is None:
@@ -104,6 +105,8 @@ class SimplePhotoOrganizer:
         ensure_directory_exists(self.log_dir)
         self.logger = setup_logger(self.log_dir, enable_color_console=True)
         self.service_container = service_container
+        self._config_file = config_file
+        self._config_loader = None
         self.student_manager = None
         self.face_recognizer = None
         self.file_organizer = None
@@ -111,6 +114,16 @@ class SimplePhotoOrganizer:
         self.last_run_report = None
         self._incremental_plan = None
         self._reset_stats()
+
+    def _get_config_loader(self) -> ConfigLoader:
+        if self._config_loader is None:
+            if self._config_file:
+                cfg_path = Path(self._config_file)
+                # 对打包版：相对路径以 config.json 所在目录为基准
+                self._config_loader = ConfigLoader(str(cfg_path), base_dir=cfg_path.parent)
+            else:
+                self._config_loader = ConfigLoader()
+        return self._config_loader
 
     def _reset_stats(self):
         """重置运行统计信息"""
@@ -159,7 +172,13 @@ class SimplePhotoOrganizer:
                 from .face_recognizer import FaceRecognizer
                 from .file_organizer import FileOrganizer
                 self.student_manager = StudentManager(self.input_dir)
-                self.face_recognizer = FaceRecognizer(self.student_manager)
+                # 让 min_face_size 可从 config.json 生效（未提供则回退默认值）
+                cfg = self._get_config_loader()
+                self.face_recognizer = FaceRecognizer(
+                    self.student_manager,
+                    tolerance=float(getattr(cfg, 'get_tolerance')()),
+                    min_face_size=int(getattr(cfg, 'get_min_face_size')()),
+                )
                 self.file_organizer = FileOrganizer(self.output_dir)
 
             # 检查学生参考照片
@@ -263,10 +282,32 @@ class SimplePhotoOrganizer:
                 continue
             if not top.is_dir():
                 continue
+
+            # 普通目录：output/<student>/<date>
             for date in dates:
                 date_dir = top / date
                 if date_dir.exists() and date_dir.is_dir():
                     shutil.rmtree(date_dir, ignore_errors=True)
+
+            # unknown 目录：output/unknown_photos/<date> 以及 output/unknown_photos/Unknown_Person_X/<date>
+            if top.name == UNKNOWN_PHOTOS_DIR:
+                for date in dates:
+                    date_dir = top / date
+                    if date_dir.exists() and date_dir.is_dir():
+                        shutil.rmtree(date_dir, ignore_errors=True)
+
+                for cluster_dir in top.iterdir():
+                    if is_ignored_fs_entry(cluster_dir):
+                        continue
+                    if not cluster_dir.is_dir():
+                        continue
+                    # 只处理 Unknown_Person_X 这类子目录
+                    if not cluster_dir.name.startswith("Unknown_Person_"):
+                        continue
+                    for date in dates:
+                        date_dir = cluster_dir / date
+                        if date_dir.exists() and date_dir.is_dir():
+                            shutil.rmtree(date_dir, ignore_errors=True)
 
     def process_photos(self, photo_files):
         """对照片列表执行人脸识别，并按状态分类结果。
@@ -338,10 +379,12 @@ class SimplePhotoOrganizer:
             return get_photo_date(photo_path), rel
 
         # 日期级缓存（仅对本次 changed_dates 的照片生效）
+        tolerance = float(getattr(self.face_recognizer, 'tolerance', DEFAULT_CONFIG['tolerance']))
+        min_face_size = int(getattr(self.face_recognizer, 'min_face_size', DEFAULT_CONFIG['min_face_size']))
         params_fingerprint = compute_params_fingerprint(
             {
-                'tolerance': float(getattr(self.face_recognizer, 'tolerance', DEFAULT_CONFIG['tolerance'])),
-                'min_face_size': int(DEFAULT_CONFIG['min_face_size']),
+                'tolerance': tolerance,
+                'min_face_size': min_face_size,
                 # 参考照变化必须触发缓存失效（补/删/替换参考照应立刻生效）
                 'reference_fingerprint': str(getattr(self.face_recognizer, 'reference_fingerprint', '')),
             }
@@ -386,7 +429,7 @@ class SimplePhotoOrganizer:
             if to_recognize:
                 self.logger.info(f"✓ 识别缓存命中: {cache_hit_count} 张；待识别: {len(to_recognize)} 张")
 
-                parallel_cfg = ConfigLoader().get_parallel_recognition()
+                parallel_cfg = self._get_config_loader().get_parallel_recognition()
                 config_enabled = bool(parallel_cfg.get('enabled'))
                 min_photos_threshold = int(parallel_cfg.get('min_photos', 30))
                 photo_count = len(to_recognize)
@@ -412,8 +455,8 @@ class SimplePhotoOrganizer:
                             to_recognize,
                             known_encodings=getattr(self.face_recognizer, 'known_encodings', []),
                             known_names=getattr(self.face_recognizer, 'known_student_names', []),
-                            tolerance=float(getattr(self.face_recognizer, 'tolerance', DEFAULT_CONFIG['tolerance'])),
-                            min_face_size=int(DEFAULT_CONFIG['min_face_size']),
+                            tolerance=tolerance,
+                            min_face_size=min_face_size,
                             workers=int(parallel_cfg.get('workers', 1)),
                             chunk_size=int(parallel_cfg.get('chunk_size', 1)),
                         ):
@@ -522,6 +565,9 @@ class SimplePhotoOrganizer:
                         save_snapshot(self.output_dir, plan.snapshot)
                 else:
                     self.logger.info("✓ 本次无需处理：没有新增/变更/删除的日期文件夹")
+
+                # 让最终统计能输出耗时
+                self.stats['end_time'] = datetime.now()
                 self.print_final_statistics()
                 return True
 
@@ -531,18 +577,23 @@ class SimplePhotoOrganizer:
             # 3b. 对未知人脸进行聚类
             unknown_clusters = None
             if unknown_encodings_map:
-                self.logger.info("正在对未知人脸进行聚类分析...")
-                clustering = UnknownClustering()
-                for path, encodings in unknown_encodings_map.items():
-                    # 仅对确实被归类为 unknown_photos 的照片进行聚类
-                    # (虽然 unknown_encodings_map 可能包含部分识别成功但有多余人脸的照片，
-                    # 但目前需求主要是整理 unknown_photos 目录)
-                    if path in unknown_photos:
-                        clustering.add_faces(path, encodings)
-                
-                unknown_clusters = clustering.get_results()
-                if unknown_clusters:
-                    self.logger.info(f"✓ 发现 {len(unknown_clusters)} 组相似的未知人脸")
+                uc = self._get_config_loader().get_unknown_face_clustering()
+                if uc.get('enabled'):
+                    self.logger.info("正在对未知人脸进行聚类分析...")
+                    clustering = UnknownClustering(
+                        tolerance=float(uc.get('threshold', 0.45)),
+                        min_cluster_size=int(uc.get('min_cluster_size', 2)),
+                    )
+                    for path, encodings in unknown_encodings_map.items():
+                        # 仅对确实被归类为 unknown_photos 的照片进行聚类
+                        # (虽然 unknown_encodings_map 可能包含部分识别成功但有多余人脸的照片，
+                        # 但目前需求主要是整理 unknown_photos 目录)
+                        if path in unknown_photos:
+                            clustering.add_faces(path, encodings)
+
+                    unknown_clusters = clustering.get_results()
+                    if unknown_clusters:
+                        self.logger.info(f"✓ 发现 {len(unknown_clusters)} 组相似的未知人脸")
 
             # 4. 整理输出目录（学生/日期分层；未知放 unknown_photos/日期）
             organize_stats = self.organize_output(recognition_results, unknown_photos, unknown_clusters)
@@ -551,7 +602,11 @@ class SimplePhotoOrganizer:
             if plan:
                 save_snapshot(self.output_dir, plan.snapshot)
 
-            # 5. 输出最终统计信息
+            # 5. 输出最终统计信息（先设置 end_time，确保耗时统计正确）
+            self.stats['end_time'] = datetime.now()
+
+            # 运行报告需要 end_time，这里用最终时间再生成一次（覆盖 organize_output 里的中间快照）
+            self._build_run_report(organize_stats)
             self.print_final_statistics()
 
             return True
@@ -561,7 +616,9 @@ class SimplePhotoOrganizer:
             return False
 
         finally:
-            self.stats['end_time'] = datetime.now()
+            # 兜底：如果上游分支未设置 end_time，这里补上
+            if not self.stats.get('end_time'):
+                self.stats['end_time'] = datetime.now()
 
     def print_final_statistics(self):
         """打印最终统计信息"""

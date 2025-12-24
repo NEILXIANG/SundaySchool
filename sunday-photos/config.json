@@ -11,6 +11,19 @@
     "tolerance": 0.6,
     "tolerance_comment": "人脸匹配阈值（0~1）。越小越严格（误识别更少、漏识别可能更多）；越大越宽松。一般建议 0.55~0.65。",
 
+    "min_face_size": 50,
+    "min_face_size_comment": "最小人脸尺寸（像素近似值）。过小可能引入误检，过大可能漏检远处的人脸。",
+
+    "unknown_face_clustering": {
+        "_comment": "未知人脸聚类：相似的未知人脸归入 Unknown_Person_X 目录，便于老师查看访客/家长/新学生。",
+        "enabled": true,
+        "enabled_comment": "是否启用未知人脸聚类（默认开启）。",
+        "threshold": 0.45,
+        "threshold_comment": "聚类阈值（建议比 tolerance 更严格）。越小越严格，越大越宽松。",
+        "min_cluster_size": 2,
+        "min_cluster_size_comment": "只有当组内照片数 >= 该值时才会创建 Unknown_Person_X 文件夹；否则仍保留在 unknown_photos/日期/。"
+    },
+
     "parallel_recognition": {
         "_comment": "并行识别（多进程）配置：课堂照片很多时可明显加速；小批量会自动回退串行以提高稳定性。",
         "enabled": false,
@@ -39,7 +52,7 @@
     "face_recognition": {
         "_comment": "人脸识别相关参数。注意：不同相机距离/清晰度可能需要微调。",
         "min_face_size": 50,
-        "min_face_size_comment": "最小人脸尺寸（像素近似值）。过小可能引入误检，过大可能漏检远处的人脸。",
+        "min_face_size_comment": "兼容字段：推荐使用顶层 min_face_size；这里保留用于兼容旧配置/旧版本。",
         "confidence_threshold": 0.7,
         "confidence_threshold_comment": "高置信度阈值（与内部评分逻辑相关）。通常不需要频繁调整。",
         "low_confidence_threshold": 0.5

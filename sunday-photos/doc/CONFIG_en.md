@@ -41,7 +41,29 @@ The app ignores these fields, and the file remains valid JSON.
 
 Practical range: `0.55~0.65`.
 
-### 3.3 Parallel recognition (parallel_recognition)
+Note: Prefer top-level `tolerance`. Older configs may contain `face_recognition.tolerance`; the app keeps backward compatibility (it takes effect when top-level `tolerance` is not explicitly set).
+
+### 3.2.1 Minimum face size (far/small faces)
+
+- `min_face_size`: minimum face size in pixels (approx, default: `50`)
+  - Smaller: detects smaller/farther faces, but may increase false detections and runtime
+  - Larger: fewer false detections, but may miss far faces
+
+Note: Prefer top-level `min_face_size`. Older configs may contain `face_recognition.min_face_size`; the app keeps backward compatibility (it takes effect when top-level `min_face_size` is not explicitly set).
+
+### 3.3 Unknown face clustering (v0.4.0)
+
+This feature groups similar *unknown* faces into `Unknown_Person_X` folders, helping teachers manage visitors/parents/new students.
+
+- `unknown_face_clustering.enabled`: enable clustering (default: `true`)
+- `unknown_face_clustering.threshold`: clustering threshold (default: `0.45`)
+  - Lower = stricter (less false grouping)
+  - Higher = looser (more grouping)
+- `unknown_face_clustering.min_cluster_size`: minimum cluster size (default: `2`)
+  - Only clusters with at least this many photos will produce an `Unknown_Person_X` folder
+  - Singletons stay under `output/unknown_photos/YYYY-MM-DD/`
+
+### 3.4 Parallel recognition (parallel_recognition)
 
 Parallel recognition uses multiprocessing to leverage multiple CPU cores. It is most helpful when you have many classroom photos.
 
@@ -65,3 +87,10 @@ Parallel recognition uses multiprocessing to leverage multiple CPU cores. It is 
 Force serial mode (troubleshooting):
 - CLI: `python run.py --no-parallel`
 - Env var: `SUNDAY_PHOTOS_NO_PARALLEL=1`
+
+### 3.5 Cache & incremental refresh (force full rerun)
+
+By default, snapshots and caches speed up repeat runs. If you suspect “new photos were not processed” or want a full rerun:
+- Remove incremental/cache traces under `output/.state/` (snapshot) and any per-date caches (if present), then run again.
+- Or rename/move the specific date folder under `class_photos/` (e.g., `2025-12-21` → `2025-12-21-new`); the app will treat it as new input and fully process it.
+Note: Deleting caches does **not** delete original photos; it only forces re-recognition and regenerates outputs/reports.

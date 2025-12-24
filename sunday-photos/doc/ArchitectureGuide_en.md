@@ -37,6 +37,32 @@ For code contributors and maintainers: deep dive into project architecture, core
 └─────────────────────────────────┘
 ```
 
+### 1.3 Runtime sequence (with fallback paths)
+
+```
+CLI/run.py
+  → ServiceContainer.build()
+  → SimplePhotoOrganizer.run()
+    → initialize()
+      → StudentManager.load_students()
+      → FaceRecognizer.load_reference_encodings()
+      → FileOrganizer.prepare_output()
+    → scan_input_directory()
+      → organize_input_by_date()          # failure → warn, continue
+      → load_snapshot()                   # failure → empty snapshot
+      → compute_incremental_plan()
+    → process_photos()
+      → load_date_cache()                 # corrupted → ignore
+      → parallel_or_serial_recognize()
+        parallel failure → fallback to serial (log reason)
+      → UnknownClustering.run()
+      → save_date_cache_atomic()
+    → organize_output()
+      → FileOrganizer.move_and_copy()     # per-file failure → warn+skip
+      → create_summary_report()
+    → save_snapshot()
+```
+
 ### 1.2 Key Design Principles
 
 **Dependency Injection (DI)**
@@ -261,9 +287,18 @@ with Pool(
 - Medium batch (30-100 photos): Parallel improves 30-50%
 - Large batch (100+ photos): Parallel improves 60-70%
 
+### 2.5 Error semantics (cross-module conventions)
+
+- **Input/Output errors**: missing directory, no write permission → raise to CLI; CLI shows user-friendly message; log fatal error.
+- **Per-file/per-date faults**: corrupted image, broken daily snapshot → log warning, skip file/date, continue others.
+- **Parallel failure**: auto downgrade to serial; log fallback reason (OOM/timeout/worker error); do not abort.
+- **Cache/snapshot corruption**: ignore and rebuild empty structures; log warning.
+- **Upstream dependency errors** (face_recognition/dlib): log error, continue other photos; mark the photo as unrecognized if needed.
+- **Logging requirements**: every error should include module/function, affected path (if any), and a next-step hint.
+
 ---
 
-### 2.5 Config Loader (config_loader)
+### 2.6 Config Loader (config_loader)
 
 **Location**: [src/core/config_loader.py](src/core/config_loader.py)
 

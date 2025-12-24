@@ -78,6 +78,7 @@ def show_help():
     --classroom-dir  输入数据目录兼容参数（已废弃，隐藏）
     --output-dir     输出目录 (默认: {DEFAULT_OUTPUT_DIR})
     --tolerance      人脸识别阈值 (0-1, 默认: {DEFAULT_TOLERANCE})
+    --no-parallel    强制禁用并行识别（排障用）
     --help           显示此帮助信息
 
 🚀 运行程序:
@@ -116,6 +117,12 @@ def main():
         default=DEFAULT_TOLERANCE,
         help="人脸识别阈值 (0-1, 默认: 0.6)"
     )
+
+    parser.add_argument(
+        "--no-parallel",
+        action="store_true",
+        help="强制禁用并行识别（排障用）",
+    )
     
     parser.add_argument(
         "--help",
@@ -131,6 +138,10 @@ def main():
     
     args = parser.parse_args()
     input_dir = args.input_dir
+
+    # 让文档口径的 --no-parallel 生效：通过环境变量强制串行。
+    if getattr(args, "no_parallel", False):
+        os.environ["SUNDAY_PHOTOS_NO_PARALLEL"] = "1"
     
     # 显示帮助
     if args.help:

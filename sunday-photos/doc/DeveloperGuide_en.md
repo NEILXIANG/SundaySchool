@@ -66,3 +66,37 @@ Note: Older builds may have used an onedir layout like `release_console/SundayPh
 2) Run Actions: macOS x86_64 / macOS arm64 / Windows build.
 3) Download artifacts (`macos-x86_64`, `macos-arm64`, `windows-x86_64`), unzip, ship to users.
 4) Ship alongside the Teacher Guide and note which chip each package targets.
+
+## Orchestration & Error Semantics
+
+### Runtime flow (with fallbacks)
+```
+User → CLI/run.py
+    → ServiceContainer.build()
+    → SimplePhotoOrganizer.run()
+       → initialize()
+          → StudentManager.load_students()
+          → FaceRecognizer.load_reference_encodings()
+          → FileOrganizer.prepare_output()
+       → scan_input_directory()
+          → organize_input_by_date()   # failure → warn and continue other dates
+          → load_snapshot()             # failure → use empty snapshot
+          → compute_incremental_plan()
+       → process_photos()
+          → load_date_cache()           # corrupted → ignore cache
+          → parallel_or_serial_recognize()
+               parallel failure → auto fallback to serial
+          → UnknownClustering.run()
+          → save_date_cache_atomic()
+       → organize_output()
+          → FileOrganizer.move_and_copy()  # per-file failure → warn and skip
+          → create_summary_report()
+       → save_snapshot()
+```
+
+### Cross-module error semantics
+- Recoverable (single image/date issues): log warning/error, skip that file/date, continue main flow.
+- Non-recoverable (input missing, no write permission): raise to CLI; CLI prints teacher-friendly message.
+- Parallel failure: auto downgrade to serial, no fatal error; log fallback reason.
+- Cache/snapshot corruption: ignore and rebuild empty cache/snapshot; log warning.
+- Logging: include location (module/function), affected path (if any), and next-step suggestion.

@@ -40,6 +40,14 @@ If macOS blocks the first run: System Settings → Privacy & Security → Open A
 ## Need help?
 - Send the newest log file from `Desktop/SundaySchoolPhotoOrganizer/logs/`.
 
+## FAQ
+
+**Q: How do I force a full rerun if new photos seem unprocessed?**
+
+Easiest: rename the date folder in `class_photos/` (e.g., `2025-12-21` → `2025-12-21-new`), then run again. The app will treat it as new input and fully process it.
+
+Thorough (optional): delete `Desktop/SundaySchoolPhotoOrganizer/output/.state/` and any per-date caches (if present) under `output/`, then run again. Original photos are untouched; only recognition is redone.
+
 ---
 
 Developer note: CLI flags like `--tolerance` are for source/dev workflows. Teachers should use the packaged `SundayPhotoOrganizer` Desktop-folder workflow.

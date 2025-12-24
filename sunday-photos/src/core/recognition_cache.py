@@ -146,6 +146,9 @@ def lookup_result(cache: Dict[str, Any], key: CacheKey) -> Optional[Dict[str, An
 
 
 def store_result(cache: Dict[str, Any], key: CacheKey, result: Dict[str, Any]) -> None:
+    # 识别结果里可能含 numpy.ndarray（例如 unknown_encodings），直接 json 序列化会失败。
+    # 缓存层做一次“可序列化净化”，保证缓存可用且不影响主流程的内存结果。
+    safe_result = _sanitize_for_json(result)
     entries = cache.setdefault("entries", {})
     if not isinstance(entries, dict):
         # 不尝试修复异常结构，直接覆盖
@@ -154,8 +157,46 @@ def store_result(cache: Dict[str, Any], key: CacheKey, result: Dict[str, Any]) -
     entries[key.rel_path] = {
         "size": int(key.size),
         "mtime": int(key.mtime),
-        "result": result,
+        "result": safe_result,
     }
+
+
+def _sanitize_for_json(value: Any, *, _depth: int = 0) -> Any:
+    """把 value 转为可 JSON 序列化的结构。
+
+    目标：尽量保留信息（包括 unknown_encodings），同时避免引入 numpy 依赖。
+    """
+
+    # 防御：避免极端嵌套导致递归爆栈
+    if _depth > 6:
+        return str(value)
+
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+
+    if isinstance(value, dict):
+        return {str(k): _sanitize_for_json(v, _depth=_depth + 1) for k, v in value.items()}
+
+    if isinstance(value, (list, tuple)):
+        return [_sanitize_for_json(v, _depth=_depth + 1) for v in value]
+
+    # numpy.ndarray / numpy scalar 兼容：优先用 tolist()/item()
+    tolist = getattr(value, "tolist", None)
+    if callable(tolist):
+        try:
+            return _sanitize_for_json(tolist(), _depth=_depth + 1)
+        except Exception:
+            return str(value)
+
+    item = getattr(value, "item", None)
+    if callable(item):
+        try:
+            return _sanitize_for_json(item(), _depth=_depth + 1)
+        except Exception:
+            return str(value)
+
+    # 兜底：转字符串，保证可序列化
+    return str(value)
 
 
 def prune_entries(cache: Dict[str, Any], keep_rel_paths: set[str]) -> None:

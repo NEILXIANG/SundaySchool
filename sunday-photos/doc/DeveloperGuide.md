@@ -194,6 +194,39 @@ SimplePhotoOrganizer (src/core/main.py)
    └─→ 5. save_snapshot() - 保存增量快照
 ```
 
+  ### 运行时序 / Orchestration（含回退路径）
+
+  ```
+  用户 → CLI/run.py
+      → ServiceContainer.build()
+      → SimplePhotoOrganizer.run()
+        → initialize()
+          → StudentManager.load_students()
+          → FaceRecognizer.load_reference_encodings()
+          → FileOrganizer.prepare_output()
+        → scan_input_directory()
+          → organize_input_by_date()  # 失败→记录警告并继续后续日期
+          → load_snapshot()            # 读取失败→用空快照
+          → compute_incremental_plan()
+        → process_photos()
+          → load_date_cache()          # 缓存损坏→忽略缓存
+          → parallel_or_serial_recognize()
+            → parallel失败→自动降级串行
+          → UnknownClustering.run()
+          → save_date_cache_atomic()
+        → organize_output()
+          → FileOrganizer.move_and_copy()
+          → create_summary_report()
+        → save_snapshot()
+  ```
+
+  **异常与返回语义（约定）**
+  - 预期可恢复的场景（单张图片损坏、单个日期失败）：记录 warning/ error 日志，跳过当前文件/日期，不中断主流程。
+  - 不可恢复的场景（输入目录不存在、输出目录无写权限）：向上抛出异常，由 CLI 层统一捕获并输出面向老师的提示。
+  - 并行识别失败：自动降级串行，不抛出致命异常；在日志中标记 fallback 原因。
+  - 缓存/快照损坏：忽略损坏文件，使用空缓存/快照继续执行，并记录 warning。
+  - 所有跨模块异常需在日志中包含：发生位置、文件路径（如有）、下一步建议。
+
 ### 关键设计模式
 
 **1. 依赖注入容器** (`ServiceContainer`)：

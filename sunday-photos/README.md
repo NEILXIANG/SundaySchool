@@ -333,8 +333,8 @@ output/
 │   └── 2024-12-21_group_photo_103045.jpg
 ├── unknown_photos/                    # Unmatched photos
 │   └── blurry_105632.jpg
-├── 整理报告.txt                        # 基础整理报告
-└── 智能分析报告.txt                    # 智能分析结果
+├── 20251221_143052_整理报告.txt         # 基础整理报告（自动带时间戳）
+└── ...
 ```
 
 ---
@@ -345,6 +345,7 @@ output/
 - `--input-dir`: 输入数据目录 (默认: input，兼容 --classroom-dir)
 - `--output-dir`: 输出目录 (默认: output)
 - `--tolerance`: 人脸识别阈值 (0-1, 默认: 0.6)
+- `--no-parallel`: 强制禁用并行识别（排障用）
 - `--help`: 显示帮助信息
 - `--check-env`: 检查运行环境
 
@@ -376,10 +377,11 @@ pip install -r requirements.txt
 
 ---
 
-## 🧠 智能功能（规划中，当前版本未实现）
+## 🧠 智能功能
 
-- 以下能力为规划路线，代码暂未实现：重复/相似检测、质量分析、智能命名。
-- 如需这些功能，请在后续版本更新后再使用，或自行扩展对应模块。
+- ✅ 未知人脸聚类（v0.4.0）：相似未知人脸自动归入 `Unknown_Person_X`
+- ✅ 增量处理 + 缓存：重复运行自动提速
+- ⏳ 规划中：重复/相似照片检测、质量分析、智能命名（当前版本未实现）
 
 ---
 
@@ -393,8 +395,10 @@ pip install -r requirements.txt
 
 ### 详细报告
 - 📄 整理报告.txt：基础整理统计
-- 🤖 智能分析报告.txt：智能分析结果
+- 🤖 智能分析报告.txt：规划中（当前版本未默认生成）
 - 📝 日志文件：详细的处理过程
+
+说明：整理报告中的“总数”按输出结果统计（复制任务数）。多人合影如果识别到多名学生，会被复制到多个学生文件夹，因此复制任务数可能大于原始照片张数。
 
 ---
 
@@ -535,7 +539,11 @@ python run.py
 ### 🎯 未知人脸聚类引擎（v0.4.0新增）
 - **贪婪聚类算法**：
   - 使用 `face_recognition.face_distance` 计算编码相似度
-  - 阈值0.45（比识别阈值0.6更严格，避免误聚类）
+  - 默认阈值 0.45（比识别阈值 0.6 更严格，避免误聚类）
+  - 可在 `config.json` 中配置：
+    - `unknown_face_clustering.enabled`（默认 true）
+    - `unknown_face_clustering.threshold`（默认 0.45）
+    - `unknown_face_clustering.min_cluster_size`（默认 2）
   - 时间复杂度 O(n²)，适合中小规模场景
 - **智能归组策略**：
   - 相似人脸归入 `output/unknown_photos/Unknown_Person_1/日期/`

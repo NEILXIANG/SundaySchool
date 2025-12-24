@@ -63,8 +63,10 @@ class FileOrganizer:
 
         # 统计信息（按“复制任务”计数，避免多人合影时成功数 > 总数的统计偏差）
         total_copy_tasks = sum(len(names) for names in recognition_results.values()) + len(unknown_photos)
+        unique_photos = len(set(recognition_results.keys()) | set(unknown_photos))
         stats = {
             'total': total_copy_tasks,
+            'unique_photos': unique_photos,
             'processed': 0,
             'copied': 0,
             'failed': 0,
@@ -237,9 +239,12 @@ class FileOrganizer:
                 f.write(f"整理时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
                 
                 f.write("处理统计:\n")
-                f.write(f"  总照片数: {stats['total']}\n")
-                f.write(f"  处理成功: {stats['copied']}\n")
-                f.write(f"  处理失败: {stats['failed']}\n\n")
+                # 注意：total/copy/copy_failed 以“复制任务”为单位（多人合影会复制到多个学生目录）
+                if 'unique_photos' in stats:
+                    f.write(f"  本次涉及原始照片: {stats['unique_photos']} 张\n")
+                f.write(f"  总复制任务数: {stats['total']}\n")
+                f.write(f"  成功复制任务: {stats['copied']}\n")
+                f.write(f"  失败复制任务: {stats['failed']}\n\n")
                 
                 f.write("各学生照片统计:\n")
                 for student_name, count in stats['students'].items():

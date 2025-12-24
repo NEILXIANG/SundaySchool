@@ -13,8 +13,10 @@ from .config import (
     DEFAULT_INPUT_DIR,
     DEFAULT_LOG_DIR,
     DEFAULT_OUTPUT_DIR,
+    DEFAULT_UNKNOWN_FACE_CLUSTERING,
     DEFAULT_PARALLEL_RECOGNITION,
     DEFAULT_TOLERANCE,
+    MIN_FACE_SIZE,
     resolve_path,
 )
 
@@ -66,10 +68,30 @@ class ConfigLoader:
         merged = dict(DEFAULT_CONFIG)
         merged.update(raw or {})
 
+        # 兼容字段提升（历史/打包版曾生成 face_recognition.*）：
+        # 默认配置会让顶层 tolerance/min_face_size 永远存在。
+        # 为了让兼容字段真正生效，这里在“用户未显式设置顶层字段”时，将其提升到顶层。
+        try:
+            raw_dict = raw or {}
+            fr = raw_dict.get("face_recognition", {}) or {}
+            if isinstance(fr, dict):
+                if raw_dict.get("tolerance", None) is None and fr.get("tolerance", None) is not None:
+                    merged["tolerance"] = fr.get("tolerance")
+                if raw_dict.get("min_face_size", None) is None and fr.get("min_face_size", None) is not None:
+                    merged["min_face_size"] = fr.get("min_face_size")
+        except Exception:
+            # 兼容提升失败不应阻断正常加载
+            pass
+
         # 确保并行配置结构完整
         pr = dict(DEFAULT_PARALLEL_RECOGNITION)
         pr.update(merged.get("parallel_recognition", {}) or {})
         merged["parallel_recognition"] = pr
+
+        # 确保未知聚类配置结构完整
+        uc = dict(DEFAULT_UNKNOWN_FACE_CLUSTERING)
+        uc.update(merged.get("unknown_face_clustering", {}) or {})
+        merged["unknown_face_clustering"] = uc
         return merged
 
     def get(self, key: str, default=None):
@@ -91,10 +113,49 @@ class ConfigLoader:
         return str(resolve_path(self.get("log_dir", DEFAULT_LOG_DIR), self.base_dir))
 
     def get_tolerance(self) -> float:
+        # 兼容两种写法：
+        # 1) 顶层 tolerance（推荐，文档口径）
+        # 2) face_recognition.tolerance（历史/打包版曾生成过）
+        raw = self.get("tolerance", None)
+        if raw is None:
+            fr = self.get("face_recognition", {}) or {}
+            if isinstance(fr, dict):
+                raw = fr.get("tolerance", None)
         try:
-            return float(self.get("tolerance", DEFAULT_TOLERANCE))
+            return float(raw if raw is not None else DEFAULT_TOLERANCE)
         except Exception:
             return DEFAULT_TOLERANCE
+
+    def get_min_face_size(self) -> int:
+        """获取最小人脸尺寸（像素）。"""
+
+        # 兼容两种写法：
+        # 1) 顶层 min_face_size（推荐，文档口径）
+        # 2) face_recognition.min_face_size（示例 config.json 中使用）
+        raw = self.get("min_face_size", None)
+        if raw is None:
+            fr = self.get("face_recognition", {}) or {}
+            if isinstance(fr, dict):
+                raw = fr.get("min_face_size", None)
+        try:
+            return int(raw if raw is not None else MIN_FACE_SIZE)
+        except Exception:
+            return int(MIN_FACE_SIZE)
+
+    def get_unknown_face_clustering(self) -> Dict[str, Any]:
+        """获取未知人脸聚类配置（unknown_face_clustering）。"""
+
+        uc = dict(self.config_data.get("unknown_face_clustering", DEFAULT_UNKNOWN_FACE_CLUSTERING))
+
+        # 最小保护与类型归一
+        try:
+            uc["enabled"] = bool(uc.get("enabled", DEFAULT_UNKNOWN_FACE_CLUSTERING["enabled"]))
+            uc["threshold"] = float(uc.get("threshold", DEFAULT_UNKNOWN_FACE_CLUSTERING["threshold"]))
+            uc["min_cluster_size"] = max(1, int(uc.get("min_cluster_size", DEFAULT_UNKNOWN_FACE_CLUSTERING["min_cluster_size"])))
+        except Exception:
+            uc = dict(DEFAULT_UNKNOWN_FACE_CLUSTERING)
+
+        return uc
 
     def get_parallel_recognition(self) -> Dict[str, Any]:
         """获取并行识别配置，支持环境变量智能控制。"""

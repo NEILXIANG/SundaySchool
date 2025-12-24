@@ -31,7 +31,8 @@
   
 - **智能聚类** / Intelligent Clustering (v0.4.0)：
   - 未知人脸自动聚类，相似人脸归入 `Unknown_Person_X` 组
-  - 贪婪算法 + 严格阈值(0.45)，避免误聚类
+  - 贪婪算法 + 默认严格阈值(0.45)，避免误聚类（可通过 config.json 的 unknown_face_clustering.threshold 调整）
+  - 支持配置：unknown_face_clustering.enabled/threshold/min_cluster_size
   - 应用场景：访客/家长/新学生自动归档
   
 - **增量处理** / Incremental Processing：
@@ -161,7 +162,7 @@ output/
 │   ├── snapshot.json
 │   └── recognition_cache_by_date/
 │       └── 2025-12-21.json
-└── 20251221_143052_整理报告.txt
+└── 20251221_143052_整理报告.txt      # 自动带时间戳前缀
 ```
 
 ---
@@ -175,6 +176,12 @@ output/
   "output_dir": "output",              # 必填 required
   "log_dir": "logs",                   # 可选 optional
   "tolerance": 0.6,                    # 识别阈值 0~1, default: 0.6
+  "min_face_size": 50,                 # 最小人脸尺寸（像素近似值），default: 50
+  "unknown_face_clustering": {         # 未知人脸聚类（v0.4.0）
+    "enabled": true,
+    "threshold": 0.45,
+    "min_cluster_size": 2
+  },
   "log_level": "INFO",                 # DEBUG/INFO/WARNING/ERROR
   "parallel_recognition": {
     "enabled": false,                  # 并行开关

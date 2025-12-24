@@ -194,13 +194,19 @@ Supported formats: .jpg / .jpeg / .png
             "input_dir": str(self.app_directory),
             "output_dir": str(self.app_directory / "output"),
             "log_dir": str(self.app_directory / "logs"),
-            "photo_processing": {
-                "supported_formats": ["jpg", "jpeg", "png"]
+            # 与 src/core/config_loader.py 读取口径保持一致（顶层字段）。
+            "tolerance": 0.6,
+            "min_face_size": 50,
+            "parallel_recognition": {
+                "enabled": False,
+                "workers": 4,
+                "chunk_size": 12,
+                "min_photos": 30
             },
-            "face_recognition": {
-                "tolerance": 0.6,
-                "min_face_size": 50,
-                "enable_enhanced_processing": True
+            "unknown_face_clustering": {
+                "enabled": True,
+                "threshold": 0.45,
+                "min_cluster_size": 2
             }
         }
         
@@ -244,7 +250,8 @@ Supported formats: .jpg / .jpeg / .png
             organizer = SimplePhotoOrganizer(
                 input_dir=str(self.app_directory),
                 output_dir=str(self.app_directory / "output"),
-                log_dir=str(self.app_directory / "logs")
+                log_dir=str(self.app_directory / "logs"),
+                config_file=str(config_file),
             )
             
             if not organizer.initialize():
@@ -255,6 +262,10 @@ Supported formats: .jpg / .jpeg / .png
             tolerance = config_loader.get_tolerance()
             if hasattr(organizer, 'face_recognizer') and organizer.face_recognizer:
                 organizer.face_recognizer.tolerance = tolerance
+
+            min_face_size = config_loader.get_min_face_size()
+            if hasattr(organizer, 'face_recognizer') and organizer.face_recognizer:
+                organizer.face_recognizer.min_face_size = min_face_size
             
             print("第 1/4 步：读取学生参考照（建立识别资料库）...")
             print("第 2/4 步：分析课堂照片（检测人脸 → 匹配姓名 → 分类保存）...")

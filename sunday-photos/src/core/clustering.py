@@ -20,12 +20,14 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class UnknownClustering:
-    def __init__(self, tolerance: float = 0.45):
+    def __init__(self, tolerance: float = 0.45, min_cluster_size: int = 2):
         """
         初始化聚类器
         :param tolerance: 聚类判定阈值。建议比识别阈值(0.6)更严格，以减少误聚类。
+        :param min_cluster_size: 最小聚类大小。只有当组内照片数 >= 该值时才会输出 Unknown_Person_X。
         """
         self.tolerance = tolerance
+        self.min_cluster_size = max(1, int(min_cluster_size))
         # clusters: cluster_id -> list of (file_path, encoding)
         self.clusters: Dict[int, List[Tuple[str, np.ndarray]]] = {}
         self.next_cluster_id = 1
@@ -40,6 +42,11 @@ class UnknownClustering:
             return
 
         for encoding in encodings:
+            try:
+                if not isinstance(encoding, np.ndarray):
+                    encoding = np.asarray(encoding, dtype=float)
+            except Exception:
+                continue
             self._add_one(path, encoding)
 
     def _add_one(self, path: str, encoding: np.ndarray):
@@ -86,7 +93,7 @@ class UnknownClustering:
             # 现在的需求是 "Unknown_Person_X"，通常暗示有多张。
             # 让我们只返回 >= 2 张的聚类，剩下的归为 "Others" 或不返回（由调用者处理剩余的）。
             
-            if len(items) < 2:
+            if len(items) < self.min_cluster_size:
                 continue
                 
             name = f"Unknown_Person_{new_id}"

@@ -3,7 +3,9 @@
 from pathlib import Path
 
 # 基础路径配置
-BASE_DIR = Path(__file__).parent.parent
+# 本文件位于：<project>/src/core/config.py
+# BASE_DIR 约定为项目根目录（即 <project>/），这样 config.json 与打包/文档口径一致。
+BASE_DIR = Path(__file__).resolve().parents[2]
 CONFIG_FILE_NAME = "config.json"
 CONFIG_FILE_PATH = BASE_DIR / CONFIG_FILE_NAME
 
@@ -50,6 +52,13 @@ DEFAULT_PARALLEL_RECOGNITION = {
 	"min_photos": 30,
 }
 
+# 未知人脸聚类默认配置（v0.4.0）
+DEFAULT_UNKNOWN_FACE_CLUSTERING = {
+	"enabled": True,
+	"threshold": 0.45,
+	"min_cluster_size": 2,
+}
+
 # 统一默认配置（覆盖策略：用户配置优先）
 DEFAULT_CONFIG = {
 	"input_dir": DEFAULT_INPUT_DIR,
@@ -58,6 +67,7 @@ DEFAULT_CONFIG = {
 	"tolerance": DEFAULT_TOLERANCE,
 	"min_face_size": MIN_FACE_SIZE,
 	"parallel_recognition": DEFAULT_PARALLEL_RECOGNITION,
+	"unknown_face_clustering": DEFAULT_UNKNOWN_FACE_CLUSTERING,
 	"class_photos_dir": CLASS_PHOTOS_DIR,
 	"student_photos_dir": STUDENT_PHOTOS_DIR,
 }

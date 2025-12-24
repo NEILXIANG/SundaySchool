@@ -8,7 +8,8 @@
 ### Goals
 - Automatically classify classroom photos by student via face recognition.
 - Organize outputs by date and student name.
-- Provide configurable paths and tolerance.
+- Provide configurable paths and tolerance (advanced users).
+- Cluster similar unknown faces into `Unknown_Person_X` groups (v0.4.0).
 
 ### Users
 - Sunday school teachers / activity organizers.
@@ -27,10 +28,13 @@
 
 ### CLI
 ```
-python src/run.py \
+python run.py \
   --input-dir "input" \    # default input directory
   --output-dir "output" \   # default output directory
   --tolerance 0.6           # face recognition tolerance (0~1, default 0.6)
+
+# troubleshooting
+python run.py --no-parallel  # force serial mode
 ```
 
 ---
@@ -68,6 +72,11 @@ output/
 │   └── 2025-12-28/
 └── LiSi/
     └── 2025-12-21/
+
+output/
+└── unknown_photos/
+  ├── Unknown_Person_1/2025-12-21/
+  └── 2025-12-21/
 ```
 
 ---
@@ -76,10 +85,22 @@ output/
 ### config.json
 ```json
 {
-  "input_dir": "input",      // required
-  "output_dir": "output",     // required
-  "tolerance": 0.6,           // optional, 0~1
-  "log_level": "INFO"         // optional: DEBUG/INFO/WARNING/ERROR
+  "input_dir": "input",
+  "output_dir": "output",
+  "log_dir": "logs",
+  "tolerance": 0.6,
+  "min_face_size": 50,
+  "unknown_face_clustering": {
+    "enabled": true,
+    "threshold": 0.45,
+    "min_cluster_size": 2
+  },
+  "parallel_recognition": {
+    "enabled": false,
+    "workers": 4,
+    "chunk_size": 12,
+    "min_photos": 30
+  }
 }
 ```
 

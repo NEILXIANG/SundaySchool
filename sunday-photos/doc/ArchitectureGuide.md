@@ -37,6 +37,32 @@
 └─────────────────────────────────┘
 ```
 
+### 1.3 运行时序（含异常回退）
+
+```
+CLI/run.py
+  → ServiceContainer.build()
+  → SimplePhotoOrganizer.run()
+    → initialize()
+      → StudentManager.load_students()        # 学生名册/参考照
+      → FaceRecognizer.load_reference_encodings()  # 参考编码+缓存
+      → FileOrganizer.prepare_output()        # 输出目录准备
+    → scan_input_directory()
+      → organize_input_by_date()              # 失败→记录警告继续
+      → load_snapshot()                       # 失败→空快照
+      → compute_incremental_plan()
+    → process_photos()
+      → load_date_cache()                     # 损坏→忽略缓存
+      → parallel_or_serial_recognize()
+        并行异常→降级串行（记录fallback）
+      → UnknownClustering.run()
+      → save_date_cache_atomic()
+    → organize_output()
+      → FileOrganizer.move_and_copy()         # 单文件失败→跳过+告警
+      → create_summary_report()
+    → save_snapshot()
+```
+
 ### 1.2 关键设计原则
 
 **依赖注入（DI）**
@@ -249,6 +275,15 @@ with Pool(
     results = pool.map(recognize_one, photo_paths, chunksize=12)
 
 # 结果格式：[(path1, details1), (path2, details2), ...]
+
+  ### 2.5 异常与错误语义（跨模块约定）
+
+  - **输入/输出类错误**：目录不存在、无写权限 → 向上抛出异常，由 CLI 捕获并输出面向老师的提示；记录致命 error 日志。
+  - **单文件/单日期故障**：图片损坏、单日快照损坏 → 记录 warning，跳过当前文件/日期，继续其他任务。
+  - **并行失败**：自动降级串行，记录 fallback 原因（如 OOM/超时/worker 异常），不终止主流程。
+  - **缓存/快照损坏**：忽略损坏内容并重建空结构（cache/snapshot），记录 warning。
+  - **外部依赖异常**（face_recognition/dlib）：记录 error 并继续处理其他照片；必要时标记该照片为未识别。
+  - **日志要求**：所有错误需写明发生位置（模块/函数）、受影响的路径（如有）、下一步建议（如“补充参考照”/“检查权限”）。
 ```
 
 **优化要点**:
