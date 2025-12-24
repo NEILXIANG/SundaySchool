@@ -208,7 +208,7 @@ output/
 - macOS：双击 `release_console/启动工具.sh`（推荐），或双击 `release_console/SundayPhotoOrganizer`
 
 ### 2) 放照片（只需要这一步）
-首次运行会创建工作目录结构（以控制台输出的 `Work folder:` 为准；通常是程序所在目录，若不可写会自动回退到桌面或主目录）：
+首次运行会创建工作目录结构（以运行时弹出的黑色窗口/终端窗口里打印的 `Work folder:` 为准；通常是程序所在目录，若不可写会自动回退到桌面或主目录）：
 - `student_photos/`：学生参考照（folder-only：`student_photos/<student_name>/...`，文件名随意）
 - `class_photos/`：课堂照片（建议按日期子目录 `2025-12-21/group_photo.jpg`）
 - `config.json`：若不存在会自动生成，老师无需修改（保持默认即可）
@@ -651,7 +651,7 @@ A: 1) 检查照片中是否包含清晰人脸
 ## 📞 技术支持
 
 如果遇到问题：
-1. 🔍 老师（打包版）：查看 `Work folder` 下 `logs/` 目录中最新的日志文件（以控制台显示路径为准）
+1. 🔍 老师（打包版）：查看 `Work folder:` 显示的路径下 `logs/` 目录中最新的日志文件（`Work folder:` 会打印在运行时弹出的黑色窗口/终端窗口里）
 2. 🔍 开发者（源码）：查看 `logs/` 目录中的日志文件
 2. 📊 查看生成的分析报告
 3. 💡 使用 `python run.py --help` 查看帮助

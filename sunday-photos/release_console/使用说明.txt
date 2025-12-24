@@ -13,9 +13,9 @@
 【文件夹位置 | Folder location】
 - 默认位置：与 SundayPhotoOrganizer 放在同一个位置（同级目录）
 - 首次运行会自动创建：input/、output/、logs/
-- 若该位置不可写：会自动改用桌面/Desktop（或主目录/Home），并在控制台打印 `Work folder:`（以该路径为准）
+- 若该位置不可写：会自动改用桌面/Desktop（或主目录/Home），并在运行时弹出的黑色窗口/终端窗口里打印 `Work folder:`（以该路径为准）
 
-	If that location is not writable, it falls back to Desktop (or Home) and prints `Work folder:` in the console (use that path as the source of truth).
+	If that location is not writable, it falls back to Desktop (or Home) and prints `Work folder:` in the console window (the black window that opens). Use that path as the source of truth.
 
 【自动创建的文件夹 | Auto-created folders】
 - input/student_photos：学生照片（学生参考照，唯一方式：input/student_photos/学生名/ 里放照片，文件名随意）

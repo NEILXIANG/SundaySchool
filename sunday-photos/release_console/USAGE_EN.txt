@@ -22,8 +22,8 @@ Sunday School Photo Organizer - Console Edition (English)
 - After processing, the output folder opens automatically.
 
 ❓ FAQ
-- Finishes too fast: Check the `Work folder` path shown in the console and verify folder names and photo placement.
-- Work folder location: By default, input/output/logs are created next to the app. If that location is not writable, it falls back to Desktop (or Home). Use the printed `Work folder` path as the source of truth.
+- Finishes too fast: Check the `Work folder:` path shown near the top of the console window (the black window that opens), then verify folder names and photo placement.
+- Work folder location: By default, input/output/logs are created next to the app. If that location is not writable, it falls back to Desktop (or Home). Use the printed `Work folder:` path as the source of truth.
 - Poor matches: Add more clear reference photos for that student.
 - Won't launch (macOS): If blocked, allow "Open Anyway" in Privacy & Security.
 
