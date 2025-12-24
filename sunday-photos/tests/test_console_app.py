@@ -50,7 +50,13 @@ def _temp_home_env() -> tuple[tempfile.TemporaryDirectory[str], dict[str, str]]:
     tmp_home = tempfile.TemporaryDirectory(prefix="sunday_photos_test_home_")
     home_path = Path(tmp_home.name)
     (home_path / "Desktop").mkdir(parents=True, exist_ok=True)
-    env = {**os.environ, "HOME": str(home_path)}
+    # Ensure the packaged console binary writes only under the temp home.
+    env = {
+        **os.environ,
+        "HOME": str(home_path),
+        # Work root: create input/output/logs directly under this directory.
+        "SUNDAY_PHOTOS_WORK_DIR": str(home_path / "Desktop"),
+    }
     return tmp_home, env
 
 def test_executable():
@@ -214,7 +220,7 @@ def simulate_teacher_usage():
         return
     
     tmp_home, env = _temp_home_env()
-    test_dir = Path(env["HOME"]) / "Desktop" / "SundaySchoolPhotoOrganizer"
+    test_dir = Path(env["HOME"]) / "Desktop"
     
     try:
         # 运行一次程序创建文件夹结构
@@ -237,13 +243,17 @@ def simulate_teacher_usage():
             print("✅ 文件夹结构自动创建成功")
             
             # 检查子文件夹
-            subdirs = ["student_photos", "class_photos", "output", "logs"]
-            for subdir in subdirs:
-                subdir_path = test_dir / subdir
-                if subdir_path.exists():
-                    print(f"✅ {subdir} 文件夹已创建")
+            required = [
+                test_dir / "input" / "student_photos",
+                test_dir / "input" / "class_photos",
+                test_dir / "output",
+                test_dir / "logs",
+            ]
+            for p in required:
+                if p.exists():
+                    print(f"✅ {p.relative_to(test_dir)} 文件夹已创建")
                 else:
-                    print(f"❌ {subdir} 文件夹创建失败")
+                    print(f"❌ {p.relative_to(test_dir)} 文件夹创建失败")
 
             # 子目录失败不作为硬失败（仅输出提示），但主目录必须存在
             return

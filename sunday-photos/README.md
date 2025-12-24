@@ -2,13 +2,13 @@
 
 <div align="center">
 
-**🎉 专为非技术老师设计的智能照片整理系统**
+**🎉 专为老师设计的智能照片整理系统**
 
 *让老师专注教学，让技术处理琐事*
 
 [![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-128%20passed-success.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-passing-success.svg)](tests/)
 
 [特性](#-核心特性) • [快速开始](#-快速开始) • [文档](#-文档导航) • [技术亮点](#-技术架构亮点)
 
@@ -39,7 +39,7 @@
 ## ⭐ 核心特性
 
 ### 🎨 极致用户体验
-- **零配置启动**：首次运行自动创建所需目录结构
+- **开箱即用**：首次运行自动创建所需目录结构
 - **可视化反馈**：彩色日志 + 实时进度条，处理状态一目了然
 - **智能容错**：异常自动降级，确保流程完成
 - **打包版本**：老师无需安装Python，双击即用
@@ -202,7 +202,7 @@ output/
 
 补充文档：
 - 发布前验收清单：[doc/ReleaseAcceptanceChecklist.md](doc/ReleaseAcceptanceChecklist.md)
-- 反向 PRD（从现有实现倒推需求与边界）：[doc/PRD_reverse.md](doc/PRD_reverse.md)
+- PRD（需求与边界，含反向校验要点）：[doc/PRD.md](doc/PRD.md)
 - AI 提示词模板（用于后续迭代/修复）：[doc/AI_prompt_templates.md](doc/AI_prompt_templates.md)
 
 ### 1) 运行
@@ -217,7 +217,7 @@ output/
 ### 3) 再运行一次
 整理完成后会自动打开 `output/`。
 
-### 重要提示（避免“照片被移动”的惊吓）
+### 重要提示（避免“照片被移动”带来的困惑）
 - 程序可能会把 `class_photos` 根目录的照片按日期移动到 `YYYY-MM-DD/` 子目录，这是正常现象（为了增量处理与便于查找）。
 
 ---
@@ -284,7 +284,7 @@ SUNDAY_PHOTOS_NO_PARALLEL=1 python run.py
 # 🛡️ 强制串行，日志清晰，便于定位问题
 ```
 
-> **🎯 设计理念**：零配置即可获得最佳性能，需要时一行命令即可加速！
+> **🎯 设计理念**：默认设置即可获得最佳性能，需要时一行命令即可加速！
 
 ### 第四步：查看结果
 1. ✨ 程序会自动在 `output/` 目录创建整理好的照片
@@ -407,7 +407,7 @@ pip install -r requirements.txt
 ### ✅ 简单易用
 - ❌ 不需要CSV文件
 - ✅ 打包版无需编辑配置文件或参数；源码版支持调参
-- ❌ 不需要计算机知识
+- ✅ 按提示操作即可完成
 - ✅ 只需创建文件夹和放照片
 
 ### 🤖 智能识别
@@ -522,7 +522,7 @@ python run.py
 - **渐进式增强**：默认稳定优先，按需开启高级特性
 
 ### 📦 增量处理架构
-- **隐藏状态快照**（`output/.state/snapshot.json`）：
+- **隐藏状态快照**（`output/.state/class_photos_snapshot.json`）：
   - 记录每个日期文件夹的文件列表和元信息（size/mtime）
   - 智能对比检测新增/变更/删除的日期目录
   - 首次运行后，仅处理变化的部分
@@ -571,7 +571,7 @@ python run.py
 - **依赖注入容器**（`ServiceContainer`）：
   - 统一管理核心服务（StudentManager/FaceRecognizer/FileOrganizer）
   - 便于测试时注入 Mock 对象
-- **单元测试覆盖**：128个测试用例，涵盖：
+- **单元测试覆盖**：覆盖核心/边界/打包验证等场景（用例数随迭代持续增长）。
   - 核心功能（识别/整理/缓存/增量）
   - 边界情况（空输入/损坏文件/并发冲突）
   - 打包验证（release acceptance）
@@ -604,7 +604,7 @@ python run.py
 ### v1.0.0 - 2025-12-01
 - ✅ 基础人脸识别和照片整理功能
 - ✅ 多编码融合策略
-- ✅ 自动化测试框架（128个用例）
+- ✅ 自动化测试框架（持续完善，覆盖核心流程与边界）
 
 ---
 

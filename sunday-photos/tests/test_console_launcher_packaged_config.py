@@ -9,10 +9,11 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
 def test_console_launcher_creates_top_level_config_and_passes_config_file(tmp_path, monkeypatch):
-    # 使用 tmp_path 模拟 Desktop
+    # 使用 tmp_path 模拟“程序可写的工作目录”
     import src.cli.console_launcher as cl
 
-    monkeypatch.setattr(cl, "get_desktop_dir", lambda: tmp_path)
+    # 新口径：工作目录默认跟随程序所在位置；测试中用 env 覆盖，避免写入真实用户目录
+    monkeypatch.setenv("SUNDAY_PHOTOS_WORK_DIR", str(tmp_path / "workdir"))
 
     organizer = cl.ConsolePhotoOrganizer()
     assert organizer.setup_directories() is True

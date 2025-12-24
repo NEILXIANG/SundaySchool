@@ -19,11 +19,19 @@ from pathlib import Path
 from datetime import datetime
 from tqdm import tqdm
 import shutil
+from typing import Dict, List
 
 # 忽略 face_recognition_models 的 pkg_resources 弃用警告
 warnings.filterwarnings("ignore", category=UserWarning, module='face_recognition_models')
 
-from .utils import setup_logger, is_supported_image_file, is_supported_nonempty_image_path, get_photo_date, ensure_directory_exists
+from .utils import (
+    setup_logger,
+    is_supported_image_file,
+    is_supported_nonempty_image_path,
+    get_photo_date,
+    ensure_directory_exists,
+    parse_date_from_text,
+)
 from .utils import is_ignored_fs_entry
 from .config import DEFAULT_CONFIG, UNKNOWN_PHOTOS_DIR
 from .config_loader import ConfigLoader
@@ -251,16 +259,55 @@ class SimplePhotoOrganizer:
         else:
             self.logger.info("✓ 未检测到新增或变更的日期文件夹")
 
+        # 兼容多种“日期文件夹写法”：输入端可为 2025.12.23 / 2025年12月23日 等。
+        # 这里统一解析为 YYYY-MM-DD，用于增量计划与输出目录命名。
+        date_to_dirs: Dict[str, List[Path]] = {}
+        try:
+            for child in self.photos_dir.iterdir():
+                if is_ignored_fs_entry(child):
+                    continue
+                if not child.is_dir():
+                    continue
+                normalized = parse_date_from_text(child.name)
+                if not normalized:
+                    continue
+                date_to_dirs.setdefault(normalized, []).append(child)
+
+                # 兼容嵌套目录：class_photos/YYYY/MM/DD/...
+                # 注意：这里的 child 已经被当作“日期目录”处理过时，不再深入。
+
+            # 第二轮：识别嵌套 YYYY/MM/DD 结构（老师常见按年/月/日建文件夹）
+            for year_dir in self.photos_dir.iterdir():
+                if is_ignored_fs_entry(year_dir) or (not year_dir.is_dir()):
+                    continue
+                if not re.fullmatch(r"\d{4}", year_dir.name or ""):
+                    continue
+                for month_dir in year_dir.iterdir():
+                    if is_ignored_fs_entry(month_dir) or (not month_dir.is_dir()):
+                        continue
+                    if not re.fullmatch(r"\d{1,2}", month_dir.name or ""):
+                        continue
+                    for day_dir in month_dir.iterdir():
+                        if is_ignored_fs_entry(day_dir) or (not day_dir.is_dir()):
+                            continue
+                        if not re.fullmatch(r"\d{1,2}", day_dir.name or ""):
+                            continue
+
+                        normalized = parse_date_from_text(f"{year_dir.name}/{month_dir.name}/{day_dir.name}")
+                        if not normalized:
+                            continue
+                        date_to_dirs.setdefault(normalized, []).append(day_dir)
+        except Exception:
+            date_to_dirs = {}
+
         photo_files = []
         for date in sorted(plan.changed_dates):
-            date_dir = self.photos_dir / date
-            if not date_dir.exists():
-                continue
-            for root, _, files in os.walk(date_dir):
-                for file in files:
-                    p = Path(root) / file
-                    if is_supported_nonempty_image_path(p):
-                        photo_files.append(str(p))
+            for date_dir in sorted(date_to_dirs.get(date, []), key=lambda p: p.name):
+                for root, _, files in os.walk(date_dir):
+                    for file in files:
+                        p = Path(root) / file
+                        if is_supported_nonempty_image_path(p):
+                            photo_files.append(str(p))
 
         self.logger.info(f"✓ 本次需要处理 {len(photo_files)} 张照片")
         self.stats['total_photos'] = len(photo_files)
@@ -373,8 +420,10 @@ class SimplePhotoOrganizer:
                 self.logger.debug(f"照片 {photo_path} 路径解析异常，使用文件名: {e}")
                 rel = p.name
             parts = rel.split('/')
-            if parts and re.fullmatch(r"\d{4}-\d{2}-\d{2}", parts[0] or ""):
-                return parts[0], rel
+            if parts:
+                normalized = parse_date_from_text(parts[0] or "")
+                if normalized:
+                    return normalized, rel
             # 兜底：从路径/文件名推断日期
             return get_photo_date(photo_path), rel
 

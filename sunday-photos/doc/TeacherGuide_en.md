@@ -15,19 +15,20 @@ If macOS blocks the first run: System Settings → Privacy & Security → Open A
 - Or double-click `release_console/SundayPhotoOrganizer.exe`.
 
 ## What happens on first run
-- The app creates this folder on your Desktop:
-  - `Desktop/SundaySchoolPhotoOrganizer/`
-- It also creates:
-  - `student_photos/` (student reference photos)
-  - `class_photos/` (classroom photos)
+- The app creates the following folders next to the executable (same directory):
+  - `input/` (where teachers put photos)
+    - `input/student_photos/` (student reference photos)
+    - `input/class_photos/` (classroom photos)
   - `output/` (organized results)
   - `logs/` (logs for troubleshooting)
 
+If the app directory is not writable, it automatically falls back to Desktop (or Home) and prints the actual `Work folder` path.
+
 ## Put photos in the right place
-- Student references: `Desktop/SundaySchoolPhotoOrganizer/student_photos/`
-  - Folder-only (single supported layout): `student_photos/<student_name>/...` (filenames can be anything)
-  - Examples: `student_photos/Alice/ref_01.jpg`, `student_photos/Bob/img_0001.png`
-- Classroom photos: `Desktop/SundaySchoolPhotoOrganizer/class_photos/`
+- Student references: `input/student_photos/`
+  - Folder-only (single supported layout): `input/student_photos/<student_name>/...` (filenames can be anything)
+  - Examples: `input/student_photos/Alice/ref_01.jpg`, `input/student_photos/Bob/img_0001.png`
+- Classroom photos: `input/class_photos/`
   - Date subfolders recommended: `2025-12-21/photo.jpg`
 
 ## Run again
@@ -38,7 +39,7 @@ If macOS blocks the first run: System Settings → Privacy & Security → Open A
 - The app may move photos from `class_photos/` into date folders like `YYYY-MM-DD/`. This is expected (it enables incremental processing).
 
 ## Need help?
-- Send the newest log file from `Desktop/SundaySchoolPhotoOrganizer/logs/`.
+- Send the newest log file from `logs/` (next to the executable; or under the fallback `Work folder`).
 
 ## FAQ
 
@@ -46,8 +47,8 @@ If macOS blocks the first run: System Settings → Privacy & Security → Open A
 
 Easiest: rename the date folder in `class_photos/` (e.g., `2025-12-21` → `2025-12-21-new`), then run again. The app will treat it as new input and fully process it.
 
-Thorough (optional): delete `Desktop/SundaySchoolPhotoOrganizer/output/.state/` and any per-date caches (if present) under `output/`, then run again. Original photos are untouched; only recognition is redone.
+Thorough (optional): delete `output/.state/` and any per-date caches (if present) under `output/`, then run again. Original photos are untouched; only recognition is redone.
 
 ---
 
-Developer note: CLI flags like `--tolerance` are for source/dev workflows. Teachers should use the packaged `SundayPhotoOrganizer` Desktop-folder workflow.
+Developer note: CLI flags like `--tolerance` are for source/dev workflows. Teachers should use the packaged `SundayPhotoOrganizer` same-folder (input/output/logs) workflow.

@@ -13,7 +13,7 @@
 
 ### Users
 - Sunday school teachers / activity organizers.
-- Non-technical users needing batch photo organization.
+- Teachers and staff needing batch photo organization.
 
 ---
 

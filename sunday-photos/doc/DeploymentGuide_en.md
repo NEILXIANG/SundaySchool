@@ -26,14 +26,15 @@ sunday-photos/
 └── requirements.txt           # Dependencies
 ```
 
-Runtime folders created automatically (Desktop):
+Runtime folders created automatically (next to the executable):
 ```
-Desktop/SundaySchoolPhotoOrganizer/
-├── student_photos/            # Reference photos (folder-only: student_photos/<student_name>/...)
-├── class_photos/              # Classroom photos (e.g., 2024-12-21/group.jpg)
-├── output/                    # Results (student/date/group_103045.jpg)
-└── logs/                      # Runtime logs (safe to clear)
+./input/
+├── student_photos/            # Reference photos (folder-only: input/student_photos/<student_name>/...)
+└── class_photos/              # Classroom photos (e.g., 2024-12-21/group.jpg)
+./output/                      # Results (student/date/group_103045.jpg)
+./logs/                        # Runtime logs (safe to clear)
 ```
+If the app directory is not writable, it automatically falls back to Desktop (or Home) and prints the actual `Work folder` path.
 
 ### 📥 Input examples (source mode)
 ```
@@ -71,9 +72,9 @@ output/
 
 ## 🚀 Teacher Workflow
 - release_console/: packaged deliverables (exe + launcher + guides)
-- Desktop/SundaySchoolPhotoOrganizer/ (auto-created on first run):
-  - student_photos/: folder-only reference photos: `student_photos/<student_name>/...` (filenames can be anything)
-  - class_photos/: classroom photos; date subfolders recommended (2024-12-21/photo.jpg)
+- Next to the executable (auto-created on first run):
+  - input/student_photos/: folder-only reference photos: `input/student_photos/<student_name>/...` (filenames can be anything)
+  - input/class_photos/: classroom photos; date subfolders recommended (2024-12-21/photo.jpg)
   - output/: organized results (student → date)
   - logs/: run logs
 

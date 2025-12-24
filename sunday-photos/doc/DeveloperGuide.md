@@ -240,7 +240,7 @@ SimplePhotoOrganizer (src/core/main.py)
   ```
 
 **2. 增量处理**（隐藏状态快照）：
-- 快照位置：`output/.state/snapshot.json`
+- 快照位置：`output/.state/class_photos_snapshot.json`
 - 记录内容：每个日期文件夹的文件列表 + 元信息(size/mtime)
 - 工作原理：
   ```python
@@ -437,7 +437,7 @@ SUNDAY_PHOTOS_CONFIG=/path/to/config.json
 参考 [doc/ReleaseAcceptanceChecklist.md](ReleaseAcceptanceChecklist.md)
 
 **核心检查项**：
-1. ✅ 本地测试全部通过（128/128）
+1. ✅ 本地测试全部通过（以 `pytest -q` 结果为准）
 2. ✅ 打包产物生成成功
 3. ✅ 打包验证测试通过（`REQUIRE_PACKAGED_ARTIFACTS=1`）
 4. ✅ 手动测试打包版（桌面目录模式）
@@ -503,7 +503,7 @@ cd release_console
 2. **性能优化**：增量处理 + 多级缓存 + 智能并行
 3. **容错机制**：多层异常捕获 + 自动回退 + 原子操作
 4. **测试覆盖**：128个用例 + 打包验证 + 边界测试
-5. **用户体验**：零配置 + 智能提示 + 友好错误
+5. **用户体验**：开箱即用 + 智能提示 + 友好错误
 6. **跨平台支持**：Windows/macOS(x86+ARM)/Linux
 7. **未知人脸聚类**：智能归组访客/家长/新学生
 

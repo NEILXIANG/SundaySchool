@@ -124,16 +124,16 @@ def create_console_guide():
 3. 完成！
 
 📁 文件夹位置：
-程序会在桌面创建 "SundaySchoolPhotoOrganizer" 文件夹，包含：
-- student_photos（学生照片）
-- class_photos（课堂照片）  
+程序会在可执行文件同目录创建这些文件夹：
+- input/student_photos（学生照片：学生参考照）
+- input/class_photos（课堂照片）
 - output（整理结果）
 - logs（日志文件）
 
 📸 照片准备：
-1. 学生照片：放入 student_photos 文件夹
-    放法（唯一方式）：student_photos/学生名/ 里放照片（文件名随意）
-2. 课堂照片：放入 class_photos 文件夹
+1. 学生照片：放入 input/student_photos 文件夹
+    放法（唯一方式）：input/student_photos/学生名/ 里放照片（文件名随意）
+2. 课堂照片：放入 input/class_photos 文件夹
    可以是任何 .jpg 或 .png 文件
 
 💡 使用技巧：
@@ -238,7 +238,7 @@ if __name__ == "__main__":
         print("   - 使用说明.txt（使用说明）")
         print()
         print("🚀 老师使用步骤：")
-        print("1. 将 SundayPhotoOrganizer 文件复制到桌面")
+        print("1. 将 release_console/ 整个文件夹发给老师（放哪都可以）")
         print("2. 双击运行")
         print("3. 按照提示添加照片")
         print("4. 等待自动完成")

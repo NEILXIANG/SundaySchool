@@ -26,7 +26,7 @@ Must exist under `sunday-photos/release_console/` (by platform):
 - `使用说明.txt` (Chinese teacher guide, zero-parameter approach)
 - `USAGE_EN.txt` (English teacher guide, optional)
 
-**Optional** (placeholder/example directories; teachers actually use Desktop `SundaySchoolPhotoOrganizer/`):
+**Optional** (placeholder/example directories; teachers actually use `input/`, `output/`, `logs/` next to the executable):
 - `input/` (may contain `student_photos/`, `class_photos/` for source-mode examples)
 - `output/` (can be empty)
 - `logs/` (can be empty)
@@ -40,11 +40,11 @@ Must exist under `sunday-photos/release_console/` (by platform):
 ## B. Runtime Behavior (Teacher-Side Zero-Parameter)
 
 ### First Run:
-- Creates `SundaySchoolPhotoOrganizer/` on Desktop (or the agreed-upon directory name in documentation).
+- Creates `input/`, `output/`, `logs/` next to the executable (or falls back to Desktop/Home if not writable).
 - Automatically creates/confirms the following subdirectories exist:
-  - `student_photos/`, `class_photos/`, `output/`, `logs/`
+  - `input/student_photos/`, `input/class_photos/`, `output/`, `logs/`
 - If essential photos are missing:
-  - Output must be "non-technical description + what to do next + where logs are"
+  - Output must be "plain-language description + what to do next + where logs are"
   - Program should exit safely (no accidental deletion/moving)
 
 ### Missing Student Reference Photos (allowed to continue):
@@ -95,7 +95,7 @@ Recommended acceptance sequence:
    - Or use equivalent command (see repository testing documentation).
 
 **Pass Criteria:**
-- Strict mode pytest all green (128+ test cases pass).
+- Strict mode pytest all green (all tests pass).
 - `release_console/` artifacts complete; manual trial run meets sections B/C.
 
 ---
@@ -103,7 +103,7 @@ Recommended acceptance sequence:
 ## E. Manual Quick Spot Check (2 Minutes Before Sending to Teachers)
 
 - Double-click launch entry (executable or launcher script) once
-- Confirm desktop directory created successfully
+- Confirm `input/`, `output/`, `logs/` are created successfully
 - Put 1-2 random photos to simulate input, confirm no crash
 - Confirm `output/` has results or clear prompts
 - Confirm `logs/` generated logs
@@ -116,7 +116,7 @@ Recommended acceptance sequence:
 - [ ] All deliverables exist in `release_console/`
 - [ ] Executables have correct permissions (macOS: chmod +x)
 - [ ] User guides are complete and accurate
-- [ ] All tests pass (128+ test cases, 100% pass rate)
+- [ ] All tests pass (100% pass rate)
 - [ ] Strict mode tests pass (`REQUIRE_PACKAGED_ARTIFACTS=1`)
 
 ### Runtime Behavior

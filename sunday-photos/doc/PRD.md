@@ -9,14 +9,14 @@
 
 ### 1.1 产品定位
 - **核心价值**：解放老师双手，让照片管理从"繁琐手工"变成"一键完成"
-- **目标用户**：主日学教师、培训机构组织者、活动管理员（零技术背景可用）
+- **目标用户**：主日学教师、培训机构组织者、活动管理员（无需额外技术准备也可用）
 - **应用场景**：课堂合照批量整理、活动照片归档、学生成长记录管理
 
 ### 1.2 核心目标
 - 通过人脸识别将课堂合照按学生自动分类 / Classify classroom photos by student via face recognition
 - 输出按 `学生/日期` 三级组织，直观易用 / Outputs organized by student and date
 - 智能识别未知人脸并自动聚类（访客/家长归组）/ Cluster unknown faces automatically
-- 零配置启动，打包版双击即用 / Zero-config start, packaged version ready-to-use
+- 默认设置即可运行，打包版双击即用 / Works with sensible defaults, packaged version ready-to-use
 - 路径与阈值可配置，满足高级需求 / Configurable paths and tolerance for advanced users
 
 ---
@@ -78,7 +78,7 @@ SUNDAY_PHOTOS_NO_PARALLEL=1 python run.py  # 强制禁用并行
 
 ### 2.3 打包版（老师模式）
 - **运行方式**：双击 `release_console/启动工具.sh` (macOS) 或 `Launch_SundayPhotoOrganizer.bat` (Windows)
-- **工作目录**：桌面 `SundaySchoolPhotoOrganizer/`（首次自动创建）
+- **工作目录**：可执行文件同目录（首次自动创建 `input/`、`output/`、`logs/`）
 - **参数配置**：通过 `config.json` 修改（可选，默认即可）
 
 ---
@@ -110,7 +110,7 @@ SUNDAY_PHOTOS_NO_PARALLEL=1 python run.py  # 强制禁用并行
 - **容错设计**：核心流程确保完成，辅助功能静默失败
 - **自动回退**：并行失败→串行，内存不足→跳过
 - **错误回滚**：文件操作失败时自动清理
-- **测试覆盖**：128个测试用例，涵盖核心/边界/打包验证
+- **测试覆盖**：覆盖核心/边界/打包验证（用例数随迭代持续增长）
 
 ---
 
@@ -159,7 +159,7 @@ output/
 │   └── 2025-12-21/           # 单次出现
 │       └── blurry_105632.jpg
 ├── .state/                   # 隐藏状态（增量/缓存）
-│   ├── snapshot.json
+│   ├── class_photos_snapshot.json
 │   └── recognition_cache_by_date/
 │       └── 2025-12-21.json
 └── 20251221_143052_整理报告.txt      # 自动带时间戳前缀
@@ -214,7 +214,7 @@ tqdm>=4.66.0
 - **边界测试** Edge Cases：空输入/损坏文件/并发冲突
 
 ### 6.2 测试覆盖率
-- **测试用例数**：128个
+- **测试用例数**：以 `pytest -q` 输出为准（持续增长）
 - **通过率要求**：100%
 - **测试数据**：tests/data/ 目录
 
@@ -227,7 +227,7 @@ tqdm>=4.66.0
 
 ### 7.1 源码仓库
 - **实现**：src/ 目录（核心模块 + CLI）
-- **测试**：tests/ 目录（128个用例）
+- **测试**：tests/ 目录（覆盖核心与边界，持续增长）
 - **文档**：doc/ 目录（PRD/README/开发指南/测试说明/配置说明）
 
 ### 7.2 打包产物
@@ -267,7 +267,7 @@ tqdm>=4.66.0
 ### 9.1 功能指标
 - ✅ 识别准确率 >95%（参考照质量良好时）
 - ✅ 100张照片处理时间 <2分钟（并行模式）
-- ✅ 测试通过率 100%（128/128）
+- ✅ 测试通过率：以 `pytest -q` 运行结果为准
 - ✅ 未知人脸聚类准确率 >90%
 
 ### 9.2 用户体验指标

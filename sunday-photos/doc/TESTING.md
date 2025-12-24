@@ -50,7 +50,7 @@
 
 ### 用户体验测试
 - **教师友好** Teacher-friendly
-  - `tests/test_teacher_friendly.py`: 零配置启动
+  - `tests/test_teacher_friendly.py`: 开箱即用
   - `tests/test_teacher_help_system.py`: 帮助系统响应
   - `tests/test_teacher_onboarding_flow.py`: 首次使用流程
 
@@ -84,7 +84,7 @@
 - ✅ 用户体验：首次运行、帮助系统、错误提示
 
 ### 当前测试状态
-- **总用例数**: 128+
+- **总用例数**: 以 `pytest -q` 输出为准（持续增长）
 - **通过率**: 100%
 - **覆盖率**: 85%+ (核心模块)
 

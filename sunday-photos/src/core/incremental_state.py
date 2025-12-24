@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from .config import STATE_DIR_NAME, CLASS_PHOTOS_SNAPSHOT_FILENAME, SNAPSHOT_VERSION, DATE_DIR_PATTERN
-from .utils import is_supported_nonempty_image_path, is_ignored_fs_entry
+from .utils import is_supported_nonempty_image_path, is_ignored_fs_entry, parse_date_from_text
 
 
 # 全局锁用于并发安全
@@ -45,7 +45,11 @@ def snapshot_file_path(output_dir: Path) -> Path:
 
 
 def iter_date_directories(class_photos_dir: Path) -> List[Path]:
-    """枚举合法的日期子目录（YYYY-MM-DD）。"""
+    """枚举合法的日期子目录（YYYY-MM-DD）。
+
+    说明：这是原有行为（也是增量处理的基线语义），用于保持向后兼容。
+    多日期格式兼容逻辑在本模块内部快照构建中处理。
+    """
     if not class_photos_dir.exists():
         return []
     date_dirs: List[Path] = []
@@ -55,6 +59,45 @@ def iter_date_directories(class_photos_dir: Path) -> List[Path]:
         if child.is_dir() and re.match(DATE_DIR_PATTERN, child.name):
             date_dirs.append(child)
     return sorted(date_dirs, key=lambda p: p.name)
+
+
+def _iter_date_directories_multi_format(class_photos_dir: Path) -> List[tuple[str, Path]]:
+    """枚举“可解析为日期”的子目录（多格式），用于构建快照。"""
+    if not class_photos_dir.exists():
+        return []
+    date_dirs: List[tuple[str, Path]] = []
+    for child in class_photos_dir.iterdir():
+        if is_ignored_fs_entry(child):
+            continue
+        if not child.is_dir():
+            continue
+        normalized = parse_date_from_text(child.name)
+        if not normalized:
+            continue
+        date_dirs.append((normalized, child))
+
+    # 兼容嵌套目录：class_photos/YYYY/MM/DD/...
+    for year_dir in class_photos_dir.iterdir():
+        if is_ignored_fs_entry(year_dir) or (not year_dir.is_dir()):
+            continue
+        if not re.fullmatch(r"\d{4}", year_dir.name or ""):
+            continue
+        for month_dir in year_dir.iterdir():
+            if is_ignored_fs_entry(month_dir) or (not month_dir.is_dir()):
+                continue
+            if not re.fullmatch(r"\d{1,2}", month_dir.name or ""):
+                continue
+            for day_dir in month_dir.iterdir():
+                if is_ignored_fs_entry(day_dir) or (not day_dir.is_dir()):
+                    continue
+                if not re.fullmatch(r"\d{1,2}", day_dir.name or ""):
+                    continue
+                normalized = parse_date_from_text(f"{year_dir.name}/{month_dir.name}/{day_dir.name}")
+                if not normalized:
+                    continue
+                date_dirs.append((normalized, day_dir))
+
+    return sorted(date_dirs, key=lambda it: (it[0], it[1].name))
 
 
 def _file_entry(path: Path) -> Dict:
@@ -68,38 +111,60 @@ def _file_entry(path: Path) -> Dict:
 
 
 def build_class_photos_snapshot(class_photos_dir: Path) -> Dict:
-        """为 input/class_photos 构建快照。
+    """为 input/class_photos 构建快照。
 
-        快照结构：
-        {
-            version: int,
-            generated_at: str,
-            dates: {
-                "YYYY-MM-DD": {
-                    files: [ {path,size,mtime}, ... ]
-                },
-                ...
-            }
+    快照结构：
+    {
+        version: int,
+        generated_at: str,
+        dates: {
+            "YYYY-MM-DD": {
+                source_dirs: ["2025-12-21", "2025.12.21", ...],
+                files: [ {path,size,mtime}, ... ]
+            },
+            ...
         }
-        """
+    }
 
-        dates: Dict[str, Dict] = {}
-        for date_dir in iter_date_directories(class_photos_dir):
-                file_entries: List[Dict] = []
-                for file_path in sorted(date_dir.rglob("*")):
-                        if is_supported_nonempty_image_path(file_path):
-                                rel = file_path.relative_to(date_dir)
-                                entry = _file_entry(file_path)
-                                entry["path"] = rel.as_posix()
-                                file_entries.append(entry)
+    说明：输入端允许多种日期文件夹写法，但快照 key 一律标准化为 YYYY-MM-DD。
+    """
 
-                dates[date_dir.name] = {"files": file_entries}
+    dates: Dict[str, Dict] = {}
+    for normalized_date, date_dir in _iter_date_directories_multi_format(class_photos_dir):
+        file_entries: List[Dict] = []
+        for file_path in sorted(date_dir.rglob("*")):
+            if is_supported_nonempty_image_path(file_path):
+                rel = file_path.relative_to(date_dir).as_posix()
+                entry = _file_entry(file_path)
+                # 兼容：
+                # - 若目录本身就是标准 YYYY-MM-DD，则沿用历史语义：path=相对日期目录路径（不带日期前缀）
+                # - 若目录是其他写法（如 2025.12.23 / 2025年12月23日），则加上物理目录名前缀避免冲突
+                if date_dir.name == normalized_date and re.match(DATE_DIR_PATTERN, date_dir.name):
+                    entry["path"] = rel
+                else:
+                    physical_rel = date_dir.relative_to(class_photos_dir).as_posix()
+                    entry["path"] = f"{physical_rel}/{rel}"
+                file_entries.append(entry)
 
-        return {
-                "version": SNAPSHOT_VERSION,
-                "generated_at": datetime.now().isoformat(timespec="seconds"),
-                "dates": dates,
-        }
+        bucket = dates.setdefault(normalized_date, {"source_dirs": [], "files": []})
+        physical_rel = date_dir.relative_to(class_photos_dir).as_posix()
+        if physical_rel not in bucket["source_dirs"]:
+            bucket["source_dirs"].append(physical_rel)
+        bucket["files"].extend(file_entries)
+
+    # 保证稳定快照：排序 source_dirs 与 files
+    for v in dates.values():
+        v["source_dirs"] = sorted(set(v.get("source_dirs", [])))
+        v["files"] = sorted(
+            v.get("files", []),
+            key=lambda e: (e.get("path", ""), e.get("size", 0), e.get("mtime", 0)),
+        )
+
+    return {
+        "version": SNAPSHOT_VERSION,
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "dates": dates,
+    }
 
 
 def load_snapshot(output_dir: Path) -> Optional[Dict]:

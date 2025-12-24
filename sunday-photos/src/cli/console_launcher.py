@@ -26,7 +26,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from core.config import UNKNOWN_PHOTOS_DIR
-from core.platform_paths import get_desktop_dir
+from core.platform_paths import get_default_work_root_dir, get_program_dir
 from core.utils import is_supported_nonempty_image_path
 
 
@@ -40,7 +40,8 @@ def _try_get_teacher_helper():
 
 class ConsolePhotoOrganizer:
     def __init__(self):
-        self.app_directory = get_desktop_dir() / "SundaySchoolPhotoOrganizer"
+        self._program_dir = get_program_dir()
+        self.app_directory = get_default_work_root_dir()
         self.setup_complete = False
         self.teacher_helper = _try_get_teacher_helper()
         self.logger = logging.getLogger(__name__)
@@ -80,12 +81,21 @@ class ConsolePhotoOrganizer:
         run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
         print("这是一款给老师用的‘零门槛’整理工具：按提示放照片，然后运行即可。")
         print(f"本次运行编号：{run_id}")
-        print(f"Work folder (Desktop): {self.app_directory}")
+        print(f"Work folder: {self.app_directory}")
+        # Teacher-friendly: don't require understanding filesystem permissions.
+        override = os.environ.get("SUNDAY_PHOTOS_WORK_DIR", "").strip()
+        if override:
+            self._print_tip("已使用自定义工作目录（由环境变量指定）。")
+        elif self.app_directory != self._program_dir:
+            self._print_warn("当前程序所在位置无法创建工作文件夹，我已自动改用其它位置继续运行。")
+            self._print_tip("你无需处理权限问题；按上面 Work folder 提示的路径放照片即可。")
+        else:
+            self._print_tip("默认使用程序所在目录；如果该位置无法创建文件夹，会自动改用桌面或主目录。")
         self._print_tip("隐私说明：照片只在本机处理，不会自动上传到网络。")
         self._print_tip("安全说明：程序不会删除照片；只会把结果复制到 output/。为了便于下次继续整理，课堂照片可能会被归档到 class_photos/ 里的日期子文件夹（例如 YYYY-MM-DD/）。")
         print("三步完成：")
-        print(f"  ① Student reference photos: {self.app_directory / 'student_photos'}")
-        print(f"  ② Classroom photos: {self.app_directory / 'class_photos'}")
+        print(f"  ① Student reference photos: {self.app_directory / 'input' / 'student_photos'}")
+        print(f"  ② Classroom photos: {self.app_directory / 'input' / 'class_photos'}")
         print("  ③ 再运行一次（我会自动把结果放到 output/ 并尝试打开）")
         self._print_divider()
     
@@ -96,10 +106,11 @@ class ConsolePhotoOrganizer:
         
         directories = [
             self.app_directory,
-            self.app_directory / "student_photos",
-            self.app_directory / "class_photos", 
+            self.app_directory / "input",
+            self.app_directory / "input" / "student_photos",
+            self.app_directory / "input" / "class_photos",
             self.app_directory / "output",
-            self.app_directory / "logs"
+            self.app_directory / "logs",
         ]
         
         created_count = 0
@@ -147,14 +158,35 @@ Supported formats: .jpg / .jpeg / .png
         if not info_file.exists():
             info_file.write_text(content, encoding='utf-8')
     
+    def _try_open_folder(self, folder_path: Path, description: str = "文件夹") -> bool:
+        """尝试打开文件夹（跨平台；静默失败）。"""
+        try:
+            import subprocess
+            
+            if platform.system() == "Darwin":  # macOS
+                subprocess.run(['open', str(folder_path)], check=False)
+            elif platform.system() == "Windows":
+                try:
+                    os.startfile(str(folder_path))  # type: ignore[attr-defined]
+                except Exception:
+                    subprocess.run(['explorer', str(folder_path)], check=False)
+            else:  # Linux
+                subprocess.run(['xdg-open', str(folder_path)], check=False)
+            
+            self.logger.debug(f"成功打开{description}: {folder_path}")
+            return True
+        except Exception as e:
+            self.logger.debug(f"打开{description}失败（非关键）: {e}")
+            return False
+    
     def check_photos(self):
         """检查照片文件"""
         self._print_section("检查照片")
         print("我来看看照片是否已经放好...")
         self._print_tip("支持格式：JPG / JPEG / PNG")
         
-        student_photos_dir = self.app_directory / "student_photos"
-        class_photos_dir = self.app_directory / "class_photos"
+        student_photos_dir = self.app_directory / "input" / "student_photos"
+        class_photos_dir = self.app_directory / "input" / "class_photos"
         
         # Student reference photos: folder-only layout, so scan recursively
         student_photos = [
@@ -189,9 +221,9 @@ Supported formats: .jpg / .jpeg / .png
         return True
     
     def create_config_file(self):
-        """创建配置文件（如已存在则不覆盖），保证零配置可运行。"""
+        """创建配置文件（如已存在则不覆盖），保证默认设置即可运行。"""
         config_data = {
-            "input_dir": str(self.app_directory),
+            "input_dir": str(self.app_directory / "input"),
             "output_dir": str(self.app_directory / "output"),
             "log_dir": str(self.app_directory / "logs"),
             # 与 src/core/config_loader.py 读取口径保持一致（顶层字段）。
@@ -248,7 +280,7 @@ Supported formats: .jpg / .jpeg / .png
             config_loader = ConfigLoader(str(config_file))
             
             organizer = SimplePhotoOrganizer(
-                input_dir=str(self.app_directory),
+                input_dir=str(self.app_directory / "input"),
                 output_dir=str(self.app_directory / "output"),
                 log_dir=str(self.app_directory / "logs"),
                 config_file=str(config_file),
@@ -296,26 +328,11 @@ Supported formats: .jpg / .jpeg / .png
             print(f"结果文件夹：{output_dir}")
             self._print_tip("If you see unknown_photos/, those are unrecognized photos; adding 2–3 clearer reference photos usually helps.")
             
-            # 询问是否打开文件夹
-            try:
-                import subprocess
-
-                print("我来帮你打开结果文件夹...")
-                
-                if platform.system() == "Darwin":  # macOS
-                    subprocess.run(['open', str(output_dir)])
-                elif platform.system() == "Windows":
-                    try:
-                        os.startfile(str(output_dir))  # type: ignore[attr-defined]
-                    except Exception:
-                        subprocess.run(['explorer', str(output_dir)])
-                else:  # Linux
-                    subprocess.run(['xdg-open', str(output_dir)])
-                    
+            # 自动打开结果文件夹
+            print("我来帮你打开结果文件夹...")
+            if self._try_open_folder(output_dir, "结果文件夹"):
                 self._print_ok("已打开结果文件夹。")
-                
-            except Exception as e:
-                self.logger.debug(f"打开结果文件夹失败（非关键操作）: {e}")
+            else:
                 self._print_warn("我没能自动打开文件夹（不影响结果）。")
                 self._print_next("请手动打开这个文件夹查看结果")
                 print(f"  {output_dir}")

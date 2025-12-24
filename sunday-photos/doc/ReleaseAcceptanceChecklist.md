@@ -18,9 +18,9 @@
   - `SundayPhotoOrganizer.exe`（Windows 控制台可执行文件）
   - `Launch_SundayPhotoOrganizer.bat`（双击入口脚本，保持窗口不闪退）
 - 通用：
-  - `使用说明.txt`（老师版简明说明，零参数口径）
+  - `使用说明.txt`（老师版简明说明，默认无需参数的口径）
 
-可选（占位/示例目录；老师实际使用桌面 `SundaySchoolPhotoOrganizer/`）：
+可选（占位/示例目录；老师实际使用程序同级目录下的 `input/`、`output/`、`logs/`）：
 - `input/`（如需提供源码模式示例，可包含 `student_photos/`、`class_photos/`）
 - `output/`（可为空）
 - `logs/`（可为空）
@@ -31,14 +31,14 @@
 
 ---
 
-## B. 运行行为（老师端零参数）
+## B. 运行行为（老师端默认无需参数）
 
 首次运行：
-- 在桌面创建 `SundaySchoolPhotoOrganizer/`（或说明中约定的同名目录）。
+- 在程序同级创建 `input/`、`output/`、`logs/`；若不可写则回退桌面（或主目录）。
 - 自动创建/确认以下子目录存在：
   - `student_photos/`、`class_photos/`、`output/`、`logs/`
 - 若缺少必要照片：
-  - 输出必须是“非技术描述 + 下一步怎么做 + 日志在哪里”
+  - 输出必须是“通俗易懂的描述 + 下一步怎么做 + 日志在哪里”
   - 程序应安全退出（不产生误删/误移动）
 
 缺少学生参考照（允许继续）：
@@ -90,12 +90,22 @@
 - 严格模式 pytest 全绿。
 - `release_console/` 内产物齐全，手工试运行符合 B/C。
 
+并行识别/未知聚类关键路径（自动化覆盖）：
+- 并行识别异常时自动回退串行：`tests/test_e2e_parallel_and_clustering.py::test_e2e_parallel_recognize_fallback_to_serial`
+- 并行识别成功路径（不走回退）：`tests/test_e2e_parallel_and_clustering.py::test_e2e_parallel_recognize_success_path`
+- unknown_face_clustering enabled 的落盘行为：`tests/test_e2e_parallel_and_clustering.py::test_e2e_unknown_face_clustering_enabled`
+
 ---
 
 ## E. 人工快速抽检（发给老师前 2 分钟）
 
 - 双击运行入口（可执行文件或启动脚本）一次
-- 确认桌面目录创建成功
+- 确认工作目录创建成功（默认在程序同级；若不可写会回退到桌面/主目录）
+- 确认 `input/`、`output/`、`logs/` 目录创建成功
 - 随便放 1-2 张照片模拟输入，确认不会崩溃
 - 确认 output/ 有结果或有明确提示
 - 确认 logs/ 生成日志
+
+开发者命令（可选）：
+- 全量回归：`python3 -m pytest -q`
+- 仅验证并行识别/聚类相关 e2e：`python3 -m pytest -q tests/test_e2e_parallel_and_clustering.py`

@@ -1,6 +1,10 @@
 import sys
 import types
+import os
+import time
 from pathlib import Path
+
+import pytest
 
 
 def _install_face_recognition_stub() -> None:
@@ -46,3 +50,81 @@ def create_minimal_test_image(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     # 使用任意非空字节（例如 "fake image"）
     path.write_bytes(b"fake-test-image-data")
+
+
+def _set_mtime(path: Path, mtime_sec: int) -> None:
+    os.utime(path, (mtime_sec, mtime_sec))
+
+
+@pytest.fixture()
+def offline_generated_dataset(tmp_path: Path):
+    """构建一份完全离线、可重复的测试数据集。
+
+    结构：
+    - input/student_photos/<学生名>/*.jpg
+    - input/class_photos/<YYYY-MM-DD>/*.jpg
+    - output/, logs/ 作为运行输出目录
+    """
+    from tests.testdata_builder import GeneratedDataset, write_jpeg, write_empty_file
+
+    input_dir = tmp_path / "input"
+    student_dir = input_dir / "student_photos"
+    class_dir = input_dir / "class_photos"
+    output_dir = tmp_path / "output"
+    log_dir = tmp_path / "logs"
+
+    student_names = ["Alice", "Bob"]
+    dates = ["2025-12-21", "2025-12-22"]
+
+    # 学生参考照：Alice 放 6 张（用于验证“最多取 5 张、按 mtime 最新优先”）
+    # mtime 使用递增秒，保证跨平台稳定。
+    base_mtime = int(time.time()) - 10_000
+    alice_dir = student_dir / "Alice"
+    for i in range(6):
+        p = alice_dir / f"ref_{i+1:02d}.jpg"
+        write_jpeg(p, text=f"Alice ref {i+1}", seed=i)
+        _set_mtime(p, base_mtime + i)
+
+    # Bob 放 2 张
+    bob_dir = student_dir / "Bob"
+    for i in range(2):
+        p = bob_dir / f"ref_{i+1:02d}.jpg"
+        write_jpeg(p, text=f"Bob ref {i+1}", seed=100 + i)
+        _set_mtime(p, base_mtime + 100 + i)
+
+    # 课堂照片：每个日期 2 张真实 JPEG + 1 个 0 字节坏文件（应被忽略）
+    for date in dates:
+        d = class_dir / date
+        write_jpeg(d / "img_01.jpg", text=f"class {date} 1", seed=200)
+        write_jpeg(d / "img_02.jpg", text=f"class {date} 2", seed=201)
+        write_empty_file(d / "bad_00.jpg")
+
+    # 平台垃圾文件（应被忽略）
+    (class_dir / ".DS_Store").write_text("x", encoding="utf-8")
+    (class_dir / "__MACOSX").mkdir(parents=True, exist_ok=True)
+    (class_dir / "__MACOSX" / "junk").write_text("x", encoding="utf-8")
+    (class_dir / "._IMG_0001.jpg").write_text("x", encoding="utf-8")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    return GeneratedDataset(
+        input_dir=input_dir,
+        student_dir=student_dir,
+        class_dir=class_dir,
+        output_dir=output_dir,
+        log_dir=log_dir,
+        student_names=student_names,
+        dates=dates,
+    )
+
+
+@pytest.fixture()
+def student_photos_root_image_input(tmp_path: Path) -> Path:
+    """构造一个“student_photos 根目录直接放图片”的非法输入，用于校验报错。"""
+    from tests.testdata_builder import write_jpeg
+
+    input_dir = tmp_path / "input"
+    root = input_dir / "student_photos"
+    write_jpeg(root / "SHOULD_NOT_BE_HERE.jpg", text="illegal", seed=999)
+    return input_dir

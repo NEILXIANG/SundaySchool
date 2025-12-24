@@ -18,7 +18,7 @@ from datetime import datetime
 from tqdm import tqdm
 from .config import DEFAULT_OUTPUT_DIR, UNKNOWN_PHOTOS_DIR, REPORT_FILE, SMART_REPORT_FILE
 
-from .utils import ensure_directory_exists, get_photo_date
+from .utils import ensure_directory_exists, get_photo_date, safe_join_under
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +126,8 @@ class FileOrganizer:
             
             # 为每个识别到的学生复制照片（学生/日期/文件）
             for student_name in student_names:
-                student_dir = self.output_dir / student_name / photo_date
+                # 使用 safe_join_under 防止路径遍历攻击
+                student_dir = safe_join_under(self.output_dir, student_name, photo_date)
                 ensure_directory_exists(student_dir)
                 
                 # 复制照片
@@ -160,10 +161,10 @@ class FileOrganizer:
             # 确定目标目录
             if cluster_name:
                 # 如果属于某个聚类，放入 output/unknown_photos/Unknown_Person_X/2024-01-01
-                unknown_dir = self.output_dir / UNKNOWN_PHOTOS_DIR / cluster_name / photo_date
+                unknown_dir = safe_join_under(self.output_dir, UNKNOWN_PHOTOS_DIR, cluster_name, photo_date)
             else:
                 # 否则放入 output/unknown_photos/2024-01-01
-                unknown_dir = self.output_dir / UNKNOWN_PHOTOS_DIR / photo_date
+                unknown_dir = safe_join_under(self.output_dir, UNKNOWN_PHOTOS_DIR, photo_date)
                 
             ensure_directory_exists(unknown_dir)
             

@@ -12,7 +12,9 @@ import os
 import re
 import logging
 from datetime import datetime
+from datetime import date as _date
 from pathlib import Path
+from typing import List, Optional, Pattern
 from .config import LOG_FORMAT, LOG_MAX_BYTES, LOG_BACKUP_COUNT, SUPPORTED_IMAGE_EXTENSIONS
 
 # ANSI 颜色码
@@ -85,6 +87,102 @@ def setup_logger(log_dir=None, enable_color_console=False):
 DATE_DIR_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
+def parse_date_from_text(text: str) -> Optional[str]:
+    """从文本中解析日期，并返回标准格式 YYYY-MM-DD。
+
+    兼容老师常见的日期文件夹写法（不引入歧义）：
+    - 2025-12-23
+    - 2025.12.23
+    - 2025_12_23
+    - 20251223
+    - 2025年12月23日（或不带“日”）
+    - Dec 23 2025 / December 23, 2025
+    - 23 Dec 2025
+    - 2025 Dec 23
+
+    说明：不支持月/日/年（如 12-23-2025）以避免地区歧义。
+    """
+    if not text:
+        return None
+    s = text.strip()
+
+    month_map = {
+        "jan": 1,
+        "feb": 2,
+        "mar": 3,
+        "apr": 4,
+        "may": 5,
+        "jun": 6,
+        "jul": 7,
+        "aug": 8,
+        "sep": 9,
+        "oct": 10,
+        "nov": 11,
+        "dec": 12,
+    }
+    month_token = (
+        r"jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|"
+        r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
+    )
+
+    patterns: List[Pattern] = [
+        # 允许常见分隔符：- . _ /
+        re.compile(r"(?P<y>\d{4})[-_./](?P<m>\d{1,2})[-_./](?P<d>\d{1,2})"),
+        re.compile(r"(?P<y>\d{4})年(?P<m>\d{1,2})月(?P<d>\d{1,2})(?:日)?"),
+        re.compile(r"^(?P<y>\d{4})(?P<m>\d{2})(?P<d>\d{2})$"),
+    ]
+
+    for pat in patterns:
+        m = pat.search(s)
+        if not m:
+            continue
+        try:
+            y = int(m.group("y"))
+            mo = int(m.group("m"))
+            d = int(m.group("d"))
+            _date(y, mo, d)  # validate
+            return f"{y:04d}-{mo:02d}-{d:02d}"
+        except Exception:
+            continue
+
+    month_name_patterns: List[Pattern] = [
+        # Dec 23 2025 / December 23, 2025
+        re.compile(
+            rf"\b(?P<mon>{month_token})\b[\s._/-]+(?P<d>\d{{1,2}})(?:st|nd|rd|th)?\b[\s,._/-]+(?P<y>\d{{4}})\b",
+            re.IGNORECASE,
+        ),
+        # 23 Dec 2025
+        re.compile(
+            rf"\b(?P<d>\d{{1,2}})(?:st|nd|rd|th)?\b[\s._/-]+\b(?P<mon>{month_token})\b[\s,._/-]+(?P<y>\d{{4}})\b",
+            re.IGNORECASE,
+        ),
+        # 2025 Dec 23
+        re.compile(
+            rf"\b(?P<y>\d{{4}})\b[\s._/-]+\b(?P<mon>{month_token})\b[\s._/-]+(?P<d>\d{{1,2}})(?:st|nd|rd|th)?\b",
+            re.IGNORECASE,
+        ),
+    ]
+
+    for pat in month_name_patterns:
+        m = pat.search(s)
+        if not m:
+            continue
+        try:
+            y = int(m.group("y"))
+            d = int(m.group("d"))
+            mon_raw = (m.group("mon") or "").strip().lower()
+            mon_key = mon_raw[:3]
+            mo = month_map.get(mon_key)
+            if not mo:
+                continue
+            _date(y, mo, d)  # validate
+            return f"{y:04d}-{mo:02d}-{d:02d}"
+        except Exception:
+            continue
+
+    return None
+
+
 def is_ignored_fs_entry(path: Path) -> bool:
     """Return True for OS-generated metadata/hidden entries.
 
@@ -117,8 +215,9 @@ def _get_date_from_directory(photo_path: str):
     """优先从目录名(yyyy-mm-dd)推断日期"""
     path_obj = Path(photo_path)
     for parent in [path_obj.parent] + list(path_obj.parents):
-        if DATE_DIR_PATTERN.match(parent.name):
-            return parent.name
+        normalized = parse_date_from_text(parent.name)
+        if normalized:
+            return normalized
     return None
 
 
@@ -189,3 +288,43 @@ def is_supported_nonempty_image_path(path) -> bool:
         return p.stat().st_size > 0
     except Exception:
         return False
+
+
+class UnsafePathError(ValueError):
+    """路径安全检查失败（试图逃逸出基准目录）。"""
+    pass
+
+
+def safe_join_under(base_dir: Path, *segments: str) -> Path:
+    """安全地拼接路径，确保结果在 base_dir 之下。
+
+    防止 Path Traversal 攻击（如 ".." 或绝对路径）。
+    
+    Args:
+        base_dir: 基准目录（必须是绝对路径或安全的可信路径）
+        *segments: 待拼接的路径片段（如学生姓名、日期等）
+    
+    Returns:
+        Path: 拼接后的绝对路径
+    
+    Raises:
+        UnsafePathError: 如果拼接后的路径不在 base_dir 之下
+    """
+    base = Path(base_dir).resolve()
+    
+    # 检查片段中是否包含绝对路径（Path.joinpath 会重置根目录）
+    for seg in segments:
+        if Path(seg).is_absolute():
+            raise UnsafePathError(f"Absolute path segment not allowed: {seg}")
+            
+    # 拼接并解析（resolve 处理 ".." 和符号链接）
+    # 注意：resolve(strict=False) 允许路径不存在
+    target = base.joinpath(*segments).resolve()
+    
+    try:
+        # 检查 target 是否以 base 开头
+        target.relative_to(base)
+    except ValueError:
+        raise UnsafePathError(f"Path traversal attempt: {target} is outside {base}")
+        
+    return target

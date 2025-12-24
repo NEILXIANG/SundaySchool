@@ -2,12 +2,13 @@ Sunday School Photo Organizer - Console Edition (English)
 
 🚀 Quick Start (3 steps)
 1) Double-click "SundayPhotoOrganizer" (or run ./SundayPhotoOrganizer in Terminal).
-2) When prompted, place photos into the auto-created desktop folder "SundaySchoolPhotoOrganizer".
+2) When prompted, place photos into the input/ folder created next to the app.
 3) Run the app again to process; the output folder opens automatically.
 
-📁 Folders created on first run (Desktop/SundaySchoolPhotoOrganizer)
-- student_photos: Reference photos (folder-only): student_photos/<student_name>/... (filenames can be anything).
-- class_photos: Classroom photos. Prefer date subfolders (2024-12-21/group.jpg). jpg/png supported.
+📁 Folders created on first run (next to the app)
+- The app automatically creates input/, output/, and logs/ next to itself.
+- input/student_photos: Reference photos (folder-only): input/student_photos/<student_name>/... (filenames can be anything).
+- input/class_photos: Classroom photos. Prefer date subfolders (2024-12-21/group.jpg). jpg/png supported.
 - output: Sorted results, organized by student → date.
 - logs: Run logs; safe to clear.
 
@@ -22,6 +23,7 @@ Sunday School Photo Organizer - Console Edition (English)
 
 ❓ FAQ
 - Finishes too fast: Check the desktop folder paths and file names.
+- Work folder location: By default, input/output/logs are created next to the app. If that location is not writable, it falls back to Desktop (or Home).
 - Poor matches: Add more clear reference photos for that student.
 - Won't launch: Run on macOS. If blocked, allow "Open Anyway" in Privacy & Security.
 
