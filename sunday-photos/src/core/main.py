@@ -317,7 +317,7 @@ class SimplePhotoOrganizer:
         """清理输出目录中指定日期的数据（用于增量重建/删除同步）。
 
         约定：
-        - 输出目录结构通常为：output/<学生名>/<日期>/... 以及 output/unknown/<日期>/...
+        - 输出目录结构通常为：output/<学生名>/<日期>/... 以及 output/unknown_photos/<日期>/...
         - 对于 deleted_dates：输入端日期文件夹被删除时，这里会同步删除输出端同日期目录
         - 对于 changed_dates：会先清理旧结果再重建，避免混入历史残留
         """

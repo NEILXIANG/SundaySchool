@@ -33,6 +33,9 @@ The app ignores these fields, and the file remains valid JSON.
 - `output_dir`: output directory (default: `output`)
 - `log_dir`: logs directory (default: `logs`)
 
+Packaged app note:
+- In the packaged (double-click) workflow, relative paths are resolved from the runtime **Work folder** (printed as `Work folder:` in the console).
+
 ### 3.2 Face matching threshold
 
 - `tolerance`: face matching threshold (0~1, default: `0.6`)

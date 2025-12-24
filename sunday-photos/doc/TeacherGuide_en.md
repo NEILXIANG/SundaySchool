@@ -23,6 +23,7 @@ If macOS blocks the first run: System Settings → Privacy & Security → Open A
   - `logs/` (logs for troubleshooting)
 
 If the app directory is not writable, it automatically falls back to Desktop (or Home) and prints the actual `Work folder` path.
+The `Work folder:` line in the console output is the source of truth.
 
 ## Put photos in the right place
 - Student references: `input/student_photos/`

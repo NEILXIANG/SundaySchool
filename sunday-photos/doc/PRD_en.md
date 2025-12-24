@@ -41,12 +41,12 @@ python run.py --no-parallel  # force serial mode
 
 ## 3. Non-Functional Requirements
 ### Performance
-- ≤ 2s per photo on standard hardware.
-- Support concurrent processing (optimize/test as needed).
+- Typical runs complete within minutes for common batch sizes; performance depends on hardware, photo resolution, and image quality.
+- Support concurrent/parallel processing for large batches when helpful; fall back to serial mode on failure.
 
 ### Compatibility
 - OS: Windows/macOS/Linux.
-- Python: >= 3.8.
+- Python: >= 3.7.
 
 ### Security
 - Validate required fields and ranges in `config.json`.

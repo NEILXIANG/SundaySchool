@@ -118,7 +118,7 @@ organizer = SimplePhotoOrganizer(service_container=container)
 
 **Design Highlights**:
 - Lazy initialization: components created on first `get_*()` call
-- Singleton guarantee: same container returns same instance
+- Singleton behavior: the same container returns the same instance
 - Isolation: different containers are independent
 
 ---
@@ -284,8 +284,8 @@ with Pool(
 
 **Performance Data**:
 - Small batch (< 30 photos): Serial faster (avoids process spawn overhead)
-- Medium batch (30-100 photos): Parallel improves 30-50%
-- Large batch (100+ photos): Parallel improves 60-70%
+- Medium batch (30-100 photos): Parallel often helps noticeably (varies by hardware/data)
+- Large batch (100+ photos): Parallel often helps more (varies by hardware/data)
 
 ### 2.5 Error semantics (cross-module conventions)
 
@@ -519,7 +519,7 @@ except Exception as e:
 - `face_recognition.compare_faces()` (distance computation)
 
 **Optimization Directions**:
-- Enable parallel recognition (4 cores improve 60-70%)
+- Enable parallel recognition (often faster on multi-core CPUs; varies)
 - Downscale reference photo size (faster encoding)
 - Reduce `tolerance` to decrease comparisons
 

@@ -41,6 +41,7 @@ Must exist under `sunday-photos/release_console/` (by platform):
 
 ### First Run:
 - Creates `input/`, `output/`, `logs/` next to the executable (or falls back to Desktop/Home if not writable).
+- The printed `Work folder:` line in the console is the source of truth for the actual location.
 - Automatically creates/confirms the following subdirectories exist:
   - `input/student_photos/`, `input/class_photos/`, `output/`, `logs/`
 - If essential photos are missing:
@@ -116,11 +117,11 @@ Recommended acceptance sequence:
 - [ ] All deliverables exist in `release_console/`
 - [ ] Executables have correct permissions (macOS: chmod +x)
 - [ ] User guides are complete and accurate
-- [ ] All tests pass (100% pass rate)
+- [ ] All tests pass
 - [ ] Strict mode tests pass (`REQUIRE_PACKAGED_ARTIFACTS=1`)
 
 ### Runtime Behavior
-- [ ] First run creates desktop directory structure
+- [ ] First run creates the work folder structure (next to executable; fall back to Desktop/Home if not writable)
 - [ ] Missing photos trigger helpful prompts (not crashes)
 - [ ] Normal processing completes successfully
 - [ ] Output directory opens automatically (or clear path shown)
@@ -134,7 +135,7 @@ Recommended acceptance sequence:
 
 ### Manual Testing
 - [ ] Double-click launch works (macOS & Windows)
-- [ ] Desktop directory creation verified
+- [ ] Work folder creation verified (including fallback behavior)
 - [ ] Sample photo processing tested
 - [ ] Output verification completed
 - [ ] Log generation confirmed
@@ -143,10 +144,10 @@ Recommended acceptance sequence:
 
 ## Related Documentation
 
-- **Deployment Guide**: [DeploymentGuide.md](DeploymentGuide.md) - Detailed deployment instructions
-- **Teacher Guide**: [TeacherGuide.md](TeacherGuide.md) - End-user documentation
-- **Testing Guide**: [TESTING.md](TESTING.md) - Test suite documentation
-- **Developer Guide**: [DeveloperGuide.md](DeveloperGuide.md) - Development handbook
+- **Deployment Guide**: [DeploymentGuide_en.md](DeploymentGuide_en.md) - Detailed deployment instructions
+- **Teacher Guide**: [TeacherGuide_en.md](TeacherGuide_en.md) - End-user documentation
+- **Testing Guide**: [TESTING_en.md](TESTING_en.md) - Test suite documentation
+- **Developer Guide**: [DeveloperGuide_en.md](DeveloperGuide_en.md) - Development handbook
 
 ---
 

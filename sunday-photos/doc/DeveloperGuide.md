@@ -38,7 +38,7 @@ sunday-photos/
 │   ├── cli/                     # 命令行入口
 │   │   └── run.py               # CLI主入口
 │   └── ui/                      # 交互式界面（教师助手）
-├── tests/                       # 自动化测试（128个用例）
+├── tests/                       # 自动化测试（用例数随迭代增长）
 │   ├── test_basic.py            # 基础功能
 │   ├── test_integration.py      # 集成测试
 │   ├── test_console_app.py      # 打包验证
@@ -440,7 +440,7 @@ SUNDAY_PHOTOS_CONFIG=/path/to/config.json
 1. ✅ 本地测试全部通过（以 `pytest -q` 结果为准）
 2. ✅ 打包产物生成成功
 3. ✅ 打包验证测试通过（`REQUIRE_PACKAGED_ARTIFACTS=1`）
-4. ✅ 手动测试打包版（桌面目录模式）
+4. ✅ 手动测试打包版（工作目录 / Work folder 模式）
 5. ✅ 文档更新（README/PRD/CHANGELOG）
 6. ✅ 版本号更新
 
@@ -502,7 +502,7 @@ cd release_console
 1. **架构设计**：依赖注入 + 分层设计 + 状态隔离
 2. **性能优化**：增量处理 + 多级缓存 + 智能并行
 3. **容错机制**：多层异常捕获 + 自动回退 + 原子操作
-4. **测试覆盖**：128个用例 + 打包验证 + 边界测试
+4. **测试覆盖**：覆盖核心流程 + 打包验证 + 边界场景（以 `pytest -q` 输出为准）
 5. **用户体验**：开箱即用 + 智能提示 + 友好错误
 6. **跨平台支持**：Windows/macOS(x86+ARM)/Linux
 7. **未知人脸聚类**：智能归组访客/家长/新学生

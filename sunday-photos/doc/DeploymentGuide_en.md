@@ -35,6 +35,7 @@ Runtime folders created automatically (next to the executable):
 ./logs/                        # Runtime logs (safe to clear)
 ```
 If the app directory is not writable, it automatically falls back to Desktop (or Home) and prints the actual `Work folder` path.
+Use the printed `Work folder:` line in the console as the source of truth.
 
 ### 📥 Input examples (source mode)
 ```

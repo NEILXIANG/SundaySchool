@@ -4,7 +4,9 @@
 面向老师的设计目标：最少操作、最少疑惑。
 
 Behavior overview:
-- First run: create a Desktop folder and show where to put photos
+- First run: prepare the work folders (input/output/logs) under a teacher-friendly "Work folder".
+    - Usually: next to the executable (portable)
+    - If not writable: automatically fall back to Desktop (or Home) and print the actual path
 - Next runs: organize photos; open output/ when finished
 
 Note:
@@ -343,7 +345,7 @@ Supported formats: .jpg / .jpeg / .png
             context = ""
             self.logger.exception("控制台启动器主流程失败")
             try:
-                context = f"桌面目录：{self.app_directory}；日志目录：{self.app_directory / 'logs'}"
+                context = f"工作目录：{self.app_directory}；日志目录：{self.app_directory / 'logs'}"
             except Exception:
                 pass
 

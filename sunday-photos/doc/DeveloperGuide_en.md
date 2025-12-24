@@ -9,7 +9,7 @@ For developers and release maintainers: local dev, packaging, and CI workflows.
 - Windows output: `sunday-photos/release_console/` (onefile `SundayPhotoOrganizer.exe` + `Launch_SundayPhotoOrganizer.bat`).
 
 ## Local dev & test
-1) Python 3.14, create venv:
+1) Python 3.7+ (recommended), create venv:
    ```bash
    cd sunday-photos
    python -m venv .venv

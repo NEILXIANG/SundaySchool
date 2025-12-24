@@ -35,6 +35,7 @@
 
 首次运行：
 - 在程序同级创建 `input/`、`output/`、`logs/`；若不可写则回退桌面（或主目录）。
+  - 以控制台打印的 `Work folder:` 为准。
 - 自动创建/确认以下子目录存在：
   - `student_photos/`、`class_photos/`、`output/`、`logs/`
 - 若缺少必要照片：
