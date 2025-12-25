@@ -52,7 +52,7 @@ jobs:
 
   build_x86_64:
     name: Build x86_64
-    runs-on: macos-12
+    runs-on: macos-15-intel
     steps:
       - name: Checkout
         uses: actions/checkout@v4
