@@ -57,6 +57,30 @@ if [ $? -eq 0 ]; then
     mkdir -p "$RELEASE_DIR/output"
     mkdir -p "$RELEASE_DIR/logs"
 
+    # 给老师的占位说明：把照片放到正确的 input 子目录
+    cat > "$RELEASE_DIR/input/student_photos/把学生参考照放这里.txt" <<'EOF'
+请把“学生参考照”放到这个文件夹里（用于识别每位学生）。
+
+建议：每位学生 1~5 张，清晰正脸、光线充足、不要过度美颜。
+示例文件名：张三_1.jpg、张三_2.jpg
+EOF
+    cat > "$RELEASE_DIR/input/class_photos/把课堂照片放这里.txt" <<'EOF'
+请把“课堂/活动照片（需要整理的照片）”放到这个文件夹里。
+
+示例文件名：2025-12-25_活动_001.jpg
+EOF
+    cat > "$RELEASE_DIR/input/student_photos/PUT_STUDENT_PHOTOS_HERE.txt" <<'EOF'
+Put student reference photos here (used to recognize each student).
+
+Tip: 1–5 photos per student; clear frontal face works best.
+Example: Alice_1.jpg, Alice_2.jpg
+EOF
+    cat > "$RELEASE_DIR/input/class_photos/PUT_CLASS_PHOTOS_HERE.txt" <<'EOF'
+Put class/event photos to be organized here.
+
+Example: 2025-12-25_Event_001.jpg
+EOF
+
     # 复制最新 onefile 可执行文件到发布目录根部：release_console/SundayPhotoOrganizer
     # 兼容旧版本：如果之前是目录结构（release_console/SundayPhotoOrganizer/），这里需要 rm -rf
     rm -rf "$RELEASE_DIR/$APP_NAME"

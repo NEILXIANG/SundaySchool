@@ -38,6 +38,33 @@ New-Item -ItemType Directory -Force -Path (Join-Path $RELEASE_DIR "input\student
 New-Item -ItemType Directory -Force -Path (Join-Path $RELEASE_DIR "output") | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $RELEASE_DIR "logs") | Out-Null
 
+# Placeholders to guide teachers
+@"
+请把“学生参考照”放到这个文件夹里（用于识别每位学生）。
+
+建议：每位学生 1~5 张，清晰正脸、光线充足、不要过度美颜。
+示例文件名：张三_1.jpg、张三_2.jpg
+"@ | Set-Content -Encoding UTF8 (Join-Path $RELEASE_DIR "input\student_photos\把学生参考照放这里.txt")
+
+@"
+请把“课堂/活动照片（需要整理的照片）”放到这个文件夹里。
+
+示例文件名：2025-12-25_活动_001.jpg
+"@ | Set-Content -Encoding UTF8 (Join-Path $RELEASE_DIR "input\class_photos\把课堂照片放这里.txt")
+
+@"
+Put student reference photos here (used to recognize each student).
+
+Tip: 1–5 photos per student; clear frontal face works best.
+Example: Alice_1.jpg, Alice_2.jpg
+"@ | Set-Content -Encoding UTF8 (Join-Path $RELEASE_DIR "input\student_photos\PUT_STUDENT_PHOTOS_HERE.txt")
+
+@"
+Put class/event photos to be organized here.
+
+Example: 2025-12-25_Event_001.jpg
+"@ | Set-Content -Encoding UTF8 (Join-Path $RELEASE_DIR "input\class_photos\PUT_CLASS_PHOTOS_HERE.txt")
+
 $srcExe = Join-Path "dist" ("$APP_NAME.exe")
 if (-not (Test-Path $srcExe)) {
   # Some environments may produce no .exe suffix; try fallback
