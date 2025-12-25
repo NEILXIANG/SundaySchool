@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from .utils import UnsafePathError, ensure_resolved_under
+
 
 CACHE_VERSION = 1
 STATE_DIR_NAME = ".state"
@@ -107,6 +109,7 @@ def invalidate_date_cache(output_dir: Path, date: str) -> None:
     """删除某日期缓存文件（用于 deleted_dates 同步）。"""
     path = date_cache_path(output_dir, date)
     try:
+        ensure_resolved_under(output_dir, path)
         if path.exists():
             path.unlink()
     except Exception:

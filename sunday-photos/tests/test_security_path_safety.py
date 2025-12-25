@@ -2,6 +2,7 @@ import pytest
 from pathlib import Path
 from src.core.utils import safe_join_under, UnsafePathError
 from src.core.file_organizer import FileOrganizer
+from src.core.main import SimplePhotoOrganizer
 
 class TestSecurityPathSafety:
     """测试路径安全机制，防止 Path Traversal 攻击。"""
@@ -87,3 +88,32 @@ class TestSecurityPathSafety:
         # 预期：处理失败
         assert stats['failed'] == 1
         assert not (tmp_path / "EvilCluster").exists()
+
+    def test_cleanup_output_skips_top_level_symlink_escape(self, tmp_path):
+        """清理输出时，若 output 下存在指向外部的 symlink 目录，不应越界删除外部文件。"""
+        input_dir = tmp_path / "input"
+        output_dir = tmp_path / "output"
+        log_dir = tmp_path / "logs"
+
+        organizer = SimplePhotoOrganizer(input_dir=str(input_dir), output_dir=str(output_dir), log_dir=str(log_dir))
+
+        date = "2025-12-21"
+
+        # 外部真实目录：模拟攻击者把 output/Alice 变成指向外部的 symlink
+        outside = tmp_path / "outside"
+        outside_date_dir = outside / date
+        outside_date_dir.mkdir(parents=True, exist_ok=True)
+        marker = outside_date_dir / "marker.txt"
+        marker.write_text("do-not-delete", encoding="utf-8")
+        assert marker.exists()
+
+        # output/Alice -> outside
+        alice_link = output_dir / "Alice"
+        alice_link.symlink_to(outside, target_is_directory=True)
+        assert alice_link.exists() and alice_link.is_dir()
+
+        # 触发清理：若未做 symlink 防护，会把 outside/2025-12-21 删掉
+        organizer._cleanup_output_for_dates([date])
+
+        assert outside_date_dir.exists()
+        assert marker.exists()

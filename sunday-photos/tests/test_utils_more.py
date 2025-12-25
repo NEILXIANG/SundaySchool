@@ -28,3 +28,38 @@ def test_get_photo_date_prefers_date_directory(tmp_path: Path):
     os.utime(img, (other, other))
 
     assert get_photo_date(str(img)) == "2025-12-21"
+
+
+def test_get_photo_date_closes_image_handle(monkeypatch, tmp_path: Path):
+    # 构造一个不含日期目录的路径，迫使进入 EXIF/mtime 分支
+    img = tmp_path / "img.jpg"
+    img.write_bytes(b"not-a-real-jpeg-but-nonempty")
+
+    # 设定一个固定 mtime，便于断言返回格式有效
+    fixed = 1766275200  # 2025-12-21 00:00:00 UTC-ish; 仅用于稳定测试
+    os.utime(img, (fixed, fixed))
+
+    opened = {"obj": None}
+
+    class DummyImage:
+        def __init__(self):
+            self.closed = False
+
+        def _getexif(self):
+            return None
+
+        def close(self):
+            self.closed = True
+
+    def fake_open(_path):
+        opened["obj"] = DummyImage()
+        return opened["obj"]
+
+    import PIL.Image
+
+    monkeypatch.setattr(PIL.Image, "open", fake_open)
+
+    result = get_photo_date(str(img))
+    assert isinstance(result, str) and len(result) == 10
+    assert opened["obj"] is not None
+    assert opened["obj"].closed is True

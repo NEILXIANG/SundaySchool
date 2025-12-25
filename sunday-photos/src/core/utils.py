@@ -218,6 +218,17 @@ def _get_date_from_directory(photo_path: str):
         normalized = parse_date_from_text(parent.name)
         if normalized:
             return normalized
+
+        # 兼容三层目录：YYYY/MM/DD（例如 2025/12/23/img.jpg）
+        # 注意：这里 parent 可能是 DD，parent.parent 是 MM，parent.parent.parent 是 YYYY
+        try:
+            d = int(parent.name)
+            mo = int(parent.parent.name)
+            y = int(parent.parent.parent.name)
+            _date(y, mo, d)  # validate
+            return f"{y:04d}-{mo:02d}-{d:02d}"
+        except Exception:
+            pass
     return None
 
 
@@ -240,9 +251,15 @@ def get_photo_date(photo_path):
     try:
         from PIL import Image
         from PIL.ExifTags import TAGS
-        
+
         image = Image.open(photo_path)
-        exif_data = image._getexif()
+        try:
+            exif_data = image._getexif()
+        finally:
+            try:
+                image.close()
+            except Exception:
+                pass
         
         if exif_data:
             for tag, value in exif_data.items():
@@ -328,3 +345,23 @@ def safe_join_under(base_dir: Path, *segments: str) -> Path:
         raise UnsafePathError(f"Path traversal attempt: {target} is outside {base}")
         
     return target
+
+
+def ensure_resolved_under(base_dir: Path, target_path: Path) -> None:
+    """确保 target_path resolve 后仍在 base_dir 之下。
+
+    用途：删除/清理等“危险操作”前的防护，避免符号链接导致越界。
+
+    Raises:
+        UnsafePathError: 如果 resolve 后不在 base_dir 之下
+    """
+    base = Path(base_dir).resolve()
+    try:
+        resolved = Path(target_path).resolve(strict=False)
+    except Exception as e:
+        raise UnsafePathError(f"Failed to resolve path: {target_path}: {e}")
+
+    try:
+        resolved.relative_to(base)
+    except ValueError:
+        raise UnsafePathError(f"Resolved path escapes base_dir: {resolved} is outside {base}")

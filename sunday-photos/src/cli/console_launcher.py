@@ -27,7 +27,7 @@ SRC_DIR = Path(__file__).resolve().parents[1]
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from core.config import UNKNOWN_PHOTOS_DIR
+from core.config import LOG_FORMAT, UNKNOWN_PHOTOS_DIR
 from core.platform_paths import get_default_work_root_dir, get_program_dir
 from core.utils import is_supported_nonempty_image_path
 
@@ -47,6 +47,36 @@ class ConsolePhotoOrganizer:
         self.setup_complete = False
         self.teacher_helper = _try_get_teacher_helper()
         self.logger = logging.getLogger(__name__)
+
+        # Packaged console app: always write a UTF-8 log file under work folder.
+        # Do NOT add extra console logging here to keep teacher-facing output stable.
+        self._ensure_file_logging()
+
+    def _ensure_file_logging(self) -> None:
+        """Best-effort configure root logger to write logs/xxx.log.
+
+        Keep it file-only to avoid changing console output and tests.
+        """
+        try:
+            log_dir = self.app_directory / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+
+            root_logger = logging.getLogger()
+            if root_logger.level == logging.NOTSET:
+                root_logger.setLevel(logging.INFO)
+
+            # Avoid adding duplicate file handlers.
+            for handler in root_logger.handlers:
+                if isinstance(handler, logging.FileHandler):
+                    return
+
+            log_file = log_dir / f"photo_organizer_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+            file_handler = logging.FileHandler(str(log_file), encoding="utf-8")
+            file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+            root_logger.addHandler(file_handler)
+        except Exception:
+            # Logging must never block teacher usage.
+            return
 
     def _print_divider(self):
         print("=" * 56)

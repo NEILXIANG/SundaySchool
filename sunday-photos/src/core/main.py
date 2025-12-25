@@ -32,7 +32,7 @@ from .utils import (
     ensure_directory_exists,
     parse_date_from_text,
 )
-from .utils import is_ignored_fs_entry
+from .utils import is_ignored_fs_entry, ensure_resolved_under, UnsafePathError
 from .config import DEFAULT_CONFIG, UNKNOWN_PHOTOS_DIR
 from .config_loader import ConfigLoader
 from .incremental_state import (
@@ -324,6 +324,30 @@ class SimplePhotoOrganizer:
         if not dates:
             return
 
+        def _safe_delete_dir(path: Path) -> None:
+            """删除目录前做 resolve-in-base 校验，防止 symlink 越界清理。"""
+            try:
+                ensure_resolved_under(self.output_dir, path)
+            except UnsafePathError as e:
+                self.logger.warning(f"跳过不安全清理路径: {path} ({e})")
+                return
+
+            try:
+                # 若 path 本身是符号链接：只删除链接本身，不跟随
+                if path.is_symlink():
+                    try:
+                        path.unlink()
+                    except FileNotFoundError:
+                        return
+                    except Exception:
+                        return
+
+                if path.exists() and path.is_dir():
+                    shutil.rmtree(path, ignore_errors=True)
+            except Exception:
+                # 清理失败不应阻断主流程
+                return
+
         for top in self.output_dir.iterdir():
             if is_ignored_fs_entry(top):
                 continue
@@ -334,14 +358,14 @@ class SimplePhotoOrganizer:
             for date in dates:
                 date_dir = top / date
                 if date_dir.exists() and date_dir.is_dir():
-                    shutil.rmtree(date_dir, ignore_errors=True)
+                    _safe_delete_dir(date_dir)
 
             # unknown 目录：output/unknown_photos/<date> 以及 output/unknown_photos/Unknown_Person_X/<date>
             if top.name == UNKNOWN_PHOTOS_DIR:
                 for date in dates:
                     date_dir = top / date
                     if date_dir.exists() and date_dir.is_dir():
-                        shutil.rmtree(date_dir, ignore_errors=True)
+                        _safe_delete_dir(date_dir)
 
                 for cluster_dir in top.iterdir():
                     if is_ignored_fs_entry(cluster_dir):
@@ -354,7 +378,7 @@ class SimplePhotoOrganizer:
                     for date in dates:
                         date_dir = cluster_dir / date
                         if date_dir.exists() and date_dir.is_dir():
-                            shutil.rmtree(date_dir, ignore_errors=True)
+                            _safe_delete_dir(date_dir)
 
     def process_photos(self, photo_files):
         """对照片列表执行人脸识别，并按状态分类结果。

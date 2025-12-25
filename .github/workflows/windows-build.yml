@@ -18,27 +18,21 @@ jobs:
       - name: Install build tools
         working-directory: sunday-photos
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip setuptools wheel
           pip install cmake
-          pip install -r requirements.txt
+          # dlib is the riskiest dependency in CI; prefer wheels when available
+          pip install "dlib>=19.24.2" --only-binary :all: || pip install "dlib>=19.24.2"
+          pip install --prefer-binary -r requirements.txt
           pip install pyinstaller
 
       - name: Build (Windows)
-        shell: cmd
+        shell: pwsh
         working-directory: sunday-photos
         run: |
-          pyinstaller ^
-            --clean ^
-            --onefile ^
-            --console ^
-            --paths src ^
-            --collect-all core ^
-            --collect-all face_recognition_models ^
-            --name SundaySchool ^
-            src/cli/run.py
+          ./scripts/build_windows_console_app.ps1
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-x86_64
-          path: sunday-photos/dist/
+          path: sunday-photos/release_console/

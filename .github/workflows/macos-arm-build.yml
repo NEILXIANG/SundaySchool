@@ -13,13 +13,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.11"
 
       - name: Install dependencies
         working-directory: sunday-photos
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip setuptools wheel
+          pip install cmake
+          # dlib is the riskiest dependency in CI; prefer wheels when available
+          pip install "dlib>=19.24.2" --only-binary :all: || pip install "dlib>=19.24.2"
+          pip install --prefer-binary -r requirements.txt
           pip install pyinstaller
 
       - name: Build (arm64)

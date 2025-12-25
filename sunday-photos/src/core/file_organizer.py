@@ -18,7 +18,7 @@ from datetime import datetime
 from tqdm import tqdm
 from .config import DEFAULT_OUTPUT_DIR, UNKNOWN_PHOTOS_DIR, REPORT_FILE, SMART_REPORT_FILE
 
-from .utils import ensure_directory_exists, get_photo_date, safe_join_under
+from .utils import ensure_directory_exists, ensure_resolved_under, get_photo_date, safe_join_under, UnsafePathError
 
 logger = logging.getLogger(__name__)
 
@@ -289,6 +289,12 @@ class FileOrganizer:
         
         for dest_path in copied_files:
             try:
+                try:
+                    ensure_resolved_under(self.output_dir, dest_path)
+                except UnsafePathError as e:
+                    logger.warning(f"跳过不安全回滚路径: {dest_path} ({e})")
+                    continue
+
                 if dest_path.exists():
                     dest_path.unlink()  # 删除文件
                     rolled_back += 1
