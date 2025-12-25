@@ -426,6 +426,10 @@ SUNDAY_PHOTOS_CONFIG=/path/to/config.json
 
 ## 🚀 发布流程
 
+发布时序图（步骤 + 输入/输出文件）详见：
+- [doc/ReleaseFlow.md](ReleaseFlow.md)（中文版）
+- [doc/ReleaseFlow_en.md](ReleaseFlow_en.md)（English）
+
 ### 发布前检查清单
 
 参考 [doc/ReleaseAcceptanceChecklist.md](ReleaseAcceptanceChecklist.md)
@@ -461,17 +465,17 @@ cd release_console
 
 **2. 触发CI构建**：
 - 进入GitHub Actions
-- 运行三个 Workflow（macOS x86_64 / macOS ARM64 / Windows）
+- 运行两个 Workflow（macOS universal / Windows）
 - 等待构建完成
 
 **3. 下载并验证产物**：
-- 下载三个平台的 Artifacts
+- 下载 Artifacts（macos-universal / windows-x86_64）
 - 解压并验证可执行文件
 - 手动测试（放入测试照片，运行，查看输出）
 
 **4. 打包发布**：
 - 创建发布包（包含可执行文件 + 启动脚本 + 使用说明）
-- 命名规范：`SundayPhotoOrganizer_v0.4.0_macOS_x86_64.zip`
+- 命名规范：`SundayPhotoOrganizer_v0.4.0_macOS_universal.zip`
 
 **5. 发布说明**：
 - 附带《老师使用指南》（中英文）

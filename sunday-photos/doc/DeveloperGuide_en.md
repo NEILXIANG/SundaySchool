@@ -2,6 +2,10 @@
 
 For developers and release maintainers: local dev, packaging, and CI workflows.
 
+Release flow (sequence diagram + inputs/outputs):
+- `doc/ReleaseFlow_en.md`
+- `doc/ReleaseFlow.md`
+
 ## Key structure
 - Source: `sunday-photos/src/` (entry `src/cli/run.py`, core logic in `src/core/`).
 - macOS packaging script: `sunday-photos/scripts/build_mac_app.sh` (console onefile, honors `TARGET_ARCH`).
