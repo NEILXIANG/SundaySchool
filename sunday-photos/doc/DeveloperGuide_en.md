@@ -48,7 +48,8 @@ Note: Older builds may have used an onedir layout like `release_console/SundayPh
 
 ## GitHub Actions
 - macOS universal bundle (arm64 + x86_64): `.github/workflows/macos-universal-bundle.yml` (manual trigger, artifact `macos-universal`).
-   - Unzips to `release_console_universal/` containing `SundayPhotoOrganizer-arm64`, `SundayPhotoOrganizer-x86_64`, and a launcher script `SundayPhotoOrganizer` that auto-selects the right binary.
+   - Unzips to `release_console_universal/` exposing a single entrypoint `SundayPhotoOrganizer`.
+      - Arch binaries are under `release_console_universal/bin/` (`SundayPhotoOrganizer-arm64`, `SundayPhotoOrganizer-x86_64`).
 - Windows x86_64: `.github/workflows/windows-build.yml` (runner windows-latest, artifact `windows-x86_64`, path `sunday-photos/release_console/`).
 - Trigger: `workflow_dispatch` (manual “Run workflow” in Actions UI).
 

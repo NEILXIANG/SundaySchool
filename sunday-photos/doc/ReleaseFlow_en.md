@@ -79,8 +79,8 @@ PyInstaller does not cross-compile; run on Windows.
 
 macOS universal bundle layout (single download supports both Intel + Apple Silicon):
 - `release_console_universal/SundayPhotoOrganizer` (launcher script; auto-selects arch)
-- `release_console_universal/SundayPhotoOrganizer-x86_64`
-- `release_console_universal/SundayPhotoOrganizer-arm64`
+- `release_console_universal/bin/SundayPhotoOrganizer-x86_64`
+- `release_console_universal/bin/SundayPhotoOrganizer-arm64`
 
 ### 4) Minimal acceptance (recommended before shipping)
 

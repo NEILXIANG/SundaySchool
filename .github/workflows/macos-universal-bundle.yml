@@ -135,8 +135,9 @@ jobs:
           rm -rf release_console_universal
           cp -R "$ARM_DIR" release_console_universal
 
-          mv release_console_universal/SundayPhotoOrganizer release_console_universal/SundayPhotoOrganizer-arm64
-          cp "$X86_DIR/SundayPhotoOrganizer" release_console_universal/SundayPhotoOrganizer-x86_64
+          mkdir -p release_console_universal/bin
+          mv release_console_universal/SundayPhotoOrganizer release_console_universal/bin/SundayPhotoOrganizer-arm64
+          cp "$X86_DIR/SundayPhotoOrganizer" release_console_universal/bin/SundayPhotoOrganizer-x86_64
 
           cat > release_console_universal/SundayPhotoOrganizer <<'EOF'
           #!/bin/bash
@@ -144,14 +145,14 @@ jobs:
           DIR="$(cd "$(dirname "$0")" && pwd)"
           ARCH="$(uname -m)"
           if [[ "$ARCH" == "arm64" ]]; then
-            exec "$DIR/SundayPhotoOrganizer-arm64" "$@"
+            exec "$DIR/bin/SundayPhotoOrganizer-arm64" "$@"
           else
-            exec "$DIR/SundayPhotoOrganizer-x86_64" "$@"
+            exec "$DIR/bin/SundayPhotoOrganizer-x86_64" "$@"
           fi
           EOF
           chmod +x release_console_universal/SundayPhotoOrganizer
-          chmod +x release_console_universal/SundayPhotoOrganizer-arm64
-          chmod +x release_console_universal/SundayPhotoOrganizer-x86_64
+          chmod +x release_console_universal/bin/SundayPhotoOrganizer-arm64
+          chmod +x release_console_universal/bin/SundayPhotoOrganizer-x86_64
 
           echo "Universal package prepared: release_console_universal"
           ls -la release_console_universal | head -n 50

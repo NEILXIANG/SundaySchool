@@ -77,8 +77,8 @@ sequenceDiagram
 
 macOS 通用包结构（一个下载包同时支持 Intel + Apple Silicon）：
 - `release_console_universal/SundayPhotoOrganizer`（启动脚本，自动选择架构）
-- `release_console_universal/SundayPhotoOrganizer-x86_64`
-- `release_console_universal/SundayPhotoOrganizer-arm64`
+- `release_console_universal/bin/SundayPhotoOrganizer-x86_64`
+- `release_console_universal/bin/SundayPhotoOrganizer-arm64`
 
 ### 4) 最小验收（建议发布前必做）
 

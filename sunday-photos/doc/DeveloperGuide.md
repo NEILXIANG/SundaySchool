@@ -331,7 +331,7 @@ powershell -ExecutionPolicy Bypass -File scripts\\build_windows_console_app.ps1
 - 触发方式：手动触发（`workflow_dispatch`）
 - 产物名：`macos-universal`
 - 路径：Artifact 解压后目录 `release_console_universal/`
-- 说明：同一个下载包同时包含 `SundayPhotoOrganizer-arm64`、`SundayPhotoOrganizer-x86_64`，以及一个自动选择架构的启动脚本 `SundayPhotoOrganizer`
+- 说明：对老师仅暴露一个入口 `SundayPhotoOrganizer`；两套架构二进制在 `bin/` 下（`bin/SundayPhotoOrganizer-arm64`、`bin/SundayPhotoOrganizer-x86_64`），启动脚本会自动选择架构
 
 **2. Windows x86_64 构建**：
 - Workflow文件：`.github/workflows/windows-build.yml`
