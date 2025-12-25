@@ -43,8 +43,8 @@ Output: `release_console/SundayPhotoOrganizer.exe` (onefile executable).
 Note: Older builds may have used an onedir layout like `release_console/SundayPhotoOrganizer/SundaySchool`. Current script outputs onefile.
 
 ## GitHub Actions
-- macOS x86_64: `.github/workflows/macos-x86-build.yml` (runner macos-12, artifact `macos-x86_64`, path `sunday-photos/release_console/`).
-- macOS arm64: `.github/workflows/macos-arm-build.yml` (runner macos-14, artifact `macos-arm64`, path same as above).
+- macOS universal bundle (arm64 + x86_64): `.github/workflows/macos-universal-bundle.yml` (manual trigger, artifact `macos-universal`).
+   - Unzips to `release_console_universal/` containing `SundayPhotoOrganizer-arm64`, `SundayPhotoOrganizer-x86_64`, and a launcher script `SundayPhotoOrganizer` that auto-selects the right binary.
 - Windows x86_64: `.github/workflows/windows-build.yml` (runner windows-latest, artifact `windows-x86_64`, path `sunday-photos/release_console/`).
 - Trigger: `workflow_dispatch` (manual “Run workflow” in Actions UI).
 
@@ -63,9 +63,9 @@ Note: Older builds may have used an onedir layout like `release_console/SundayPh
 
 ## Release flow suggestion
 1) Verify help/text locally: `python src/cli/run.py --help`.
-2) Run Actions: macOS x86_64 / macOS arm64 / Windows build.
-3) Download artifacts (`macos-x86_64`, `macos-arm64`, `windows-x86_64`), unzip, ship to users.
-4) Ship alongside the Teacher Guide and note which chip each package targets.
+2) Run Actions: macOS universal bundle / Windows build.
+3) Download artifacts (`macos-universal`, `windows-x86_64`), unzip, ship to users.
+4) Ship alongside the Teacher Guide.
 
 ## Orchestration & Error Semantics
 

@@ -326,20 +326,14 @@ powershell -ExecutionPolicy Bypass -File scripts\\build_windows_console_app.ps1
 
 ### GitHub Actions 配置
 
-**1. macOS x86_64 构建**：
-- Workflow文件：`.github/workflows/macos-x86-build.yml`
-- Runner：`macos-12`（Intel）
+**1. macOS 通用包（arm64 + x86_64）**：
+- Workflow文件：`.github/workflows/macos-universal-bundle.yml`
 - 触发方式：手动触发（`workflow_dispatch`）
-- 产物名：`macos-x86_64`
-- 路径：`sunday-photos/release_console/`
+- 产物名：`macos-universal`
+- 路径：Artifact 解压后目录 `release_console_universal/`
+- 说明：同一个下载包同时包含 `SundayPhotoOrganizer-arm64`、`SundayPhotoOrganizer-x86_64`，以及一个自动选择架构的启动脚本 `SundayPhotoOrganizer`
 
-**2. macOS ARM64 构建**：
-- Workflow文件：`.github/workflows/macos-arm-build.yml`
-- Runner：`macos-14`（Apple Silicon）
-- 触发方式：手动触发
-- 产物名：`macos-arm64`
-
-**3. Windows x86_64 构建**：
+**2. Windows x86_64 构建**：
 - Workflow文件：`.github/workflows/windows-build.yml`
 - Runner：`windows-latest`
 - 触发方式：手动触发
@@ -355,7 +349,7 @@ powershell -ExecutionPolicy Bypass -File scripts\\build_windows_console_app.ps1
 **下载产物**：
 1. Workflow运行完成后
 2. 点击运行记录
-3. 下载 Artifacts（macos-x86_64 / macos-arm64 / windows-x86_64）
+3. 下载 Artifacts（macos-universal / windows-x86_64）
 
 ---
 
