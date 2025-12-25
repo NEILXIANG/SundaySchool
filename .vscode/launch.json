@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run (source) sunday-photos/run.py",
+      "type": "python",
+      "request": "launch",
+      "python": "${workspaceFolder}/sunday-photos/.venv310/bin/python",
+      "pythonPath": "${workspaceFolder}/sunday-photos/.venv310/bin/python",
+      "program": "${workspaceFolder}/sunday-photos/run.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/sunday-photos",
+      "env": {
+        "GUIDE_FORCE_AUTO": "1"
+      },
+      "args": [
+        "--check-env"
+      ]
+    },
+    {
+      "name": "Debug teacher console entry (console_launcher.py)",
+      "type": "python",
+      "request": "launch",
+      "python": "${workspaceFolder}/sunday-photos/.venv310/bin/python",
+      "pythonPath": "${workspaceFolder}/sunday-photos/.venv310/bin/python",
+      "program": "${workspaceFolder}/sunday-photos/src/cli/console_launcher.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/sunday-photos",
+      "env": {
+        "GUIDE_FORCE_AUTO": "1",
+        "SUNDAY_PHOTOS_WORK_DIR": "${workspaceFolder}/sunday-photos/.debug_work"
+      }
+    }
+  ]
+}

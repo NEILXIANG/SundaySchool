@@ -150,6 +150,10 @@ ENV/
 env.bak/
 venv.bak/
 
+# sunday-photos local debug artifacts
+sunday-photos/.venv310/
+sunday-photos/.debug_work/
+
 # Spyder project settings
 .spyderproject
 .spyproject
