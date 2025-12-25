@@ -50,6 +50,22 @@ if (-not (Test-Path $srcExe)) {
 $dstExe = Join-Path $RELEASE_DIR (Split-Path $srcExe -Leaf)
 Copy-Item -Force $srcExe $dstExe
 
+# Copy teacher quick start docs into release_console (refresh on each build)
+$docRoot = Join-Path (Get-Location).Path "doc"
+if (Test-Path $docRoot) {
+  $pairs = @(
+    @{ Src = (Join-Path $docRoot "TeacherQuickStart.md");     Dst = (Join-Path $RELEASE_DIR "老师快速开始.md") },
+    @{ Src = (Join-Path $docRoot "TeacherQuickStart.txt");    Dst = (Join-Path $RELEASE_DIR "老师快速开始.txt") },
+    @{ Src = (Join-Path $docRoot "TeacherQuickStart_en.md");  Dst = (Join-Path $RELEASE_DIR "QuickStart_EN.md") },
+    @{ Src = (Join-Path $docRoot "TeacherQuickStart_en.txt"); Dst = (Join-Path $RELEASE_DIR "QuickStart_EN.txt") }
+  )
+  foreach ($p in $pairs) {
+    if (Test-Path $p.Src) {
+      Copy-Item -Force $p.Src $p.Dst
+    }
+  }
+}
+
 Write-Host "Release prepared: $RELEASE_DIR"
 Write-Host "- Executable: $dstExe"
 Write-Host "- Windows launcher: $RELEASE_DIR\Launch_SundayPhotoOrganizer.bat"

@@ -6,6 +6,10 @@ Release flow (sequence diagram + inputs/outputs):
 - `doc/ReleaseFlow_en.md`
 - `doc/ReleaseFlow.md`
 
+Teacher-facing quick start (included in release bundles):
+- `doc/TeacherQuickStart.md`
+- `doc/TeacherQuickStart_en.md`
+
 ## Key structure
 - Source: `sunday-photos/src/` (entry `src/cli/run.py`, core logic in `src/core/`).
 - macOS packaging script: `sunday-photos/scripts/build_mac_app.sh` (console onefile, honors `TARGET_ARCH`).

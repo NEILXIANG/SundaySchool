@@ -63,6 +63,13 @@ if [ $? -eq 0 ]; then
     cp "dist/$APP_NAME" "$RELEASE_DIR/$APP_NAME"
     chmod +x "$RELEASE_DIR/$APP_NAME" || true
 
+    # 将“老师快速开始”文档复制到发布目录（每次打包都刷新一份）
+    # 老师只需要看 release_console/ 里的文件即可
+    cp -f "doc/TeacherQuickStart.md" "$RELEASE_DIR/老师快速开始.md" || true
+    cp -f "doc/TeacherQuickStart.txt" "$RELEASE_DIR/老师快速开始.txt" || true
+    cp -f "doc/TeacherQuickStart_en.md" "$RELEASE_DIR/QuickStart_EN.md" || true
+    cp -f "doc/TeacherQuickStart_en.txt" "$RELEASE_DIR/QuickStart_EN.txt" || true
+
     echo "✅ 发布目录已准备好：$RELEASE_DIR"
     echo "   - 已预创建 input/class_photos、input/student_photos、output、logs"
     echo "   - 可执行文件：$RELEASE_DIR/$APP_NAME"

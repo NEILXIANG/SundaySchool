@@ -430,6 +430,10 @@ SUNDAY_PHOTOS_CONFIG=/path/to/config.json
 - [doc/ReleaseFlow.md](ReleaseFlow.md)（中文版）
 - [doc/ReleaseFlow_en.md](ReleaseFlow_en.md)（English）
 
+面向老师的极简说明（会随发布包一起提供）：
+- [doc/TeacherQuickStart.md](TeacherQuickStart.md)
+- [doc/TeacherQuickStart_en.md](TeacherQuickStart_en.md)
+
 ### 发布前检查清单
 
 参考 [doc/ReleaseAcceptanceChecklist.md](ReleaseAcceptanceChecklist.md)
