@@ -7,6 +7,7 @@
 import os
 import sys
 import argparse
+import warnings
 from pathlib import Path
 
 # 添加src目录到Python路径
@@ -19,6 +20,10 @@ from core.config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_TOLERANCE
 def check_environment():
     """检查运行环境"""
     print("🔍 检查运行环境...")
+
+    # face_recognition_models 会触发 pkg_resources 弃用警告；不影响运行，避免干扰老师/调试输出。
+    warnings.filterwarnings("ignore", category=UserWarning, module=r"face_recognition_models")
+    warnings.filterwarnings("ignore", message=r"pkg_resources is deprecated as an API\.")
     
     # 检查Python版本
     if sys.version_info < (3, 7):

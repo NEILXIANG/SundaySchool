@@ -2,7 +2,27 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run (source) sunday-photos/run.py",
+      "name": "Run pipeline (source) - debug_work",
+      "type": "python",
+      "request": "launch",
+      "python": "${workspaceFolder}/sunday-photos/.venv310/bin/python",
+      "pythonPath": "${workspaceFolder}/sunday-photos/.venv310/bin/python",
+      "program": "${workspaceFolder}/sunday-photos/run.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/sunday-photos",
+      "env": {
+        "GUIDE_FORCE_AUTO": "1"
+      },
+      "args": [
+        "--input-dir",
+        ".debug_work/input",
+        "--output-dir",
+        ".debug_work/output",
+        "--no-parallel"
+      ]
+    },
+    {
+      "name": "Check env (source) - run.py --check-env",
       "type": "python",
       "request": "launch",
       "python": "${workspaceFolder}/sunday-photos/.venv310/bin/python",

@@ -12,9 +12,7 @@ ICON_PATH="app_icon.icns"
 
 # 可选目标架构：设置环境变量 TARGET_ARCH=universal2 或 arm64 或 x86_64
 TARGET_ARCH=${TARGET_ARCH:-}
-ARCH_FLAG=()
 if [ -n "$TARGET_ARCH" ]; then
-    ARCH_FLAG=(--target-arch "$TARGET_ARCH")
     echo "Target arch: $TARGET_ARCH"
 fi
 
@@ -43,7 +41,6 @@ SPEC_FILE="SundayPhotoOrganizer.spec"
 "$PYTHON" -m PyInstaller \
     --clean \
     --noconfirm \
-    "${ARCH_FLAG[@]}" \
     "$SPEC_FILE"
 
 # 打包完成后，准备发布目录并预创建老师需要的空目录

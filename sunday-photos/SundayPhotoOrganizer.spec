@@ -1,5 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
+import sys
 from PyInstaller.utils.hooks import collect_all
 
 
@@ -38,6 +40,15 @@ a = Analysis(
 pyz = PYZ(a.pure)
 
 # 该 spec 生成 onefile 控制台可执行文件：dist/SundayPhotoOrganizer
+# Windows 不支持 .icns；若未安装 Pillow 则无法自动转换，导致打包失败。
+# 为保证 CI 稳定：Windows 不设置 icon；其他平台继续使用 app_icon.icns。
+icon_files = [] if sys.platform.startswith("win") else ["app_icon.icns"]
+
+# 在提供 .spec 时，PyInstaller 不允许通过 CLI 传入 --target-arch。
+# 这里改为通过环境变量 TARGET_ARCH 传入（仅对 macOS 有意义；其他平台保持 None）。
+env_target_arch = (os.environ.get("TARGET_ARCH") or "").strip() or None
+target_arch_value = env_target_arch if sys.platform == "darwin" else None
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -54,8 +65,8 @@ exe = EXE(
     console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch=None,
+    target_arch=target_arch_value,
     codesign_identity=None,
     entitlements_file=None,
-    icon=["app_icon.icns"],
+    icon=icon_files,
 )

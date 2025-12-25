@@ -23,6 +23,7 @@ jobs:
           # dlib is the riskiest dependency in CI; prefer wheels when available
           python -m pip install "dlib>=19.24.2" --only-binary :all: || python -m pip install "dlib>=19.24.2"
           python -m pip install --prefer-binary -r requirements.txt
+          python -c "import PIL; print('Pillow:', PIL.__version__)"
           python -m pip install pyinstaller
 
       - name: Build (Windows)
