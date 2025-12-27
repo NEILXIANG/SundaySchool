@@ -10,7 +10,8 @@
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}/sunday-photos",
       "env": {
-        "GUIDE_FORCE_AUTO": "1"
+        "GUIDE_FORCE_AUTO": "1",
+        "DEBUGPY_LOG_DIR": "${workspaceFolder}/logs/debugpy"
       },
       "args": [
         "--input-dir",
@@ -29,7 +30,8 @@
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}/sunday-photos",
       "env": {
-        "GUIDE_FORCE_AUTO": "1"
+        "GUIDE_FORCE_AUTO": "1",
+        "DEBUGPY_LOG_DIR": "${workspaceFolder}/logs/debugpy"
       },
       "args": [
         "--check-env"
@@ -45,6 +47,7 @@
       "cwd": "${workspaceFolder}/sunday-photos",
       "env": {
         "GUIDE_FORCE_AUTO": "1",
+        "DEBUGPY_LOG_DIR": "${workspaceFolder}/logs/debugpy",
         "SUNDAY_PHOTOS_WORK_DIR": "${workspaceFolder}/sunday-photos/.debug_work"
       }
     }
