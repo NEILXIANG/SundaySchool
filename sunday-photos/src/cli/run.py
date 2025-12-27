@@ -8,6 +8,8 @@ import os
 import sys
 import argparse
 import warnings
+import importlib
+import importlib.util
 from pathlib import Path
 
 # Ensure project root (containing the src/ package) is importable.
@@ -71,28 +73,66 @@ def check_environment():
         required_packages = ['face_recognition', 'PIL', 'numpy', 'tqdm']
     else:
         required_packages = ['insightface', 'onnxruntime', 'cv2', 'PIL', 'numpy', 'tqdm']
-    missing_packages = []
-    
+
+    diag_enabled = os.environ.get("SUNDAY_PHOTOS_DIAG_ENV", "").strip().lower() in ("1", "true", "yes")
+    missing_packages: list[str] = []
+    broken_packages: list[tuple[str, str]] = []
+
     for package in required_packages:
+        spec = importlib.util.find_spec(package)
         try:
-            __import__(package)
-        except ImportError:
-            missing_packages.append(package)
-    
-    if missing_packages:
-        print("❌ 缺少依赖包:")
-        for pkg in missing_packages:
-            print(f"   - {pkg}")
-        print("\n💡 请运行以下命令安装依赖:")
+            importlib.import_module(package)
+        except Exception as e:
+            # 说明：即使包“已安装”，也可能因为子依赖缺失/二进制库问题/警告被提升为异常等导致导入失败。
+            if spec is None:
+                missing_packages.append(package)
+            else:
+                broken_packages.append((package, f"{type(e).__name__}: {e}"))
+
+    if missing_packages or broken_packages:
+        print("❌ 环境依赖检查失败")
+
+        # 在失败时输出关键诊断信息（尤其用于 VS Code debug 会话定位解释器/路径差异）。
+        print("\n🧭 诊断信息:")
+        print(f"   - engine: {engine}")
+        print(f"   - cwd: {os.getcwd()}")
+        print(f"   - sys.executable: {sys.executable}")
+        print(f"   - sys.prefix: {getattr(sys, 'prefix', '')}")
+        print(f"   - VIRTUAL_ENV: {os.environ.get('VIRTUAL_ENV', '')}")
+        print(f"   - PYTHONPATH: {os.environ.get('PYTHONPATH', '')}")
+        print(f"   - SUNDAY_PHOTOS_FACE_BACKEND: {os.environ.get('SUNDAY_PHOTOS_FACE_BACKEND', '')}")
+
+        if missing_packages:
+            print("\n📦 未安装的模块:")
+            for pkg in missing_packages:
+                print(f"   - {pkg}")
+
+        if broken_packages:
+            print("\n🧩 已安装但导入失败的模块:")
+            for pkg, err in broken_packages:
+                print(f"   - {pkg}: {err}")
+
+        print("\n💡 安装/修复建议:")
         if engine == "dlib":
             print("   pip install -r requirements-dlib.txt")
             print("   # 或者：pip install face_recognition dlib")
         else:
             print("   pip install -r requirements.txt")
+            print("   # 如果仅 insightface 导入失败：优先看上面的具体异常信息（常见是子依赖/二进制库问题）")
         return False
     
+    if diag_enabled:
+        print("\n🧭 诊断信息(已开启 SUNDAY_PHOTOS_DIAG_ENV):")
+        print(f"   - engine: {engine}")
+        print(f"   - cwd: {os.getcwd()}")
+        print(f"   - sys.executable: {sys.executable}")
+        print(f"   - sys.prefix: {getattr(sys, 'prefix', '')}")
+        print(f"   - VIRTUAL_ENV: {os.environ.get('VIRTUAL_ENV', '')}")
+        print(f"   - PYTHONPATH: {os.environ.get('PYTHONPATH', '')}")
+        print(f"   - SUNDAY_PHOTOS_FACE_BACKEND: {os.environ.get('SUNDAY_PHOTOS_FACE_BACKEND', '')}")
+
     print("✅ 环境检查通过")
-    print("\n\u2705 环境检查通过，准备运行主程序。")
+    print("\n✅ 环境检查通过，准备运行主程序。")
     return True
 
 def show_help():
