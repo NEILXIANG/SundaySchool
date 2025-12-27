@@ -53,6 +53,22 @@ _sanitize_sys_path_for_app_runtime()
 from src.core.config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_TOLERANCE
 
 
+def _cy_rule(width: int = 60) -> str:
+    enc = (getattr(sys.stdout, "encoding", "") or "").lower()
+    if "utf" in enc or sys.platform == "darwin":
+        return "═" * width
+    return "=" * width
+
+
+def _cy_tag(label: str) -> str:
+    label = (label or "").strip().upper()[:5]
+    return f"[{label:<5}]"
+
+
+def _cy_print(label: str, text: str) -> None:
+    print(f"{_cy_tag(label)} {text}")
+
+
 def _normalize_backend_engine(raw: str) -> str:
     v = (raw or "").strip().lower()
     if v in ("dlib", "face_recognition", "facerecognition"):
@@ -89,14 +105,14 @@ def _get_backend_engine_from_env_or_config() -> str:
 
 def check_environment():
     """检查运行环境"""
-    print("🔍 检查运行环境...")
+    _cy_print("SCAN", "ENV CHECK / 环境自检")
 
     # 某些依赖会触发 pkg_resources 弃用警告；不影响运行，避免干扰老师/调试输出。
     warnings.filterwarnings("ignore", message=r"pkg_resources is deprecated as an API\.")
     
     # 检查Python版本
     if sys.version_info < (3, 7):
-        print("❌ 需要Python 3.7或更高版本")
+        _cy_print("FAIL", "需要 Python 3.7 或更高版本")
         return False
     
     # 检查依赖包（根据人脸后端）
@@ -122,10 +138,11 @@ def check_environment():
                 broken_packages.append((package, f"{type(e).__name__}: {e}"))
 
     if missing_packages or broken_packages:
-        print("❌ 环境依赖检查失败")
+        _cy_print("FAIL", "环境依赖检查失败")
 
         # 在失败时输出关键诊断信息（尤其用于 VS Code debug 会话定位解释器/路径差异）。
-        print("\n🧭 诊断信息:")
+        print("\n" + _cy_rule())
+        _cy_print("DIAG", "诊断信息")
         print(f"   - engine: {engine}")
         print(f"   - cwd: {os.getcwd()}")
         print(f"   - sys.executable: {sys.executable}")
@@ -144,7 +161,8 @@ def check_environment():
             for pkg, err in broken_packages:
                 print(f"   - {pkg}: {err}")
 
-        print("\n💡 安装/修复建议:")
+        print("\n" + _cy_rule())
+        _cy_print("HINT", "安装 / 修复建议")
         if engine == "dlib":
             print("   pip install -r requirements-dlib.txt")
             print("   # 或者：pip install face_recognition dlib")
@@ -154,7 +172,8 @@ def check_environment():
         return False
     
     if diag_enabled:
-        print("\n🧭 诊断信息(已开启 SUNDAY_PHOTOS_DIAG_ENV):")
+        print("\n" + _cy_rule())
+        _cy_print("DIAG", "诊断信息（已开启 SUNDAY_PHOTOS_DIAG_ENV）")
         print(f"   - engine: {engine}")
         print(f"   - cwd: {os.getcwd()}")
         print(f"   - sys.executable: {sys.executable}")
@@ -163,8 +182,8 @@ def check_environment():
         print(f"   - PYTHONPATH: {os.environ.get('PYTHONPATH', '')}")
         print(f"   - SUNDAY_PHOTOS_FACE_BACKEND: {os.environ.get('SUNDAY_PHOTOS_FACE_BACKEND', '')}")
 
-    print("✅ 环境检查通过")
-    print("\n✅ 环境检查通过，准备运行主程序。")
+    _cy_print("OK", "环境检查通过")
+    _cy_print("BOOT", "READY / 准备启动主程序")
     return True
 
 def show_help():
@@ -284,18 +303,23 @@ def main():
         check_environment()
         return
     
-    # 启动画面（按需求：不显示前两行大标题）
-    print("="*60)
-    print("🏫 欢迎使用湖东教会(LECC)主日学照片整理工具！")
+    # 启动画面（赛博/HUD 风格）
+    print(_cy_rule())
+    _cy_print("SYS", "SUNDAY PHOTO ORGANIZER / 主日学照片整理")
+    _cy_print("ORG", "LECC / 湖东教会")
+    _cy_print("MODE", "PIPELINE: SCAN -> MATCH -> SORT -> REPORT")
+    print(_cy_rule())
     
     # 环境检查
     if not check_environment():
-        print("\n❌ 环境检查失败，请解决上述问题后重试")
+        print("\n" + _cy_rule())
+        _cy_print("FAIL", "环境检查失败：请按上方提示修复后重试")
         sys.exit(1)
     
     # 导入主模块并运行
     try:
-        print("\n🚀 启动照片整理程序...")
+        print("\n" + _cy_rule())
+        _cy_print("BOOT", "启动照片整理程序")
 
         # 延迟导入，减少冷启动时的重型依赖加载
         from src.core.main import SimplePhotoOrganizer
@@ -317,28 +341,32 @@ def main():
             organizer.face_recognizer.tolerance = args.tolerance
         
         # 运行整理流程
-        print("📂 正在整理照片，请稍候...")
-        print("📸 正在扫描照片，寻找每一张笑脸...")
+        _cy_print("RUN", "整理中...（请稍候）")
+        _cy_print("SCAN", "扫描照片 / 人脸检测与匹配")
         success = organizer.run()
         
         if success:
-            print("✨ 整理完成！所有照片已分类存放到输出目录。")
-            print("🎯 照片整理完成！快去看看成果吧！")
-            print("\n🎉 程序执行完成！")
+            print(_cy_rule())
+            _cy_print("OK", "整理完成：照片已分类写入输出目录")
+            _cy_print("DONE", "任务结束")
         else:
-            print("\n❌ 程序执行失败，请查看日志了解详情")
+            print("\n" + _cy_rule())
+            _cy_print("FAIL", "程序执行失败：请查看日志了解详情")
             sys.exit(1)
             
     except ImportError as e:
-        print(f"\n❌ 导入模块失败: {e}")
-        print("请确保所有依赖包都已正确安装")
+        print("\n" + _cy_rule())
+        _cy_print("FAIL", f"导入模块失败: {e}")
+        _cy_print("HINT", "请确保所有依赖包都已正确安装")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ 程序运行出错: {e}")
-        print("请查看详细日志了解问题原因")
+        print("\n" + _cy_rule())
+        _cy_print("FAIL", f"程序运行出错: {e}")
+        _cy_print("HINT", "请查看详细日志了解问题原因")
         sys.exit(1)
 
-    print("\n🎉 所有准备工作完成，开始整理照片吧！")
+    print("\n" + _cy_rule())
+    _cy_print("TIP", "想要再跑一次：继续放照片到 input/ 然后重新运行")
 
 if __name__ == "__main__":
     main()

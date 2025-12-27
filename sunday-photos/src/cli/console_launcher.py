@@ -134,7 +134,7 @@ class ConsolePhotoOrganizer:
         """Return a short bracketed tag, optionally colored (TTY-only)."""
         # Fixed width tag for a cyber/HUD look.
         label = (label or "").strip().upper()[:5]
-        tag = f"[{label:<5}]"
+        tag = f"[{label:<5}]"  # keep stable width
         if color_code and self._ansi_enabled():
             return f"\033[1;{color_code}m{tag}\033[0m"
         return tag
@@ -273,9 +273,11 @@ class ConsolePhotoOrganizer:
 
         print(self._hud_border("top"))
         run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
-        self._print_hud("SYS", "系统启动：SundayPhotoOrganizer Console", color="36")
+        # Keep these keywords stable for tests: "SundayPhotoOrganizer Console" and "WORK_DIR=".
+        self._print_hud("SYS", "SYSTEM ONLINE: SundayPhotoOrganizer Console", color="36")
         self._print_hud("SYS", f"RUN_ID={run_id}", color="36")
         self._print_hud("SYS", f"WORK_DIR={self.app_directory}", color="36")
+        self._print_hud("HUD", "PIPELINE: SCAN -> MATCH -> SORT -> REPORT", color="35")
         self._print_hud("UI", "按提示放照片 → 运行 → 自动输出到 output/", color="35")
         # Teacher-friendly: don't require understanding filesystem permissions.
         override = os.environ.get("SUNDAY_PHOTOS_WORK_DIR", "").strip()
@@ -289,7 +291,7 @@ class ConsolePhotoOrganizer:
         self._print_tip("隐私说明：照片只在本机处理，不会自动上传到网络。")
         self._print_tip("安全说明：程序不会删除照片；只会把结果复制到 output/。为了便于下次继续整理，课堂照片可能会被归档到 class_photos/ 里的日期子文件夹（例如 YYYY-MM-DD/）。")
         print(self._hud_line())
-        self._print_hud("BOOT", "QUICK START", color="36")
+        self._print_hud("BOOT", "QUICK START / 快速启动", color="36")
         self._print_hud("PATH", f"STUDENTS={self.app_directory / 'input' / 'student_photos'}", color="32")
         self._print_hud("PATH", f"CLASSROOM={self.app_directory / 'input' / 'class_photos'}", color="32")
         self._print_hud("PATH", f"OUTPUT={self.app_directory / 'output'}", color="32")
@@ -300,7 +302,7 @@ class ConsolePhotoOrganizer:
         """自动创建目录结构"""
         self._print_section("准备工作")
         self._print_hud("SYS", "初始化工作区（文件夹/说明文件）", color="36")
-        self._pulse("把工作台摆整齐")
+        self._pulse("INIT / workspace")
         
         directories = [
             self.app_directory,
@@ -383,7 +385,7 @@ Supported formats: .jpg / .jpeg / .png
         """检查照片文件"""
         self._print_section("检查照片")
         self._print_hud("SCAN", "扫描输入目录（参考照/课堂照）", color="36")
-        self._pulse("启动扫描雷达")
+        self._pulse("SCAN / input")
         self._print_tip("支持格式：JPG / JPEG / PNG")
         
         student_photos_dir = self.app_directory / "input" / "student_photos"
@@ -467,7 +469,7 @@ Supported formats: .jpg / .jpeg / .png
         """处理照片"""
         self._print_section("开始整理")
         self._print_hud("AI", "进入整理模式：识别 → 分类 → 输出", color="35")
-        print("整理过程中请不要关闭窗口；完成后我会告诉你结果在哪。")
+        print("执行中请不要关闭窗口；完成后会显示 output/ 位置。")
         self._print_tip(f"如果中途出现问题：日志会保存在 {self.app_directory / 'logs'}")
         self._print_tip("无需任何配置文件，我会自动为你准备默认配置。")
         
@@ -479,7 +481,7 @@ Supported formats: .jpg / .jpeg / .png
                 from src.core.main import SimplePhotoOrganizer
                 from src.core.config_loader import ConfigLoader
 
-            self._pulse("AI 引擎热身中", seconds=0.8)
+            self._pulse("NEURAL / warmup", seconds=0.8)
             
             # 创建/读取配置文件（存在则不覆盖；老师无需调参）
             with self._spinner("正在准备默认配置（无需你动手）..."):
@@ -520,7 +522,7 @@ Supported formats: .jpg / .jpeg / .png
             print(self._hud_rule())
             self._print_hud("STEP", "4/4 打开输出：尝试为你打开 output/", color="36")
             print(self._hud_rule())
-            self._print_tip("小提示：进度条在动就说明我在努力；看起来‘没动’也可能在算得很认真。")
+            self._print_tip("提示：进度条在动 = 正常运行；长时间不动可能是在计算。")
 
             # Clear visual boundary before the heavy pipeline output (tqdm, stats).
             print(self._hud_line())
