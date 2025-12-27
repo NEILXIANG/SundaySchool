@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import logging
+import warnings
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Iterator, List, Tuple
 
@@ -39,6 +40,9 @@ def _truthy_env(name: str, default: str = "0") -> bool:
 
 
 def init_worker(known_encodings: List[Any], known_names: List[str], tolerance: float, min_face_size: int) -> None:
+    # 兼容历史：某些依赖可能产生噪声警告；并行下会被放大。
+    warnings.filterwarnings("ignore", message=r"pkg_resources is deprecated as an API\.")
+
     global _G_KNOWN_ENCODINGS, _G_KNOWN_NAMES, _G_TOLERANCE, _G_MIN_FACE_SIZE
     _G_KNOWN_ENCODINGS = known_encodings
     _G_KNOWN_NAMES = known_names
@@ -48,10 +52,16 @@ def init_worker(known_encodings: List[Any], known_names: List[str], tolerance: f
 
 def recognize_one(image_path: str) -> Tuple[str, Dict[str, Any]]:
     """对子进程中的单张照片执行识别，返回 (path, details_dict)。"""
-    import face_recognition  # pyright: ignore[reportMissingImports]
+    # 保险起见：某些平台/路径下警告过滤可能未在 initializer 生效，这里再兜底一次。
+    warnings.filterwarnings("ignore", message=r"pkg_resources is deprecated as an API\.")
+    from .face_recognizer import face_recognition
 
     # 结果结构尽量与 FaceRecognizer.recognize_faces(return_details=True) 对齐
     try:
+        if face_recognition is None:
+            engine = os.environ.get("SUNDAY_PHOTOS_FACE_BACKEND", "").strip().lower() or "insightface"
+            raise ModuleNotFoundError(f"人脸识别后端依赖未就绪（SUNDAY_PHOTOS_FACE_BACKEND={engine}）")
+
         image = face_recognition.load_image_file(image_path)
         face_locations = face_recognition.face_locations(image)
 
@@ -164,11 +174,16 @@ def parallel_recognize(
 
     import multiprocessing as mp
 
+    # 进度条“卡住”的常见原因：Pool.imap_unordered 的 chunksize 偏大时，结果会按批次回传。
+    # 为了让控制台进度条更丝滑（老师能持续看到在运行），这里对实际 chunksize 做上限。
+    # 说明：chunksize 越小，调度开销越高；但通常 1~2 能显著改善“长时间不动”。
+    effective_chunksize = int(max(1, min(int(chunk_size), 2)))
+
     ctx = mp.get_context("spawn")
     with ctx.Pool(
         processes=int(workers),
         initializer=init_worker,
         initargs=(known_encodings, known_names, float(tolerance), int(min_face_size)),
     ) as pool:
-        for item in pool.imap_unordered(recognize_one, photo_paths, chunksize=int(max(1, chunk_size))):
+        for item in pool.imap_unordered(recognize_one, photo_paths, chunksize=effective_chunksize):
             yield item

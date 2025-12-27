@@ -101,8 +101,8 @@ class TestWorkerInitialization:
 class TestRecognizeOne:
     """测试单张照片识别"""
     
-    @patch('face_recognition.load_image_file')
-    @patch('face_recognition.face_locations')
+    @patch('src.core.face_recognizer.face_recognition.load_image_file')
+    @patch('src.core.face_recognizer.face_recognition.face_locations')
     def test_recognize_one_no_faces(self, mock_locations, mock_load):
         """无人脸照片应该返回正确状态"""
         import src.core.parallel_recognizer as pr
@@ -124,8 +124,8 @@ class TestRecognizeOne:
         assert result["total_faces"] == 0
         assert result["recognized_students"] == []
     
-    @patch('face_recognition.load_image_file')
-    @patch('face_recognition.face_locations')
+    @patch('src.core.face_recognizer.face_recognition.load_image_file')
+    @patch('src.core.face_recognizer.face_recognition.face_locations')
     def test_recognize_one_faces_too_small(self, mock_locations, mock_load):
         """人脸过小应该被过滤"""
         import src.core.parallel_recognizer as pr
@@ -144,11 +144,11 @@ class TestRecognizeOne:
         assert result["status"] == "no_faces_detected"
         assert "尺寸过小" in result["message"]
     
-    @patch('face_recognition.load_image_file')
-    @patch('face_recognition.face_locations')
-    @patch('face_recognition.face_encodings')
-    @patch('face_recognition.compare_faces')
-    @patch('face_recognition.face_distance')
+    @patch('src.core.face_recognizer.face_recognition.load_image_file')
+    @patch('src.core.face_recognizer.face_recognition.face_locations')
+    @patch('src.core.face_recognizer.face_recognition.face_encodings')
+    @patch('src.core.face_recognizer.face_recognition.compare_faces')
+    @patch('src.core.face_recognizer.face_recognition.face_distance')
     def test_recognize_one_with_match(self, mock_dist, mock_cmp, mock_enc, mock_locs, mock_load):
         """成功识别应该返回学生名字"""
         import numpy as np

@@ -158,7 +158,7 @@ class ConfigLoader:
         return uc
 
     def get_parallel_recognition(self) -> Dict[str, Any]:
-        """获取并行识别配置，支持环境变量智能控制。"""
+        """获取并行识别配置，支持环境变量开关与参数覆盖。"""
 
         pr = dict(self.config_data.get("parallel_recognition", DEFAULT_PARALLEL_RECOGNITION))
 
@@ -184,9 +184,22 @@ class ConfigLoader:
         elif env_enable:
             pr["enabled"] = True
 
-        # 最小保护
+        # 可选：通过环境变量覆盖并行启用阈值（便于调试/临时加速）
+        # - SUNDAY_PHOTOS_PARALLEL_MIN_PHOTOS=0  表示“只要 workers>=2 就允许并行”
+        env_min_photos = os.environ.get("SUNDAY_PHOTOS_PARALLEL_MIN_PHOTOS", "").strip()
+        if env_min_photos:
+            try:
+                pr["min_photos"] = max(0, int(env_min_photos))
+            except Exception:
+                pass
+
+        # 最小保护（不做“智能拉高”，仅做合理的范围校验与 CPU 上限约束）
         try:
-            pr["workers"] = max(1, int(pr.get("workers", DEFAULT_PARALLEL_RECOGNITION["workers"])))
+            requested_workers = max(1, int(pr.get("workers", DEFAULT_PARALLEL_RECOGNITION["workers"])))
+            cpu_cores = max(1, int(os.cpu_count() or 1))
+
+            # 上限：不超过 CPU 核心数（避免过量进程造成系统抖动）
+            pr["workers"] = min(requested_workers, cpu_cores)
             pr["chunk_size"] = max(1, int(pr.get("chunk_size", DEFAULT_PARALLEL_RECOGNITION["chunk_size"])))
             pr["min_photos"] = max(0, int(pr.get("min_photos", DEFAULT_PARALLEL_RECOGNITION["min_photos"])))
             pr["enabled"] = bool(pr.get("enabled", False))
@@ -197,3 +210,36 @@ class ConfigLoader:
 
     def get_all_config(self) -> Dict[str, Any]:
         return dict(self.config_data)
+
+    def get_face_backend_engine(self) -> str:
+        """获取人脸识别后端引擎。
+
+        支持：
+        - 环境变量：SUNDAY_PHOTOS_FACE_BACKEND（优先级最高）
+        - config.json：face_backend.engine 或 face_backend（字符串简写）
+
+        允许值（大小写不敏感）：
+        - insightface / insight / arcface
+        - dlib / face_recognition
+        """
+
+        env = os.environ.get("SUNDAY_PHOTOS_FACE_BACKEND", "").strip().lower()
+        if env:
+            raw = env
+        else:
+            raw = self.get("face_backend", None)
+            if isinstance(raw, dict):
+                raw = raw.get("engine")
+
+            if isinstance(raw, str):
+                raw = raw.strip().lower()
+            else:
+                raw = ""
+
+        if raw in ("insightface", "insight", "arcface"):
+            return "insightface"
+        if raw in ("dlib", "face_recognition", "facerecognition"):
+            return "dlib"
+
+        # 默认：InsightFace（当前主方案）
+        return "insightface"

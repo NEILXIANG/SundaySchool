@@ -62,12 +62,12 @@ Note: Older builds may have used an onedir layout like `release_console/SundayPh
 - Constants: see `src/config.py` / `src/core/config.py`.
 
 ## Models & size
-- `face_recognition_models` includes ~95MB model; GitHub may warn. Consider Git LFS or runtime download if size matters.
+- Default backend is InsightFace. The first run may download models into `~/.insightface/` (or `SUNDAY_PHOTOS_INSIGHTFACE_HOME`). For offline deployments, pre-download and ship the model folder.
 - onedir bundles Python and deps (larger but faster start); onefile is smaller but slower (Windows uses onefile).
 
 ## Troubleshooting
 - `requirements.txt` missing: ensure working directory is `sunday-photos` (CI already sets this).
-- dlib/numpy build errors on Windows: install VC Build Tools or use prebuilt wheels; ensure `cmake` is present (CI installs cmake).
+- Optional dlib backend: if you choose `SUNDAY_PHOTOS_FACE_BACKEND=dlib`, you may hit dlib build errors on Windows. Install VC Build Tools or use prebuilt wheels; ensure `cmake` is present.
 - Instant exit: check photos under `input/class_photos`; inspect `logs/photo_organizer_*.log`.
 
 ## Release flow suggestion

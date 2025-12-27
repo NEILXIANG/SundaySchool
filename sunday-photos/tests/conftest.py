@@ -11,8 +11,8 @@ def _install_face_recognition_stub() -> None:
     """在测试环境中提供 face_recognition 的最小 stub。
 
     目的：
-    - 让 `unittest.mock.patch("face_recognition....")` 在依赖缺失时仍可工作。
-    - 若用户已安装真实 face_recognition，则不会触发此逻辑。
+    - 让测试环境不再意外导入真实 face_recognition（它会引入 dlib 等重依赖，并产生噪声警告）。
+    - 兼容历史：若未来仍有测试想 patch `face_recognition.*`，也能顺利 patch 到 stub 上。
     """
 
     if "face_recognition" in sys.modules:
@@ -35,10 +35,8 @@ def _install_face_recognition_stub() -> None:
     sys.modules["face_recognition"] = stub
 
 
-try:
-    import face_recognition  # type: ignore  # noqa: F401
-except Exception:
-    _install_face_recognition_stub()
+# 迁移到 InsightFace 后，项目不再依赖 face_recognition；测试中统一注入 stub，避免导入真实包。
+_install_face_recognition_stub()
 
 
 def create_minimal_test_image(path: Path) -> None:

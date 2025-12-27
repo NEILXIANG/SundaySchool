@@ -1,7 +1,7 @@
 # 产品需求说明文档 / Product Requirements Document (PRD)
 项目：主日学照片整理工具 / Sunday Photos Organizer  
 版本：1.3.0  
-更新日期：2025-12-23
+更新日期：2025-12-26
 
 ---
 
@@ -25,7 +25,8 @@
 
 ### 2.1 核心功能
 - **人脸识别引擎** / Face Recognition Engine：
-  - 基于 `face_recognition` (dlib深度学习模型)
+  - 默认使用 **InsightFace**（CPU 推理，ArcFace embedding 常见为 512 维）
+  - 支持可配置回退到 `face_recognition/dlib`（embedding 常见为 128 维；需自行安装依赖）
   - 支持多编码融合（每学生多张参考照，自动选择最佳匹配）
   - 识别效果：参考照质量良好时通常更准；以实际运行报告为准
   
@@ -40,9 +41,9 @@
   - 删除同步：输入删除时自动清理输出
   - 识别结果缓存：参数未变时复用，提升速度
   
-- **智能并行** / Smart Parallelization：
-  - 自适应：照片数<30自动串行，≥50提示并行
-  - 大批量场景可能明显受益于并行加速（取决于机器与照片规模）
+- **并行识别** / Parallelization：
+  - 小批量（低于 `min_photos`）默认串行，减少进程启动开销
+  - 大批量（达到 `min_photos`）启用多进程并行（默认 workers=6，固定不做“智能拉高”）
   - 异常自动回退串行，确保完成
   
 - **文件整理** / File Organization：
@@ -74,6 +75,8 @@ python run.py \
 # 环境变量
 SUNDAY_PHOTOS_PARALLEL=1 python run.py  # 临时启用并行
 SUNDAY_PHOTOS_NO_PARALLEL=1 python run.py  # 强制禁用并行
+SUNDAY_PHOTOS_FACE_BACKEND=insightface python run.py  # 选择 InsightFace 后端（默认）
+SUNDAY_PHOTOS_FACE_BACKEND=dlib python run.py  # 选择 dlib/face_recognition 后端（可选）
 ```
 
 ### 2.3 打包版（老师模式）
@@ -92,8 +95,8 @@ SUNDAY_PHOTOS_NO_PARALLEL=1 python run.py  # 强制禁用并行
   
 - **资源占用** Resource Usage：
   - 内存：100张照片约 500MB-1GB
-  - CPU：支持多核并行（自适应）
-  - 磁盘：缓存约 10MB/100张照片
+  - CPU：支持多核并行（默认开启；默认 `workers=6`，且不超过 CPU 核心数）
+  - 磁盘：会写入增量状态与缓存（大小与照片数量/人脸数量相关；以实际目录占用为准）
 
 ### 3.2 兼容性 / Compatibility
 - **操作系统**：Windows 10+, macOS 10.15+, Linux (Ubuntu 20.04+)
@@ -183,8 +186,8 @@ output/
   },
   "log_level": "INFO",                 # DEBUG/INFO/WARNING/ERROR
   "parallel_recognition": {
-    "enabled": false,                  # 并行开关
-    "workers": 4,                      # 进程数
+    "enabled": true,                   # 并行开关
+    "workers": 6,                      # 进程数（固定默认值）
     "chunk_size": 12,                  # 批次大小
     "min_photos": 30                   # 启用阈值
   }
@@ -193,12 +196,17 @@ output/
 
 ### 5.2 依赖管理 (requirements.txt)
 ```
-face_recognition>=1.3.0
-face_recognition_models>=0.3.0
-dlib>=19.24.0
-Pillow>=10.3.0
-numpy>=1.26.0
-tqdm>=4.66.0
+insightface
+onnxruntime
+opencv-python-headless
+Pillow
+numpy
+tqdm
+requests
+
+# 可选（仅当选择 dlib 后端时需要）
+face_recognition
+dlib
 ```
 
 ---
@@ -247,7 +255,7 @@ tqdm>=4.66.0
 ### 8.1 技术风险
 - **人脸识别精度**：依赖参考照质量（清晰度/角度/光线）
 - **大批量性能**：200+张照片可能占用较多内存（建议分批处理）
-- **模型体积**：face_recognition_models 约 95MB（可考虑运行时下载）
+- **模型体积/离线部署**：默认 InsightFace 可能在首次运行下载模型到本机缓存（离线环境需预下载并随部署一起提供）
 
 ### 8.2 用户约束
 - **学习成本**：打包版零学习成本；源码版需基础命令行知识
@@ -256,8 +264,8 @@ tqdm>=4.66.0
 
 ### 8.3 缓解策略
 - **精度问题**：提供清晰的参考照要求说明 + 智能提示
-- **性能问题**：智能并行 + 增量处理 + 缓存优化
-- **模型体积**：当前版本打包集成，未来可改为首次运行下载
+- **性能问题**：默认并行（固定默认 workers）+ 增量处理 + 缓存优化
+- **模型体积**：支持预下载/指定模型缓存目录，确保离线可用
 
 ---
 

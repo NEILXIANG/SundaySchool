@@ -55,9 +55,9 @@ class TestLogicScenarios(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @patch('face_recognition.load_image_file')
-    @patch('face_recognition.face_locations')
-    @patch('face_recognition.face_encodings')
+    @patch('core.face_recognizer.face_recognition.load_image_file')
+    @patch('core.face_recognizer.face_recognition.face_locations')
+    @patch('core.face_recognizer.face_recognition.face_encodings')
     def test_multiple_reference_photos(self, mock_encodings, mock_locations, mock_load_image):
         """测试场景1: 学生有多张参考照片"""
         print("\n🧪 测试场景1: 多张参考照片逻辑")
@@ -97,11 +97,11 @@ class TestLogicScenarios(unittest.TestCase):
         np.testing.assert_array_equal(recognizer.students_encodings['ZhangSan']['encodings'][0], self.encoding_zhang)
         print("✅ 成功处理多张参考照片，自动跳过无效照片")
 
-    @patch('face_recognition.load_image_file')
-    @patch('face_recognition.face_locations')
-    @patch('face_recognition.face_encodings')
-    @patch('face_recognition.face_distance')
-    @patch('face_recognition.compare_faces')
+    @patch('core.face_recognizer.face_recognition.load_image_file')
+    @patch('core.face_recognizer.face_recognition.face_locations')
+    @patch('core.face_recognizer.face_recognition.face_encodings')
+    @patch('core.face_recognizer.face_recognition.face_distance')
+    @patch('core.face_recognizer.face_recognition.compare_faces')
     def test_group_photo_recognition(self, mock_compare, mock_distance, mock_encodings, mock_locations, mock_load_image):
         """测试场景2: 多人合照识别"""
         print("\n🧪 测试场景2: 多人合照识别")
@@ -195,11 +195,11 @@ class TestLogicScenarios(unittest.TestCase):
         self.assertTrue(lisi_file.exists(), "LiSi 的照片未创建")
         print("✅ 文件正确归档到对应的学生和日期目录")
 
-    @patch('face_recognition.load_image_file')
-    @patch('face_recognition.face_locations')
-    @patch('face_recognition.face_encodings')
-    @patch('face_recognition.face_distance')
-    @patch('face_recognition.compare_faces')
+    @patch('core.face_recognizer.face_recognition.load_image_file')
+    @patch('core.face_recognizer.face_recognition.face_locations')
+    @patch('core.face_recognizer.face_recognition.face_encodings')
+    @patch('core.face_recognizer.face_recognition.face_distance')
+    @patch('core.face_recognizer.face_recognition.compare_faces')
     def test_tolerance_boundary(self, mock_compare, mock_distance, mock_encodings, mock_locations, mock_load_image):
         """测试场景4: 阈值边界测试"""
         print("\n🧪 测试场景4: 阈值边界测试")

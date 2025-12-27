@@ -159,7 +159,7 @@ class TeacherFriendlyTester:
         """测试依赖包"""
         print("📦 检查程序依赖...")
         
-        required_packages = ['face_recognition', 'PIL', 'numpy', 'tqdm']
+        required_packages = ['insightface', 'onnxruntime', 'cv2', 'PIL', 'numpy', 'tqdm']
         missing_packages = []
         
         for package in required_packages:

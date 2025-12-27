@@ -240,15 +240,17 @@ save_date_cache_atomic(output_dir, "2024-01-01", cache)
 
 ---
 
-### 2.4 Smart Parallel Recognition (parallel_recognizer)
+### 2.4 Controlled Parallel Recognition (parallel_recognizer)
 
 **Location**: [src/core/parallel_recognizer.py](src/core/parallel_recognizer.py)
 
-**Decision Logic**:
+**Decision Logic** (predictable; no “smart scaling”):
 1. **Force disable**: `SUNDAY_PHOTOS_NO_PARALLEL=1` → serial
-2. **Force enable**: `SUNDAY_PHOTOS_PARALLEL=1` → parallel (if ≥30 photos)
-3. **Config file**: `config.json` `parallel_recognition.enabled`
-4. **Smart hint**: Suggests parallel when ≥50 photos
+2. **Force enable**: `SUNDAY_PHOTOS_PARALLEL=1` → allow parallel (still constrained by `min_photos/workers`; you can override threshold via `SUNDAY_PHOTOS_PARALLEL_MIN_PHOTOS`)
+3. **Config file**: `config.json` → `parallel_recognition.enabled/min_photos/workers/chunk_size`
+  - Defaults: `enabled=true`, `workers=6`, `min_photos=30`
+  - `workers` is capped at CPU cores
+4. **Hints**: when `enabled=false` and the batch is large (e.g. ≥50), the program logs a suggestion to enable parallel; it does not prompt interactively
 
 **Core Functions**:
 - `init_worker()`: Child process initializer (caches known encodings)
@@ -465,21 +467,21 @@ except Exception as e:
 
 ---
 
-### ADR-003: Why Disable Parallel by Default?
+### ADR-003: Why Enable Parallel by Default?
 
-**Context**: Parallel recognition may fail on low-spec machines
+**Context**: Teachers frequently process mid/large batches; parallelism reduces wall-clock time on multi-core CPUs
 
-**Decision**: Default `enabled: false`, provide env var quick enable
+**Decision**: Default `enabled: true` with conservative defaults (`workers=6`, `min_photos=30`) and simple force-disable env var
 
 **Pros**:
-- Compatible with low-memory environments
-- Avoids beginner confusion
-- Provides smart hints to guide enablement
+- Faster by default on common multi-core machines
+- Predictable behavior (no auto-scaling; fixed default workers)
+- Easy troubleshooting: `SUNDAY_PHOTOS_NO_PARALLEL=1`
 
 **Cons**:
-- Large batches initially slower
+- On low-memory machines, parallel mode may be less stable; users may need to force serial
 
-**Conclusion**: Stability first, educate users via hints
+**Conclusion**: Better teacher experience by default, while keeping a one-line escape hatch for stability
 
 ---
 
@@ -515,8 +517,8 @@ except Exception as e:
 ### 6.1 Recognition Performance
 
 **Bottlenecks**:
-- `face_recognition.face_encodings()` (CPU-intensive)
-- `face_recognition.compare_faces()` (distance computation)
+- Embedding extraction / face encoding (backend-dependent: InsightFace inference or dlib/face_recognition encoding)
+- Distance computation + best-match selection against the known reference set
 
 **Optimization Directions**:
 - Enable parallel recognition (often faster on multi-core CPUs; varies)

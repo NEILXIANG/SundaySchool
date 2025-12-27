@@ -159,7 +159,9 @@ class InteractiveGuide:
         
         # 检查依赖包
         required_packages = [
-            ('face_recognition', '人脸识别'),
+            ('insightface', '人脸识别(InsightFace)'),
+            ('onnxruntime', '推理引擎(onnxruntime)'),
+            ('cv2', '图像处理(OpenCV)'),
             ('PIL', '图像处理'),
             ('numpy', '数值计算'),
             ('tqdm', '进度条')

@@ -9,10 +9,11 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  bash scripts/clean_generated_artifacts.sh [--all] [--yes]
+  bash scripts/clean_generated_artifacts.sh [--all] [--venv] [--yes]
 
 Options:
-  --all   Also remove build outputs and caches: build/, dist/, output/, logs/, _downloaded_images/
+  --all   Also remove build outputs and caches: build/, dist/, output/, logs/, _downloaded_images/, .debug_work/ and .DS_Store
+  --venv  Also remove legacy local venv: .venv310/
   --yes   Do not prompt for confirmation
 
 Default (no flags) removes:
@@ -27,10 +28,12 @@ EOF
 }
 
 ALL=0
+VENV=0
 YES=0
 for arg in "$@"; do
   case "$arg" in
     --all) ALL=1 ;;
+    --venv) VENV=1 ;;
     --yes) YES=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown arg: $arg"; usage; exit 2 ;;
@@ -56,6 +59,17 @@ if [[ "$ALL" == "1" ]]; then
   [[ -d output ]] && delete_paths+=("output")
   [[ -d logs ]] && delete_paths+=("logs")
   [[ -d _downloaded_images ]] && delete_paths+=("_downloaded_images")
+  [[ -d .debug_work ]] && delete_paths+=(".debug_work")
+
+  # Legacy local logs accidentally committed/kept
+  [[ -d test ]] && delete_paths+=("test")
+
+  # macOS Finder artifacts
+  while IFS= read -r -d '' p; do delete_paths+=("$p"); done < <(find . -name '.DS_Store' -print0)
+fi
+
+if [[ "$VENV" == "1" ]]; then
+  [[ -d .venv310 ]] && delete_paths+=(".venv310")
 fi
 
 # De-dup (Bash 3.2 compatible; macOS ships bash 3.x by default)

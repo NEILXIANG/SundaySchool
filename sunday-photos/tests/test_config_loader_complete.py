@@ -135,6 +135,44 @@ def test_config_loader_parallel_workers_validation(tmp_path):
     assert pr["min_photos"] >= 0
 
 
+def test_config_loader_parallel_workers_clamped_to_cpu(tmp_path):
+    """workers 不应超过 CPU 核心数（自动上限）"""
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({
+        "parallel_recognition": {
+            "enabled": True,
+            "workers": 9999,
+            "chunk_size": 1,
+            "min_photos": 0,
+        }
+    }))
+
+    cl = ConfigLoader(config_file=config_file, base_dir=tmp_path)
+    pr = cl.get_parallel_recognition()
+
+    cpu_cores = os.cpu_count() or 1
+    assert pr["workers"] <= cpu_cores
+
+
+def test_config_loader_parallel_workers_fixed_no_scale(tmp_path):
+    """workers 不做“智能拉高”：仅按配置值使用，并受 CPU 核心数上限约束。"""
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({
+        "parallel_recognition": {
+            "enabled": True,
+            "workers": 6,
+            "chunk_size": 1,
+            "min_photos": 0,
+        }
+    }))
+
+    cl = ConfigLoader(config_file=config_file, base_dir=tmp_path)
+    pr = cl.get_parallel_recognition()
+
+    cpu_cores = int(os.cpu_count() or 1)
+    assert pr["workers"] == min(cpu_cores, 6)
+
+
 def test_config_loader_tolerance_validation(tmp_path):
     """测试tolerance值验证"""
     config_file = tmp_path / "config.json"

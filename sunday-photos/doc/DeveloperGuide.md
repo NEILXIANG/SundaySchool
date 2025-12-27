@@ -1,7 +1,7 @@
 # 开发与打包指南 (Developer Guide)
 
 **版本**: v0.4.0  
-**更新日期**: 2025-12-23
+**更新日期**: 2025-12-26
 
 面向开发者与发布维护者，涵盖本地调试、架构说明、打包与 CI 工作流。
 
@@ -94,6 +94,11 @@ pip install -r requirements.txt
 
 **验证安装**：
 ```bash
+python -c "import insightface; print('✓ insightface installed')"
+python -c "import onnxruntime; print('✓ onnxruntime installed')"
+python -c "import cv2; print('✓ opencv installed')"
+
+# 可选：若你要切换到 dlib/face_recognition 后端，再验证这两项
 python -c "import face_recognition; print('✓ face_recognition installed')"
 python -c "import dlib; print('✓ dlib installed')"
 ```
@@ -318,7 +323,7 @@ powershell -ExecutionPolicy Bypass -File scripts\\build_windows_console_app.ps1
 
 **注意事项**：
 - PyInstaller不支持交叉编译（必须在Windows上打包Windows版）
-- 首次打包可能较慢（需编译dlib）
+- 首次打包可能较慢（需要收集/压缩依赖与模型；若选择 dlib 后端且本机无预编译 wheel，也可能涉及编译）
 
 ---
 
@@ -502,7 +507,7 @@ cd release_console
 ## 🎯 工程亮点总结
 
 1. **架构设计**：依赖注入 + 分层设计 + 状态隔离
-2. **性能优化**：增量处理 + 多级缓存 + 智能并行
+2. **性能优化**：增量处理 + 多级缓存 + 并行识别（小批量回退串行）
 3. **容错机制**：多层异常捕获 + 自动回退 + 原子操作
 4. **测试覆盖**：覆盖核心流程 + 打包验证 + 边界场景（以 `pytest -q` 输出为准）
 5. **用户体验**：开箱即用 + 智能提示 + 友好错误

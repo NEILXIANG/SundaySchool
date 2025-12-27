@@ -11,12 +11,6 @@ import numpy as np
 import logging
 from typing import List, Dict, Tuple
 
-# 尝试导入 face_recognition，如果失败则不启用聚类（虽然理论上已安装）
-try:
-    import face_recognition
-except ImportError:
-    face_recognition = None
-
 logger = logging.getLogger(__name__)
 
 class UnknownClustering:
@@ -38,9 +32,6 @@ class UnknownClustering:
         :param path: 照片路径
         :param encodings: 该照片中检测到的未知人脸编码列表
         """
-        if face_recognition is None:
-            return
-
         for encoding in encodings:
             try:
                 if not isinstance(encoding, np.ndarray):
@@ -48,6 +39,14 @@ class UnknownClustering:
             except Exception:
                 continue
             self._add_one(path, encoding)
+
+    @staticmethod
+    def _cosine_distance(a: np.ndarray, b: np.ndarray) -> float:
+        a = np.asarray(a, dtype=np.float32)
+        b = np.asarray(b, dtype=np.float32)
+        an = float(np.linalg.norm(a) + 1e-12)
+        bn = float(np.linalg.norm(b) + 1e-12)
+        return float(1.0 - (np.dot(a, b) / (an * bn)))
 
     def _add_one(self, path: str, encoding: np.ndarray):
         best_cluster_id = -1
@@ -59,7 +58,7 @@ class UnknownClustering:
             cluster_encodings = [item[1] for item in items]
             
             # 计算与簇内所有点的距离
-            distances = face_recognition.face_distance(cluster_encodings, encoding)
+            distances = [self._cosine_distance(e, encoding) for e in cluster_encodings]
             avg_dist = np.mean(distances)
             
             if avg_dist < min_dist:

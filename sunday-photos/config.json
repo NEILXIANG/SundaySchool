@@ -11,6 +11,12 @@
     "tolerance": 0.6,
     "tolerance_comment": "人脸匹配阈值（0~1）。越小越严格（误识别更少、漏识别可能更多）；越大越宽松。一般建议 0.55~0.65。",
 
+    "face_backend": {
+        "_comment": "人脸识别后端选择：默认 InsightFace（更准、更适合复杂场景）。如需回退到旧版 dlib/face_recognition，可设置 engine=dlib（需自行安装 face_recognition 与 dlib）。",
+        "engine": "insightface",
+        "engine_comment": "可选：insightface / dlib。也可用环境变量 SUNDAY_PHOTOS_FACE_BACKEND 覆盖（优先级更高）。"
+    },
+
     "min_face_size": 50,
     "min_face_size_comment": "最小人脸尺寸（像素近似值）。过小可能引入误检，过大可能漏检远处的人脸。",
 
@@ -26,10 +32,10 @@
 
     "parallel_recognition": {
         "_comment": "并行识别（多进程）配置：课堂照片很多时可明显加速；小批量会自动回退串行以提高稳定性。",
-        "enabled": false,
+        "enabled": true,
         "enabled_comment": "是否允许启用并行识别。即使为 true，程序也可能因照片数量少/进程数为 1/环境变量强制关闭而回退串行。",
-        "workers": 4,
-        "workers_comment": "并行进程数。建议从 2~6 试起；过大可能因内存/IO 反而变慢。",
+        "workers": 6,
+        "workers_comment": "并行进程数（默认=6，固定不自动拉高）：更稳、更适合多数机器；避免进程启动开销与 CPU/IO 争用。建议从 4~6 试起；过大可能反而变慢。",
         "chunk_size": 12,
         "chunk_size_comment": "每个任务批次包含的照片数量。太小会增加调度开销；太大可能导致单批耗时过长。",
         "min_photos": 30,

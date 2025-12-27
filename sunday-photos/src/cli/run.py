@@ -21,8 +21,7 @@ def check_environment():
     """检查运行环境"""
     print("🔍 检查运行环境...")
 
-    # face_recognition_models 会触发 pkg_resources 弃用警告；不影响运行，避免干扰老师/调试输出。
-    warnings.filterwarnings("ignore", category=UserWarning, module=r"face_recognition_models")
+    # 某些依赖会触发 pkg_resources 弃用警告；不影响运行，避免干扰老师/调试输出。
     warnings.filterwarnings("ignore", message=r"pkg_resources is deprecated as an API\.")
     
     # 检查Python版本
@@ -30,8 +29,12 @@ def check_environment():
         print("❌ 需要Python 3.7或更高版本")
         return False
     
-    # 检查依赖包
-    required_packages = ['face_recognition', 'PIL', 'numpy', 'tqdm']
+    # 检查依赖包（根据人脸后端）
+    engine = os.environ.get("SUNDAY_PHOTOS_FACE_BACKEND", "").strip().lower() or "insightface"
+    if engine in ("dlib", "face_recognition", "facerecognition"):
+        required_packages = ['face_recognition', 'PIL', 'numpy', 'tqdm']
+    else:
+        required_packages = ['insightface', 'onnxruntime', 'cv2', 'PIL', 'numpy', 'tqdm']
     missing_packages = []
     
     for package in required_packages:

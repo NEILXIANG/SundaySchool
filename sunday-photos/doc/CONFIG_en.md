@@ -12,6 +12,7 @@ From highest to lowest priority:
 
 Additionally:
 - Environment variable `SUNDAY_PHOTOS_NO_PARALLEL=1` (or `true`/`yes`) forces serial mode (useful for troubleshooting or low-memory machines).
+ - Environment variable `SUNDAY_PHOTOS_FACE_BACKEND=insightface|dlib` switches the face backend (higher priority than config.json).
 
 ## 2. Why there are “comment fields” in config.json
 
@@ -54,7 +55,22 @@ Note: Prefer top-level `tolerance`. Older configs may contain `face_recognition.
 
 Note: Prefer top-level `min_face_size`. Older configs may contain `face_recognition.min_face_size`; the app keeps backward compatibility (it takes effect when top-level `min_face_size` is not explicitly set).
 
-### 3.3 Unknown face clustering (v0.4.0)
+### 3.3 Face backend (face_backend)
+
+Default backend is **InsightFace (recommended)**. You can also fall back to **dlib/face_recognition** (you must install those dependencies yourself).
+
+- `face_backend.engine`:
+  - `insightface` (default): better for complex/multi-person scenes; embeddings are commonly 512-d
+  - `dlib`: compatible with the legacy `face_recognition/dlib`; embeddings are commonly 128-d
+
+Priority: if `SUNDAY_PHOTOS_FACE_BACKEND` is set, it overrides `config.json`.
+
+**Important (cache isolation)**: reference encodings are stored under backend/model-specific folders to prevent mixing 128-d and 512-d caches:
+
+- Reference cache: `{input_dir}/logs/reference_encodings/<engine>/<model>/`
+- Reference snapshot: `{input_dir}/logs/reference_index/<engine>/<model>.json`
+
+### 3.4 Unknown face clustering (v0.4.0)
 
 This feature groups similar *unknown* faces into `Unknown_Person_X` folders, helping teachers manage visitors/parents/new students.
 
@@ -66,19 +82,17 @@ This feature groups similar *unknown* faces into `Unknown_Person_X` folders, hel
   - Only clusters with at least this many photos will produce an `Unknown_Person_X` folder
   - Singletons stay under `output/unknown_photos/YYYY-MM-DD/`
 
-### 3.4 Parallel recognition (parallel_recognition)
+### 3.5 Parallel recognition (parallel_recognition)
 
 Parallel recognition uses multiprocessing to leverage multiple CPU cores. It is most helpful when you have many classroom photos.
 
-**Note**: Parallel recognition is **disabled by default** to ensure compatibility with low-memory machines and provide the most stable experience out-of-the-box. You can enable it when processing large batches of photos.
+Current behavior (more stable and predictable):
+- Small batches (photo count < `min_photos`) fall back to serial (less overhead and easier debugging)
+- Large batches (photo count ≥ `min_photos`) use multiprocessing
+- If parallel recognition fails, it falls back to serial to finish the run
 
-**Smart Decision**: The program automatically selects the optimal mode:
-- When photos to recognize ≥ 50 and parallel is disabled, it will suggest enabling parallel mode with estimated time savings
-- When photo count < `min_photos`, it automatically uses serial mode (more stable for small batches)
-- If parallel recognition fails, it automatically falls back to serial mode to ensure the process continues
-
-- `parallel_recognition.enabled`: master switch (default: `false`)
-- `parallel_recognition.workers`: process count (default: `4`)
+- `parallel_recognition.enabled`: master switch (default: `true`)
+- `parallel_recognition.workers`: process count (default: `6`, fixed; only clamped to CPU core count as a safety cap)
 - `parallel_recognition.chunk_size`: photos per task batch (default: `12`)
 - `parallel_recognition.min_photos`: enable threshold (default: `30`)
   - If classroom photo count < `min_photos`, the app falls back to serial mode for stability.
@@ -87,11 +101,14 @@ Parallel recognition uses multiprocessing to leverage multiple CPU cores. It is 
 - **Temporary**: `SUNDAY_PHOTOS_PARALLEL=1 python run.py`
 - **Persistent**: Set `parallel_recognition.enabled: true` in `config.json`
 
+Debug tip:
+- `SUNDAY_PHOTOS_PARALLEL_MIN_PHOTOS=0` forces parallel even for small batches (generally not recommended).
+
 Force serial mode (troubleshooting):
 - CLI: `python run.py --no-parallel`
 - Env var: `SUNDAY_PHOTOS_NO_PARALLEL=1`
 
-### 3.5 Cache & incremental refresh (force full rerun)
+### 3.6 Cache & incremental refresh (force full rerun)
 
 By default, snapshots and caches speed up repeat runs. If you suspect “new photos were not processed” or want a full rerun:
 - Remove incremental/cache traces under `output/.state/` (snapshot) and any per-date caches (if present), then run again.

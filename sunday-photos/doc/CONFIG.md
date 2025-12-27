@@ -1,7 +1,7 @@
 # 配置说明（config.json）
 
 **版本**: v0.4.0  
-**更新日期**: 2025-12-23
+**更新日期**: 2025-12-26
 
 本项目使用 `config.json` 作为默认配置文件，支持默认配置直接运行（会自动生成默认配置）。
 
@@ -16,6 +16,7 @@
 补充：
 - 环境变量 `SUNDAY_PHOTOS_NO_PARALLEL=1`（或 `true`/`yes`）会强制禁用并行识别（用于排障或低内存环境）
 - 环境变量 `SUNDAY_PHOTOS_PARALLEL=1` 可临时启用并行识别（无需修改配置文件）
+ - 环境变量 `SUNDAY_PHOTOS_FACE_BACKEND=insightface|dlib` 可临时切换人脸识别后端（优先级高于 config.json）
 
 ## 2. 为什么 config.json 里有“注释字段”
 
@@ -59,7 +60,22 @@
 
 说明：推荐使用顶层 `min_face_size`。历史配置里可能出现 `face_recognition.min_face_size`，程序也会兼容读取（当未显式设置顶层 `min_face_size` 时生效）。
 
-### 3.3 未知人脸聚类（🆕 v0.4.0）
+### 3.3 人脸识别后端（face_backend）
+
+默认后端为 **InsightFace（推荐）**，同时支持回退到 **dlib/face_recognition**（需要你自行安装对应依赖）。
+
+- `face_backend.engine`：后端引擎选择
+  - `insightface`（默认）：更适合复杂/多人/角度变化场景；embedding 常见为 512 维
+  - `dlib`：兼容旧的 `face_recognition/dlib`；embedding 常见为 128 维
+
+优先级：若设置了环境变量 `SUNDAY_PHOTOS_FACE_BACKEND`，则会覆盖 `config.json`。
+
+**重要（缓存隔离）**：参考照编码缓存会按“后端/模型”分目录保存，避免不同后端的维度混用导致报错：
+
+- 参考照缓存：`{input_dir}/logs/reference_encodings/<engine>/<model>/`
+- 参考照快照：`{input_dir}/logs/reference_index/<engine>/<model>.json`
+
+### 3.4 未知人脸聚类（🆕 v0.4.0）
 
 **新功能**：自动将相似的未知人脸归为一组，便于管理访客、家长、新学生。
 
@@ -91,17 +107,17 @@ output/
 - **新学生识别**：经常出现的未知人脸可能是新学生
 - **志愿者追踪**：定期参与的志愿者照片集中管理
 
-### 3.4 并行识别（parallel_recognition）
+### 3.5 并行识别（parallel_recognition）
 
-并行识别通过多进程利用多核 CPU 提升速度，适合“课堂照数量很多”的场景。当前默认关闭，满足低配机器与最简使用；当需要加速大批量照片时可开启。
+并行识别通过多进程利用多核 CPU 提升速度，适合“课堂照数量很多”的场景。
 
-**智能决策**：程序会根据实际情况自动选择最优模式：
-- 当待识别照片 ≥ 50张且未开启并行时，会提示建议开启并预计节省时间
-- 当照片数 < `min_photos` 时，自动使用串行（小批量更稳定）
+当前策略（更稳定、口径更清晰）：
+- 小批量（照片数 < `min_photos`）默认回退串行（减少进程启动开销，调试也更直观）
+- 大批量（照片数 ≥ `min_photos`）启用并行
 - 并行识别异常时自动回退串行，保证流程不中断
 
-- `parallel_recognition.enabled`：是否允许启用并行（默认 `false`）
-- `parallel_recognition.workers`：并行进程数（默认 `4`）
+- `parallel_recognition.enabled`：是否允许启用并行（默认 `true`）
+- `parallel_recognition.workers`：并行进程数（默认 `6`，固定不做“智能拉高”，仅做不超过 CPU 核心数的上限保护）
 - `parallel_recognition.chunk_size`：每批次分发给 worker 的照片数量（默认 `12`）
 - `parallel_recognition.min_photos`：启用阈值（默认 `30`）
   - 当课堂照数量 < `min_photos` 时，自动回退串行（小批量更稳定）
@@ -110,7 +126,10 @@ output/
 - **临时启用**：`SUNDAY_PHOTOS_PARALLEL=1 python run.py`
 - **持久配置**：在 `config.json` 中设置 `parallel_recognition.enabled: true`
 
-### 3.5 缓存与增量刷新（强制全量重跑）
+调试技巧：
+- `SUNDAY_PHOTOS_PARALLEL_MIN_PHOTOS=0` 可在调试时强制“小批量也走并行”（默认建议不要开）
+
+### 3.6 缓存与增量刷新（强制全量重跑）
 
 默认情况下，程序会使用快照与缓存加速重复运行。若发现“新增照片未被处理”或想强制全量重跑，可选择：
 - 删除输出目录下的增量/缓存痕迹：`output/.state/`（增量快照 + 按日期缓存 `recognition_cache_by_date/*.json`）；然后重新运行。

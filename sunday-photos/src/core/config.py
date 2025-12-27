@@ -46,8 +46,8 @@ LOW_CONFIDENCE_THRESHOLD = 0.5    # 低置信度阈值
 
 # 并行识别默认配置
 DEFAULT_PARALLEL_RECOGNITION = {
-	"enabled": False,
-	"workers": 4,
+	"enabled": True,
+	"workers": 6,
 	"chunk_size": 12,
 	"min_photos": 30,
 }

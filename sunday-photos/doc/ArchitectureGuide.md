@@ -240,15 +240,17 @@ save_date_cache_atomic(output_dir, "2024-01-01", cache)
 
 ---
 
-### 2.4 智能并行识别（parallel_recognizer）
+### 2.4 可控并行识别（parallel_recognizer）
 
 **位置**: [src/core/parallel_recognizer.py](src/core/parallel_recognizer.py)
 
-**决策逻辑**:
-1. **强制禁用**: `SUNDAY_PHOTOS_NO_PARALLEL=1` → 串行
-2. **强制启用**: `SUNDAY_PHOTOS_PARALLEL=1` → 并行（如果 ≥30 张）
-3. **配置文件**: `config.json` 中 `parallel_recognition.enabled`
-4. **智能提示**: ≥50 张时提示可加速
+**决策逻辑**（无“智能拉高”，行为可预测）：
+1. **强制禁用**：`SUNDAY_PHOTOS_NO_PARALLEL=1` → 串行
+2. **强制启用**：`SUNDAY_PHOTOS_PARALLEL=1` → 允许并行（仍受 `min_photos/workers` 约束；可用 `SUNDAY_PHOTOS_PARALLEL_MIN_PHOTOS` 调整阈值）
+3. **配置文件**：`config.json` → `parallel_recognition.enabled/min_photos/workers/chunk_size`
+  - 默认：`enabled=true`，`workers=6`，`min_photos=30`
+  - `workers` 会被限制为不超过 CPU 核心数
+4. **提示信息**：当 `enabled=false` 且待识别照片较多（例如 ≥50）时，仅通过日志提示“可开启并行”，不做交互式询问
 
 **核心函数**:
 - `init_worker()`: 子进程初始化器（缓存已知编码）
@@ -276,7 +278,9 @@ with Pool(
 
 # 结果格式：[(path1, details1), (path2, details2), ...]
 
-  ### 2.5 异常与错误语义（跨模块约定）
+```
+
+### 2.5 异常与错误语义（跨模块约定）
 
   - **输入/输出类错误**：目录不存在、无写权限 → 向上抛出异常，由 CLI 捕获并输出面向老师的提示；记录致命 error 日志。
   - **单文件/单日期故障**：图片损坏、单日快照损坏 → 记录 warning，跳过当前文件/日期，继续其他任务。
@@ -465,21 +469,21 @@ except Exception as e:
 
 ---
 
-### ADR-003: 为何默认禁用并行识别？
+### ADR-003: 为何默认启用并行识别？
 
-**背景**: 并行识别在低配机器可能失败
+**背景**: 老师常处理 30+ 张批量照片，多核并行可显著减少总耗时
 
-**决策**: 默认 `enabled: false`，提供环境变量快速启用
+**决策**: 默认 `enabled: true`，采用保守默认值（`workers=6`、`min_photos=30`），并提供一行强制禁用用于排障
 
 **优点**:
-- 兼容低内存环境
-- 避免新手困惑
-- 提供智能提示引导启用
+- 常见多核机器默认更快
+- 行为可预期（固定默认 workers，不做“智能拉高”）
+- 排障简单：`SUNDAY_PHOTOS_NO_PARALLEL=1`
 
 **缺点**:
-- 大批量场景初次使用较慢
+- 低内存/老旧机器在并行模式下可能更不稳定，需要手动禁用
 
-**结论**: 稳定性优先，通过提示教育用户
+**结论**: 默认提升体验，同时保留低成本“逃生开关”
 
 ---
 
@@ -515,8 +519,8 @@ except Exception as e:
 ### 6.1 识别性能
 
 **瓶颈**:
-- `face_recognition.face_encodings()` (CPU 密集)
-- `face_recognition.compare_faces()` (距离计算)
+- 人脸编码/embedding 生成（不同后端实现不同：InsightFace 推理或 dlib/face_recognition 编码）
+- 距离计算与最佳匹配（对每张人脸与已知库做比较）
 
 **优化方向**:
 - 启用并行识别（多核机器通常更快；以实际运行结果为准）

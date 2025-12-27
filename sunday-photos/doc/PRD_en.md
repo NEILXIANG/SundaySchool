@@ -21,7 +21,7 @@
 ### Core Features
 | Module              | Description |
 |---------------------|-------------|
-| Face Recognition    | Use `face_recognition` to classify students in group photos. |
+| Face Recognition    | Default: **InsightFace** (CPU) for face detection/embeddings; optional fallback: `face_recognition/dlib` via config/env. |
 | File Organizer      | Store photos by student name and date. |
 | Config Management   | Load paths, tolerance, and params from `config.json`. |
 | Logging             | Record run status and errors; filter by level (DEBUG/INFO/ERROR). |
@@ -35,6 +35,10 @@ python run.py \
 
 # troubleshooting
 python run.py --no-parallel  # force serial mode
+
+# switch backend (advanced)
+SUNDAY_PHOTOS_FACE_BACKEND=insightface python run.py  # default
+SUNDAY_PHOTOS_FACE_BACKEND=dlib python run.py        # optional
 ```
 
 ---
@@ -96,18 +100,29 @@ output/
     "min_cluster_size": 2
   },
   "parallel_recognition": {
-    "enabled": false,
-    "workers": 4,
+    "enabled": true,
+    "workers": 6,
     "chunk_size": 12,
     "min_photos": 30
+  },
+  "face_backend": {
+    "engine": "insightface"
   }
 }
 ```
 
 ### Dependencies (see requirements.txt)
-- face_recognition>=1.3.0
-- Pillow>=10.3.0
-- numpy>=1.26.0
+- insightface
+- onnxruntime
+- opencv-python-headless
+- Pillow
+- numpy
+- tqdm
+- requests
+
+Optional (only if you select `dlib` backend):
+- face_recognition
+- dlib
 
 ---
 

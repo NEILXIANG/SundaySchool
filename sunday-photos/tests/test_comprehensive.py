@@ -236,8 +236,8 @@ class TestComprehensive(unittest.TestCase):
 
     def test_memory_error_handling(self):
         """测试内存不足时的处理"""
-        # 模拟 face_recognition 加载图片时内存不足
-        with patch('face_recognition.load_image_file', side_effect=MemoryError("Out of memory")):
+        # 模拟加载图片时内存不足（InsightFace 版本在 FaceRecognizer._load_image_with_exif_fix 处统一入口）
+        with patch('src.core.face_recognizer.FaceRecognizer._load_image_with_exif_fix', side_effect=MemoryError("Out of memory")):
             # 创建一个学生和照片
             sd = Path(self.student_photos_dir) / 'StudentA'
             sd.mkdir(parents=True, exist_ok=True)

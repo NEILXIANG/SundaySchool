@@ -1,0 +1,36 @@
+Teacher Quick Start (macOS / Windows)
+
+Only 3 steps:
+1) Unzip
+2) Put photos into input
+3) Run, then check output
+
+Step 1: Unzip
+- Download and unzip to Desktop (recommended)
+
+Step 2: Put photos into input
+- input/student_photos/: student reference photos (1–5 per student; clear frontal face is best)
+- input/class_photos/: class/event photos (all photos to organize)
+
+Examples:
+- input/student_photos/Alice_1.jpg
+- input/student_photos/Alice_2.jpg
+- input/student_photos/Bob_1.jpg
+- input/class_photos/2025-12-25_Event_001.jpg
+
+Step 3: Run (single entrypoint)
+- macOS: double-click SundayPhotoOrganizer (or 启动工具.sh)
+- Windows: double-click Launch_SundayPhotoOrganizer.bat
+- A black window shows progress; do not close it
+
+Where are the results?
+- output/: organized results
+- logs/: logs (if any issue, send the whole logs folder)
+
+macOS security prompt (can’t be opened / developer cannot be verified)
+- System Settings → Privacy & Security → find the blocked app message → Open Anyway → open again
+- Or: right click SundayPhotoOrganizer → Open → confirm
+
+If something goes wrong, send:
+1) the whole logs/ folder
+2) a screenshot of the error

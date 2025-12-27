@@ -5,47 +5,267 @@
 
 import os
 import logging
+import warnings
 import numpy as np
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 from .config import DEFAULT_TOLERANCE, MIN_FACE_SIZE
 
+# InsightFace 的部分依赖（如 albumentations）在导入时可能尝试联网检查版本，离线/打包环境会产生噪声警告。
+# 注意：该 warning 的 message 可能以换行开头，因此用 \s* 兼容。
+warnings.filterwarnings("ignore", message=r"\s*Error fetching version info.*")
 
 try:
-    import face_recognition  # type: ignore
+    from insightface.app import FaceAnalysis  # type: ignore
 except Exception as e:  # pragma: no cover
-    _FACE_RECOGNITION_IMPORT_ERROR = e
+    _INSIGHTFACE_IMPORT_ERROR = e
+    FaceAnalysis = None  # type: ignore
 
-    class _FaceRecognitionStub:
-        """当 face_recognition 未安装时的占位实现。
 
-        说明：
-        - 生产环境必须安装 face_recognition。
-        - 单元测试可通过 mock/patch 这些方法来避免真实依赖。
-        """
+def _normalize_face_backend_engine(raw: str) -> str:
+    v = (raw or "").strip().lower()
+    if v in ("insightface", "insight", "arcface"):
+        return "insightface"
+    if v in ("dlib", "face_recognition", "facerecognition"):
+        return "dlib"
+    return "insightface"
 
-        def _raise(self):
+
+def _get_selected_face_backend_engine() -> str:
+    return _normalize_face_backend_engine(os.environ.get("SUNDAY_PHOTOS_FACE_BACKEND", ""))
+
+
+def _safe_key(s: str) -> str:
+    out = []
+    for ch in (s or ""):
+        if ch.isalnum() or ch in ("-", "_"):
+            out.append(ch)
+        else:
+            out.append("_")
+    v = "".join(out).strip("_")
+    return v or "default"
+
+
+def _cosine_distance(a: np.ndarray, b: np.ndarray) -> float:
+    """Cosine distance in [0, 2]. Smaller is more similar."""
+    a = np.asarray(a, dtype=np.float32)
+    b = np.asarray(b, dtype=np.float32)
+    an = float(np.linalg.norm(a) + 1e-12)
+    bn = float(np.linalg.norm(b) + 1e-12)
+    return float(1.0 - (np.dot(a, b) / (an * bn)))
+
+
+def _normalize(v: np.ndarray) -> np.ndarray:
+    v = np.asarray(v, dtype=np.float32)
+    n = float(np.linalg.norm(v) + 1e-12)
+    return v / n
+
+
+class _InsightFaceCompat:
+    """A minimal face_recognition-like API backed by InsightFace.
+
+    目标：尽量不改动上层业务逻辑，保持 FaceRecognizer 的对外行为。
+    """
+
+    def __init__(self) -> None:
+        if FaceAnalysis is None:
             raise ModuleNotFoundError(
-                "未安装 face_recognition（人脸识别依赖）。请先安装 requirements.txt 中的依赖。"
-            ) from _FACE_RECOGNITION_IMPORT_ERROR
+                "未安装 InsightFace（人脸识别依赖）。请先安装 requirements.txt 中的依赖。"
+            ) from _INSIGHTFACE_IMPORT_ERROR
+        self._app = None
 
-        def load_image_file(self, *args, **kwargs):
-            self._raise()
+    def _get_app(self):
+        if self._app is not None:
+            return self._app
 
-        def face_locations(self, *args, **kwargs):
-            self._raise()
+        # Model storage:
+        # - Default: ~/.insightface
+        # - Optional override via env for portable/offline deployments
+        model_root = os.environ.get("SUNDAY_PHOTOS_INSIGHTFACE_HOME", "").strip() or None
+        model_name = os.environ.get("SUNDAY_PHOTOS_INSIGHTFACE_MODEL", "").strip() or "buffalo_l"
 
-        def face_encodings(self, *args, **kwargs):
-            self._raise()
+        # 注意：InsightFace 的 FaceAnalysis 不接受 root=None（会触发 TypeError）。
+        # - 未提供 override 时，直接省略 root 参数，让其使用默认 ~/.insightface。
+        if model_root is None:
+            app = FaceAnalysis(name=model_name, providers=["CPUExecutionProvider"])
+        else:
+            app = FaceAnalysis(name=model_name, root=model_root, providers=["CPUExecutionProvider"])
+        # det_size affects detection quality/speed; keep a sensible default.
+        app.prepare(ctx_id=0, det_size=(640, 640))
+        self._app = app
+        return app
 
-        def compare_faces(self, *args, **kwargs):
-            self._raise()
+    def load_image_file(self, image_path: str):
+        # Keep behavior consistent: return RGB ndarray
+        try:
+            from PIL import Image, ImageOps
 
-        def face_distance(self, *args, **kwargs):
-            self._raise()
+            with Image.open(image_path) as im:
+                im = ImageOps.exif_transpose(im)
+                im = im.convert("RGB")
+                return np.asarray(im)
+        except Exception as e:
+            # Mirror previous behavior: bubble up for caller to handle
+            raise
 
-    face_recognition = _FaceRecognitionStub()  # type: ignore
+    def _detect(self, image_rgb: np.ndarray):
+        app = self._get_app()
+        # InsightFace expects BGR
+        image_bgr = image_rgb[:, :, ::-1]
+        faces = app.get(image_bgr) or []
+        return faces
+
+    def face_locations(self, image, *args, **kwargs):
+        faces = self._detect(np.asarray(image))
+        locs = []
+        for f in faces:
+            try:
+                x1, y1, x2, y2 = f.bbox
+                top = int(round(y1))
+                right = int(round(x2))
+                bottom = int(round(y2))
+                left = int(round(x1))
+                locs.append((top, right, bottom, left))
+            except Exception:
+                continue
+        return locs
+
+    def face_encodings(self, image, face_locations=None, *args, **kwargs):
+        faces = self._detect(np.asarray(image))
+        if not faces:
+            return []
+
+        # Map requested locations to nearest detected bbox (stable enough for our usage).
+        requested = list(face_locations or [])
+        if not requested:
+            requested = []
+            for f in faces:
+                x1, y1, x2, y2 = f.bbox
+                requested.append((int(round(y1)), int(round(x2)), int(round(y2)), int(round(x1))))
+
+        encs = []
+        det_boxes = []
+        for f in faces:
+            x1, y1, x2, y2 = f.bbox
+            det_boxes.append((int(round(y1)), int(round(x2)), int(round(y2)), int(round(x1)), f))
+
+        for (top, right, bottom, left) in requested:
+            best = None
+            best_score = None
+            for (dt, dr, db, dl, f) in det_boxes:
+                score = abs(dt - top) + abs(dr - right) + abs(db - bottom) + abs(dl - left)
+                if best_score is None or score < best_score:
+                    best_score = score
+                    best = f
+            if best is None:
+                continue
+            try:
+                encs.append(_normalize(best.embedding))
+            except Exception:
+                continue
+        return encs
+
+    def face_distance(self, known_encodings, face_encoding):
+        if known_encodings is None:
+            return np.asarray([], dtype=np.float32)
+        fe = np.asarray(face_encoding, dtype=np.float32).reshape(-1)
+        out = []
+        for ke in known_encodings:
+            ke_arr = np.asarray(ke, dtype=np.float32).reshape(-1)
+            # 兼容旧缓存（dlib/face_recognition 常见为 128 维；InsightFace 常见为 512 维）。
+            # 维度不一致时，返回最大距离，避免崩溃并确保不会误匹配。
+            if ke_arr.shape != fe.shape:
+                out.append(2.0)
+                continue
+            out.append(_cosine_distance(ke_arr, fe))
+        return np.asarray(out, dtype=np.float32)
+
+    def compare_faces(self, known_encodings, face_encoding, tolerance=0.6):
+        d = self.face_distance(known_encodings, face_encoding)
+        tol = float(tolerance)
+        return [bool(x <= tol) for x in d.tolist()]
+
+
+class _DlibFaceRecognitionCompat:
+    """A minimal face_recognition-like API backed by face_recognition/dlib."""
+
+    def __init__(self) -> None:
+        try:
+            import face_recognition as fr  # type: ignore
+        except Exception as e:  # pragma: no cover
+            raise ModuleNotFoundError(
+                "未安装 face_recognition/dlib（人脸识别后端）。如需使用 dlib 后端，请先安装 face_recognition 与 dlib。"
+            ) from e
+        self._fr = fr
+
+    def load_image_file(self, image_path: str):
+        # 统一行为：返回 RGB ndarray，并处理 EXIF 方向
+        try:
+            from PIL import Image, ImageOps
+
+            with Image.open(image_path) as im:
+                im = ImageOps.exif_transpose(im)
+                im = im.convert("RGB")
+                return np.asarray(im)
+        except Exception:
+            # 回退到 face_recognition 自带实现
+            return self._fr.load_image_file(image_path)
+
+    def face_locations(self, image, number_of_times_to_upsample=0, model="hog"):
+        try:
+            return self._fr.face_locations(
+                image,
+                number_of_times_to_upsample=number_of_times_to_upsample,
+                model=model,
+            )
+        except TypeError:
+            # 兼容旧签名
+            return self._fr.face_locations(image)
+
+    def face_encodings(self, image, face_locations=None, *args, **kwargs):
+        try:
+            return self._fr.face_encodings(image, known_face_locations=face_locations)
+        except TypeError:
+            # 兼容旧签名
+            return self._fr.face_encodings(image, face_locations)
+
+    def face_distance(self, known_encodings, face_encoding):
+        return self._fr.face_distance(known_encodings, face_encoding)
+
+    def compare_faces(self, known_encodings, face_encoding, tolerance=0.6):
+        return self._fr.compare_faces(known_encodings, face_encoding, tolerance=tolerance)
+
+
+def _get_backend_model_name(engine: str) -> str:
+    if engine == "insightface":
+        return os.environ.get("SUNDAY_PHOTOS_INSIGHTFACE_MODEL", "").strip() or "buffalo_l"
+    return "face_recognition"
+
+
+def _get_backend_embedding_dim(engine: str) -> int:
+    # 约定：InsightFace ArcFace embedding 常见 512 维；dlib/face_recognition 常见 128 维。
+    return 512 if engine == "insightface" else 128
+
+
+_FACE_BACKEND_INIT_ERROR: Exception | None = None
+
+
+def _init_face_backend():
+    global _FACE_BACKEND_INIT_ERROR
+    engine = _get_selected_face_backend_engine()
+    try:
+        if engine == "dlib":
+            return _DlibFaceRecognitionCompat()
+        return _InsightFaceCompat()
+    except Exception as e:  # pragma: no cover
+        _FACE_BACKEND_INIT_ERROR = e
+        return None
+
+
+# Module-level singleton (acts like the old face_recognition module variable)
+face_recognition = _init_face_backend()  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -72,13 +292,82 @@ class FaceRecognizer:
         self.known_student_names = []
         self.known_encodings = []
 
+        # 后端选择（用于缓存隔离与兼容判断）
+        self._backend_engine = _get_selected_face_backend_engine()
+        self._backend_model = _get_backend_model_name(self._backend_engine)
+        self._backend_embedding_dim = _get_backend_embedding_dim(self._backend_engine)
+
         # 参考照增量缓存（提升速度 + 支持增删 diff）
         self._ref_cache_dir = self._resolve_ref_cache_dir()
         self._ref_snapshot_path = self._resolve_ref_snapshot_path()
         self.reference_fingerprint = ""  # 用于识别缓存失效（参考照变化即变化）
+
+        if face_recognition is None:  # pragma: no cover
+            engine = self._backend_engine
+            if engine == "dlib":
+                msg = (
+                    "人脸识别后端(dlib/face_recognition)依赖未就绪。"
+                    "如需使用 dlib 后端，请先安装 face_recognition 与 dlib，"
+                    "或将 SUNDAY_PHOTOS_FACE_BACKEND 设置为 insightface。"
+                )
+            else:
+                msg = (
+                    "人脸识别后端(InsightFace)依赖未就绪。请先安装 requirements.txt 并确保可导入 insightface/onnxruntime。"
+                )
+            if _FACE_BACKEND_INIT_ERROR is not None:
+                raise ModuleNotFoundError(msg) from _FACE_BACKEND_INIT_ERROR
+            raise ModuleNotFoundError(msg)
         
         # 加载所有学生的面部编码
         self.load_student_encodings()
+
+    def _load_image_with_exif_fix(self, image_path: str):
+        """加载图片并尽量修正 EXIF 方向。
+
+        说明：不少手机照片“视觉上是正的”，但实际像素是旋转的，方向信息写在 EXIF 里。
+        dlib/face_recognition 的检测是基于像素数组的；如果不先转正，可能会出现“有脸但检测不到”。
+        """
+
+        # 为了可测试性：统一委托给 face_recognition.load_image_file。
+        # InsightFace 兼容层内部已处理 EXIF 转正与 RGB 输出。
+        return face_recognition.load_image_file(image_path)
+
+    def _face_locations_for_reference(self, image):
+        """参考照的人脸检测策略：更偏向“尽量找出来”，允许更慢一点。
+
+        参考照数量通常较少；提高参考照编码成功率比节省这几秒更重要。
+        """
+
+        # 1) 默认（hog + upsample=0）
+        try:
+            locs = face_recognition.face_locations(image)
+        except TypeError:
+            # 兼容极老版本签名
+            locs = face_recognition.face_locations(image)
+
+        if locs:
+            return locs
+
+        # 2) 放大再找（对小脸/远景更有效）
+        try:
+            locs = face_recognition.face_locations(image, number_of_times_to_upsample=1)
+            if locs:
+                return locs
+            locs = face_recognition.face_locations(image, number_of_times_to_upsample=2)
+            if locs:
+                return locs
+        except TypeError:
+            pass
+
+        # 3) 最后回退：cnn（更准但更慢；只用于参考照阶段）
+        try:
+            locs = face_recognition.face_locations(image, number_of_times_to_upsample=1, model="cnn")
+            if locs:
+                return locs
+        except Exception:
+            pass
+
+        return []
 
     def _resolve_ref_cache_dir(self) -> Path:
         """参考照编码缓存目录（跟随 input_dir/logs，打包版也可用）。"""
@@ -86,7 +375,9 @@ class FaceRecognizer:
             input_dir = Path(getattr(self.student_manager, 'input_dir'))
         except Exception:
             input_dir = Path(".")
-        d = input_dir / "logs" / "reference_encodings"
+        engine = _safe_key(getattr(self, "_backend_engine", _get_selected_face_backend_engine()))
+        model = _safe_key(getattr(self, "_backend_model", _get_backend_model_name(_get_selected_face_backend_engine())))
+        d = input_dir / "logs" / "reference_encodings" / engine / model
         try:
             d.mkdir(parents=True, exist_ok=True)
         except Exception:
@@ -99,7 +390,9 @@ class FaceRecognizer:
             input_dir = Path(getattr(self.student_manager, 'input_dir'))
         except Exception:
             input_dir = Path(".")
-        p = input_dir / "logs" / "reference_index.json"
+        engine = _safe_key(getattr(self, "_backend_engine", _get_selected_face_backend_engine()))
+        model = _safe_key(getattr(self, "_backend_model", _get_backend_model_name(_get_selected_face_backend_engine())))
+        p = input_dir / "logs" / "reference_index" / engine / f"{model}.json"
         return p
 
     def _load_ref_snapshot(self) -> dict:
@@ -162,23 +455,55 @@ class FaceRecognizer:
         loaded_count = 0
         failed_count = 0
 
+        # 参考照编码缓存兼容：
+        # - 旧版本可能来自 face_recognition/dlib（128 维）
+        # - 新版本改用 InsightFace（常见 512 维）
+        # 若 snapshot 缺少引擎元信息或 embedding_dim 不一致，则视为“引擎升级”，自动失效并重建缓存。
         prev = self._load_ref_snapshot()
+
+        current_engine = getattr(self, "_backend_engine", _get_selected_face_backend_engine())
+        current_model = getattr(self, "_backend_model", _get_backend_model_name(current_engine))
+        current_embedding_dim = int(getattr(self, "_backend_embedding_dim", _get_backend_embedding_dim(current_engine)))
+
+        prev_engine = str(prev.get("engine") or "").strip()
+        prev_model = str(prev.get("engine_model") or "").strip()
+        prev_dim_raw = prev.get("embedding_dim")
+        try:
+            prev_dim = int(prev_dim_raw) if prev_dim_raw is not None else None
+        except Exception:
+            prev_dim = None
+
+        cache_compatible = (
+            prev.get("version") == 2
+            and prev_engine == current_engine
+            and prev_model == current_model
+            and prev_dim == current_embedding_dim
+        )
+
         prev_items_by_rel: dict[str, dict] = {}
-        for student_name, items in (prev.get('students') or {}).items():
-            if not isinstance(items, list):
-                continue
-            for it in items:
-                rel = it.get('rel_path')
-                if isinstance(rel, str):
-                    prev_items_by_rel[rel] = it
+        if cache_compatible:
+            for student_name, items in (prev.get('students') or {}).items():
+                if not isinstance(items, list):
+                    continue
+                for it in items:
+                    rel = it.get('rel_path')
+                    if isinstance(rel, str):
+                        prev_items_by_rel[rel] = it
 
         next_snapshot: dict = {
-            'version': 1,
+            'version': 2,
             'mode': 'student_folder_only',
             'max_photos_per_student': 5,
+            'engine': current_engine,
+            'engine_model': current_model,
+            'embedding_dim': current_embedding_dim,
             'students': {},
         }
         selected_for_fingerprint: list[dict] = []
+
+        # 汇总：参考照中“检测不到人脸/异常”的文件清单，便于老师快速替换
+        no_face_by_student: dict[str, list[str]] = {}
+        error_by_student: dict[str, list[str]] = {}
         
         for student_info in students:
             student_name = student_info.get('name', '')
@@ -233,18 +558,23 @@ class FaceRecognizer:
                     if status in ('no_face', 'error'):
                         # 未变化的失败参考照：直接沿用失败状态，避免重复计算
                         student_items.append({'rel_path': rel, 'mtime': mtime, 'size': size, 'status': str(status)})
+                        if status == 'no_face':
+                            no_face_by_student.setdefault(student_name, []).append(rel)
+                        elif status == 'error':
+                            error_by_student.setdefault(student_name, []).append(rel)
                         continue
 
                 image = None
                 face_locations = None
 
                 try:
-                    image = face_recognition.load_image_file(photo_path)
-                    face_locations = face_recognition.face_locations(image)
+                    image = self._load_image_with_exif_fix(photo_path)
+                    face_locations = self._face_locations_for_reference(image)
 
                     if not face_locations:
                         logger.warning(f"在照片中未检测到人脸: {photo_path}")
                         student_items.append({'rel_path': rel, 'mtime': mtime, 'size': size, 'status': 'no_face'})
+                        no_face_by_student.setdefault(student_name, []).append(rel)
                         if image is not None:
                             del image
                         if face_locations is not None:
@@ -271,6 +601,7 @@ class FaceRecognizer:
                         "请关闭其他程序或分批处理照片后重试。"
                     )
                     student_items.append({'rel_path': rel, 'mtime': mtime, 'size': size, 'status': 'error', 'error': 'memory'})
+                    error_by_student.setdefault(student_name, []).append(rel)
                     if image is not None:
                         del image
                     if face_locations is not None:
@@ -280,6 +611,7 @@ class FaceRecognizer:
                 except Exception as e:
                     logger.error(f"加载学生 {student_name} 的照片 {photo_path} 失败: {str(e)}")
                     student_items.append({'rel_path': rel, 'mtime': mtime, 'size': size, 'status': 'error', 'error': str(e)[:120]})
+                    error_by_student.setdefault(student_name, []).append(rel)
                     if image is not None:
                         del image
                     if face_locations is not None:
@@ -301,6 +633,45 @@ class FaceRecognizer:
                 loaded_count += 1
             else:
                 failed_count += 1
+
+            # 参考照失败汇总提示：
+            # - 无编码：WARNING（会显著影响该学生识别准确率）
+            # - 有编码但部分失败：INFO（给出替换/裁剪建议）
+            no_face_list = no_face_by_student.get(student_name, [])
+            err_list = error_by_student.get(student_name, [])
+            if (not encodings) or no_face_list or err_list:
+                def _fmt(items: list[str]) -> str:
+                    shown = items[:5]
+                    suffix = "" if len(items) <= 5 else f" ...（还有 {len(items) - 5} 张）"
+                    if not shown:
+                        return ""
+                    return "\n".join([f"    - {p}" for p in shown]) + suffix
+
+                if not encodings:
+                    header = (
+                        f"学生 {student_name} 没有生成任何可用的人脸编码：该学生在课堂照中将更容易被误识别或进入 unknown。"
+                    )
+                else:
+                    header = (
+                        f"学生 {student_name} 的参考照部分不可用：成功编码 {len(encodings)} 张；"
+                        f"检测不到人脸 {len(no_face_list)} 张；读取/编码异常 {len(err_list)} 张。"
+                    )
+
+                msg_lines = [
+                    header,
+                    "建议：为该学生补 3–5 张清晰、单人、正脸、无遮挡的近照（尽量与课堂照年代接近）；避免侧脸/模糊/滤镜重/脸太小。",
+                ]
+                if no_face_list:
+                    msg_lines.append("以下参考照检测不到人脸（优先替换/裁剪成单人正脸）：")
+                    msg_lines.append(_fmt(no_face_list))
+                if err_list:
+                    msg_lines.append("以下参考照读取/编码异常（可尝试重新导出为 JPG/PNG 后替换）：")
+                    msg_lines.append(_fmt(err_list))
+
+                if not encodings:
+                    logger.warning("\n".join(msg_lines))
+                elif no_face_list or err_list:
+                    logger.info("\n".join(msg_lines))
         
         self._refresh_known_faces()
 
@@ -339,8 +710,8 @@ class FaceRecognizer:
             except Exception:
                 pass
 
-            # 加载图片
-            image = face_recognition.load_image_file(image_path)
+            # 加载图片（修正 EXIF 方向，减少“有脸但检测不到”）
+            image = self._load_image_with_exif_fix(image_path)
             
             # 检测人脸位置
             face_locations = face_recognition.face_locations(image)
@@ -538,7 +909,7 @@ class FaceRecognizer:
                 return 0.0
             
             # 加载图片并识别人脸
-            image = face_recognition.load_image_file(image_path)
+            image = self._load_image_with_exif_fix(image_path)
             face_locations = face_recognition.face_locations(image)
             
             if not face_locations:
@@ -655,7 +1026,7 @@ class FaceRecognizer:
                 pass
             
             # 加载新照片并获取编码
-            image = face_recognition.load_image_file(new_photo_path)
+            image = self._load_image_with_exif_fix(new_photo_path)
             face_locations = face_recognition.face_locations(image)
             
             if not face_locations:

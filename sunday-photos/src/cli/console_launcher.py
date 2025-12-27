@@ -262,8 +262,8 @@ Supported formats: .jpg / .jpeg / .png
             "tolerance": 0.6,
             "min_face_size": 50,
             "parallel_recognition": {
-                "enabled": False,
-                "workers": 4,
+                "enabled": True,
+                "workers": 6,
                 "chunk_size": 12,
                 "min_photos": 30
             },

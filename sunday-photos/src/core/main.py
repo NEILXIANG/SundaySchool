@@ -21,11 +21,12 @@ from tqdm import tqdm
 import shutil
 from typing import Dict, List
 
-# 忽略 face_recognition_models 的 pkg_resources 弃用警告
-warnings.filterwarnings("ignore", category=UserWarning, module='face_recognition_models')
+# 忽略 pkg_resources 弃用警告（不影响运行）
+warnings.filterwarnings("ignore", message=r"pkg_resources is deprecated as an API\.")
 
 from .utils import (
     setup_logger,
+    COLORS,
     is_supported_image_file,
     is_supported_nonempty_image_path,
     get_photo_date,
@@ -177,11 +178,22 @@ class SimplePhotoOrganizer:
                 self.file_organizer = sc.get_file_organizer()
             else:
                 from .student_manager import StudentManager
-                from .face_recognizer import FaceRecognizer
                 from .file_organizer import FileOrganizer
                 self.student_manager = StudentManager(self.input_dir)
-                # 让 min_face_size 可从 config.json 生效（未提供则回退默认值）
+
+                # 让 min_face_size/tolerance/人脸后端可从 config.json 生效（未提供则回退默认值）
                 cfg = self._get_config_loader()
+                try:
+                    engine = str(getattr(cfg, 'get_face_backend_engine')()).strip().lower()
+                except Exception:
+                    engine = "insightface"
+
+                # 通过环境变量向并行子进程传播后端选择（spawn 进程会继承 env）
+                # 若用户手动设置了 env，则尊重用户设置。
+                if not os.environ.get("SUNDAY_PHOTOS_FACE_BACKEND"):
+                    os.environ["SUNDAY_PHOTOS_FACE_BACKEND"] = engine
+
+                from .face_recognizer import FaceRecognizer
                 self.face_recognizer = FaceRecognizer(
                     self.student_manager,
                     tolerance=float(getattr(cfg, 'get_tolerance')()),
@@ -468,8 +480,121 @@ class SimplePhotoOrganizer:
         to_recognize = []
         cache_hit_count = 0
 
-        # 使用进度条显示处理进度
-        with tqdm(total=len(photo_files), desc="识别照片", unit="张") as pbar:
+        # 使用进度条显示处理进度（并行时也要保持“持续在动”的观感）
+        # - dynamic_ncols: 自适应终端宽度
+        # - mininterval: 降低刷新间隔，避免长时间看不到变化
+        # - smoothing: 降低平滑，让速度/剩余时间估计更及时
+        # tqdm 在 n=0 时无法估算 remaining/rate，会显示 "<?, ?张/s>"，老师容易以为是乱码。
+        # 这里做成“两阶段”：预热阶段不显示 rate/remaining；跑出第一张后再切换到完整信息。
+        bar_format_warm = "{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}] {postfix}"
+        bar_format_full = "{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}"
+        with tqdm(
+            total=len(photo_files),
+            desc="[AI] 人脸识别",
+            unit="张",
+            dynamic_ncols=True,
+            mininterval=0.2,
+            smoothing=0.05,
+            bar_format=bar_format_warm,
+        ) as pbar:
+            import time
+
+            # 进度“打点”：定期在日志里播报（不刷屏，但让老师更安心）
+            checkpoint_interval_s = 30.0
+            last_checkpoint_t = time.monotonic()
+            last_checkpoint_n = 0
+            total_target = len(photo_files)
+
+            def _checkpoint_log(prefix: str = "") -> None:
+                nonlocal last_checkpoint_t, last_checkpoint_n
+                now = time.monotonic()
+                if (now - last_checkpoint_t) < checkpoint_interval_s:
+                    return
+                done = int(pbar.n)
+                delta_n = max(0, done - last_checkpoint_n)
+                delta_t = max(1e-6, now - last_checkpoint_t)
+                speed = delta_n / delta_t
+                remaining = max(0, total_target - done)
+                eta_s = int(remaining / speed) if speed > 1e-6 else -1
+
+                if eta_s >= 0:
+                    eta_m = eta_s // 60
+                    eta_r = eta_s % 60
+                    eta_text = f"约 {eta_m:02d}:{eta_r:02d}"
+                else:
+                    eta_text = "估算中"
+
+                self.logger.info(
+                    "%s进度播报：已完成 %d/%d（%.0f%%），当前约 %.2f 张/秒，剩余 %s",
+                    (prefix + " ") if prefix else "",
+                    done,
+                    total_target,
+                    (done / total_target * 100.0) if total_target else 100.0,
+                    speed,
+                    eta_text,
+                )
+
+                last_checkpoint_t = now
+                last_checkpoint_n = done
+            # 右侧状态：不频繁变化（老师更舒服），但提供一个“小图标沿轨道移动”的进度感。
+            # 说明：轨道位置只随进度变化；刷新频率由心跳线程控制，避免一直跳来跳去。
+            last_postfix_t = 0.0
+            postfix_min_interval_s = 1.2
+            mode_phrase = "正在整理中"
+
+            # 颜色与闪烁：更明显但不“吵”。
+            # - 若控制台不支持/用户关闭彩色，则自动降级为纯字符动画。
+            cfg_enable_color = bool(self._get_config_loader().get("enable_color_console", True))
+            use_color = bool(cfg_enable_color and sys.stdout.isatty() and (os.environ.get("NO_COLOR") is None))
+            bold = "\033[1m" if use_color else ""
+            reset = COLORS.get("RESET", "\033[0m") if use_color else ""
+            c1 = COLORS.get("INFO", "") if use_color else ""
+            c2 = COLORS.get("WARNING", "") if use_color else ""
+            c_tail = COLORS.get("DEBUG", "") if use_color else ""
+
+            pulse_frames = [
+                f"{bold}{c1}●{reset}" if use_color else "●",
+                f"{bold}{c2}●{reset}" if use_color else "●",
+            ]
+            tail_char = f"{c_tail}•{reset}" if use_color else "•"
+            pulse_idx = 0
+
+            def _progress_track() -> str:
+                nonlocal pulse_idx
+                track_len = 12
+                if total_target <= 0:
+                    pos = 0
+                else:
+                    pos = int((pbar.n / total_target) * (track_len - 1))
+                    pos = max(0, min(track_len - 1, pos))
+                cells = ["·"] * track_len
+                # 让小图标更“活”：轻微闪烁 + 小尾迹（文案保持稳定，不频繁变化）
+                head = pulse_frames[pulse_idx % len(pulse_frames)]
+                cells[pos] = head
+                if pos - 1 >= 0:
+                    cells[pos - 1] = tail_char
+                return "⟦" + "".join(cells) + "⟧"
+
+            # 初始阶段给更友好的提示（避免 ?张/s 观感）
+            pbar.set_postfix_str(f"{_progress_track()} 准备中（先热热身）", refresh=True)
+
+            full_format_enabled = False
+
+            def _maybe_enable_full_format() -> None:
+                nonlocal full_format_enabled
+                if (not full_format_enabled) and pbar.n > 0:
+                    pbar.bar_format = bar_format_full
+                    full_format_enabled = True
+                    pbar.refresh()
+
+            def _tick_postfix(force: bool = False) -> None:
+                nonlocal last_postfix_t, pulse_idx
+                now = time.monotonic()
+                if (not force) and (now - last_postfix_t) < postfix_min_interval_s:
+                    return
+                last_postfix_t = now
+                pulse_idx += 1
+                pbar.set_postfix_str(f"{_progress_track()} {mode_phrase}", refresh=force)
             # 1) 先尝试从缓存命中（命中则直接分类，不再做识别）
             for photo_path in photo_files:
                 try:
@@ -488,6 +613,9 @@ class SimplePhotoOrganizer:
                         cache_hit_count += 1
                         _apply_result(photo_path, cached)
                         pbar.update(1)
+                        _maybe_enable_full_format()
+                        _tick_postfix()
+                        _checkpoint_log()
                     else:
                         to_recognize.append(photo_path)
                         photo_to_key[photo_path] = key
@@ -497,6 +625,9 @@ class SimplePhotoOrganizer:
                     error_count += 1
                     self.stats['processed_photos'] += 1
                     pbar.update(1)
+                    _maybe_enable_full_format()
+                    _tick_postfix()
+                    _checkpoint_log("处理异常")
 
             # 2) 对未命中的照片做识别：智能决策并行/串行模式
             if to_recognize:
@@ -506,9 +637,11 @@ class SimplePhotoOrganizer:
                 config_enabled = bool(parallel_cfg.get('enabled'))
                 min_photos_threshold = int(parallel_cfg.get('min_photos', 30))
                 photo_count = len(to_recognize)
+                workers = int(parallel_cfg.get('workers', 1))
+                chunk_size = int(parallel_cfg.get('chunk_size', 1))
                 
                 # 智能决策：根据配置、照片数量、系统资源决定是否并行
-                can_parallel = config_enabled and photo_count >= min_photos_threshold
+                can_parallel = config_enabled and photo_count >= min_photos_threshold and workers > 1
                 
                 # 智能提示：给用户性能优化建议
                 if not config_enabled and photo_count >= 50:
@@ -521,26 +654,61 @@ class SimplePhotoOrganizer:
                 elif config_enabled and photo_count < min_photos_threshold:
                     self.logger.info("ℹ️  照片数量(%d张) < 并行阈值(%d张)，使用串行模式（小批量更稳定）", 
                                    photo_count, min_photos_threshold)
+                elif config_enabled and workers <= 1:
+                    self.logger.info("ℹ️  并行已允许但 workers=%d，使用串行模式（workers 需 >=2 才会启用并行）", workers)
 
                 if can_parallel:
+                    self.logger.info(
+                        "🚀 启用并行识别：photos=%d workers=%d chunk_size=%d min_photos=%d",
+                        photo_count,
+                        workers,
+                        chunk_size,
+                        min_photos_threshold,
+                    )
+                    mode_phrase = "加速整理中"
+                    pbar.set_postfix_str(f"{_progress_track()} {mode_phrase}", refresh=True)
+                    self.logger.info("💨 加速模式已开启：会同时处理多张照片（更省时间）")
                     try:
+                        import threading
+
+                        # 心跳线程：即使某些图片耗时较长、主线程在等待并行结果，
+                        # 也能持续刷新 postfix，让老师清楚“程序仍在工作”。
+                        hb_stop = threading.Event()
+
+                        def _hb_loop() -> None:
+                            # 心跳不需要太快，避免“后面经常变化不好”的观感
+                            while not hb_stop.wait(0.8):
+                                _tick_postfix(force=True)
+
+                        hb_thread = threading.Thread(target=_hb_loop, name="progress-heartbeat", daemon=True)
+                        hb_thread.start()
+
                         for photo_path, result in parallel_recognize(
                             to_recognize,
                             known_encodings=getattr(self.face_recognizer, 'known_encodings', []),
                             known_names=getattr(self.face_recognizer, 'known_student_names', []),
                             tolerance=tolerance,
                             min_face_size=min_face_size,
-                            workers=int(parallel_cfg.get('workers', 1)),
-                            chunk_size=int(parallel_cfg.get('chunk_size', 1)),
+                            workers=workers,
+                            chunk_size=chunk_size,
                         ):
                             _apply_result(photo_path, result)
                             key = photo_to_key.get(photo_path)
                             if key is not None:
                                 store_result(date_to_cache[key.date], key, result)
                             pbar.update(1)
+                            _maybe_enable_full_format()
+                            _tick_postfix()
+                            _checkpoint_log("加速模式")
+                        hb_stop.set()
                     except Exception as e:
+                        try:
+                            hb_stop.set()  # type: ignore[name-defined]
+                        except Exception:
+                            pass
                         self.logger.warning(f"并行识别失败，将回退串行识别: {str(e)}")
                         self.logger.debug("并行识别失败详情", exc_info=True)
+                        pbar.set_postfix_str("已回退串行", refresh=False)
                         for photo_path in to_recognize:
                             result = self.face_recognizer.recognize_faces(photo_path, return_details=True)
                             _apply_result(photo_path, result)
@@ -548,7 +716,12 @@ class SimplePhotoOrganizer:
                             if key is not None:
                                 store_result(date_to_cache[key.date], key, result)
                             pbar.update(1)
+                            _maybe_enable_full_format()
+                            _tick_postfix()
+                            _checkpoint_log("回退串行")
                 else:
+                    mode_phrase = "稳稳整理中"
+                    pbar.set_postfix_str(f"{_progress_track()} {mode_phrase}", refresh=True)
                     for photo_path in to_recognize:
                         result = self.face_recognizer.recognize_faces(photo_path, return_details=True)
                         _apply_result(photo_path, result)
@@ -556,8 +729,13 @@ class SimplePhotoOrganizer:
                         if key is not None:
                             store_result(date_to_cache[key.date], key, result)
                         pbar.update(1)
+                        _maybe_enable_full_format()
+                        _tick_postfix()
+                        _checkpoint_log("串行")
             else:
                 self.logger.info(f"✓ 识别缓存命中: {cache_hit_count} 张；待识别: 0 张")
+
+            _tick_postfix(force=True)
 
         # 3) 保存/剪枝日期缓存（仅保存本次涉及到的日期）
         for date, cache in date_to_cache.items():
