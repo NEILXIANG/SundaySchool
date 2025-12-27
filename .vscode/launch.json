@@ -8,6 +8,8 @@
       "python": "${workspaceFolder}/.venv/bin/python",
       "program": "${workspaceFolder}/sunday-photos/run.py",
       "console": "integratedTerminal",
+      "redirectOutput": true,
+      "logToFile": true,
       "cwd": "${workspaceFolder}/sunday-photos",
       "env": {
         "GUIDE_FORCE_AUTO": "1",
@@ -28,6 +30,8 @@
       "python": "${workspaceFolder}/.venv/bin/python",
       "program": "${workspaceFolder}/sunday-photos/run.py",
       "console": "integratedTerminal",
+      "redirectOutput": true,
+      "logToFile": true,
       "cwd": "${workspaceFolder}/sunday-photos",
       "env": {
         "GUIDE_FORCE_AUTO": "1",
@@ -44,6 +48,8 @@
       "python": "${workspaceFolder}/.venv/bin/python",
       "program": "${workspaceFolder}/sunday-photos/src/cli/console_launcher.py",
       "console": "integratedTerminal",
+      "redirectOutput": true,
+      "logToFile": true,
       "cwd": "${workspaceFolder}/sunday-photos",
       "env": {
         "GUIDE_FORCE_AUTO": "1",
