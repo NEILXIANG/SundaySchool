@@ -18,6 +18,38 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+
+def _sanitize_sys_path_for_app_runtime() -> None:
+    """Remove VS Code extension injected site-packages from sys.path.
+
+    Some VS Code extensions prepend their own vendored `tools/site-packages` onto
+    `sys.path` during debugging. Those vendored deps (e.g. pydantic v1) can
+    shadow the project's venv deps (e.g. pydantic v2), causing imports like
+    `insightface` to fail in debug sessions while succeeding in terminals.
+    """
+
+    cleaned: list[str] = []
+    removed: list[str] = []
+    for p in sys.path:
+        ps = str(p)
+        if "/.vscode/extensions/" in ps and "/tools/site-packages" in ps:
+            removed.append(ps)
+            continue
+        cleaned.append(p)
+
+    if removed:
+        sys.path[:] = cleaned
+
+        # Only emit a short message in diagnostic mode to avoid confusing teachers.
+        diag_enabled = os.environ.get("SUNDAY_PHOTOS_DIAG_ENV", "").strip().lower() in ("1", "true", "yes")
+        if diag_enabled:
+            print("🧹 已清理 VS Code 扩展注入的 site-packages 路径:")
+            for ps in removed:
+                print(f"   - {ps}")
+
+
+_sanitize_sys_path_for_app_runtime()
+
 from src.core.config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_TOLERANCE
 
 
