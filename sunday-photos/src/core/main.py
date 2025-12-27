@@ -524,7 +524,8 @@ class SimplePhotoOrganizer:
                 else:
                     eta_text = "估算中"
 
-                self.logger.info(
+                # 进度播报属于“安心提示”，默认不应刷屏到控制台；需要时可调高日志级别查看。
+                self.logger.debug(
                     "%s进度播报：已完成 %d/%d（%.0f%%），当前约 %.2f 张/秒，剩余 %s",
                     (prefix + " ") if prefix else "",
                     done,
@@ -552,9 +553,10 @@ class SimplePhotoOrganizer:
             c2 = COLORS.get("WARNING", "") if use_color else ""
             c_tail = COLORS.get("DEBUG", "") if use_color else ""
 
+            blink = "\033[5m" if use_color else ""
             pulse_frames = [
-                f"{bold}{c1}●{reset}" if use_color else "●",
-                f"{bold}{c2}●{reset}" if use_color else "●",
+                f"{blink}{bold}{c1}●{reset}" if use_color else "●",
+                f"{blink}{bold}{c2}●{reset}" if use_color else "●",
             ]
             tail_char = f"{c_tail}•{reset}" if use_color else "•"
             pulse_idx = 0

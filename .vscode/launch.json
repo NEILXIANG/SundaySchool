@@ -19,8 +19,7 @@
         "--input-dir",
         "${workspaceFolder}/sunday-photos/.debug_work/input",
         "--output-dir",
-        "${workspaceFolder}/sunday-photos/.debug_work/output",
-        "--no-parallel"
+        "${workspaceFolder}/sunday-photos/.debug_work/output"
       ]
     },
     {
