@@ -42,9 +42,13 @@ def _get_backend_engine_from_env_or_config() -> str:
         return _normalize_backend_engine(env_raw)
 
     try:
+        from core import config as core_config
         from core.config_loader import ConfigLoader
 
-        return _normalize_backend_engine(ConfigLoader().get_face_backend_engine())
+        # 显式传入配置路径，避免 ConfigLoader 在 import 时绑定旧的默认常量。
+        return _normalize_backend_engine(
+            ConfigLoader(config_file=core_config.CONFIG_FILE_PATH).get_face_backend_engine()
+        )
     except Exception:
         return "insightface"
 
