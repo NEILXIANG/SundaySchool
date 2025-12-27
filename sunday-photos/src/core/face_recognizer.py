@@ -6,6 +6,8 @@
 import os
 import logging
 import warnings
+import contextlib
+import io
 import numpy as np
 import hashlib
 import json
@@ -80,6 +82,27 @@ class _InsightFaceCompat:
         if self._app is not None:
             return self._app
 
+        # 默认静默 InsightFace/onnxruntime 的模型加载噪声输出（会破坏 tqdm 进度条）。
+        # 需要排障时可设置：SUNDAY_PHOTOS_DIAG_ENV=1
+        diag_enabled = os.environ.get("SUNDAY_PHOTOS_DIAG_ENV", "").strip().lower() in ("1", "true", "yes")
+        quiet_models = os.environ.get("SUNDAY_PHOTOS_QUIET_MODELS", "1").strip().lower() in ("1", "true", "yes")
+        suppress_output = bool(quiet_models and (not diag_enabled))
+
+        # 额外：尽力降低 onnxruntime 的 logger 噪声（不同版本 API/环境变量略有差异）
+        # - ORT_LOG_SEVERITY_LEVEL: 0-4 (verbose/info/warning/error/fatal)
+        # - 我们用 3=error，尽量只保留真正错误
+        if suppress_output:
+            os.environ.setdefault("ORT_LOG_SEVERITY_LEVEL", "3")
+            try:
+                import onnxruntime as ort  # type: ignore
+
+                try:
+                    ort.set_default_logger_severity(3)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
         # Model storage:
         # - Default: ~/.insightface
         # - Optional override via env for portable/offline deployments
@@ -88,12 +111,22 @@ class _InsightFaceCompat:
 
         # 注意：InsightFace 的 FaceAnalysis 不接受 root=None（会触发 TypeError）。
         # - 未提供 override 时，直接省略 root 参数，让其使用默认 ~/.insightface。
-        if model_root is None:
-            app = FaceAnalysis(name=model_name, providers=["CPUExecutionProvider"])
-        else:
-            app = FaceAnalysis(name=model_name, root=model_root, providers=["CPUExecutionProvider"])
-        # det_size affects detection quality/speed; keep a sensible default.
-        app.prepare(ctx_id=0, det_size=(640, 640))
+        # InsightFace 内部会 print 模型信息（find model / Applied providers）。这里对初始化阶段做输出重定向。
+        sink = io.StringIO()
+        redir = contextlib.nullcontext()
+        if suppress_output:
+            redir = contextlib.redirect_stdout(sink)
+        with redir:
+            redir_err = contextlib.nullcontext()
+            if suppress_output:
+                redir_err = contextlib.redirect_stderr(sink)
+            with redir_err:
+                if model_root is None:
+                    app = FaceAnalysis(name=model_name, providers=["CPUExecutionProvider"])
+                else:
+                    app = FaceAnalysis(name=model_name, root=model_root, providers=["CPUExecutionProvider"])
+                # det_size affects detection quality/speed; keep a sensible default.
+                app.prepare(ctx_id=0, det_size=(640, 640))
         self._app = app
         return app
 
@@ -250,6 +283,7 @@ def _get_backend_embedding_dim(engine: str) -> int:
 
 
 _FACE_BACKEND_INIT_ERROR: Exception | None = None
+_FACE_BACKEND_SINGLETON: Any | None = None
 
 
 def _init_face_backend():
@@ -264,8 +298,42 @@ def _init_face_backend():
         return None
 
 
-# Module-level singleton (acts like the old face_recognition module variable)
-face_recognition = _init_face_backend()  # type: ignore
+def _get_face_backend_singleton():
+    """Lazily initialize the selected backend and cache it.
+
+    Why lazy?
+    - Import-time initialization can be expensive (dlib loads native libs; InsightFace loads model zoo).
+    - In multiprocessing spawn children, import-time init can cause hangs/timeouts.
+    """
+    global _FACE_BACKEND_SINGLETON
+    if _FACE_BACKEND_SINGLETON is not None:
+        return _FACE_BACKEND_SINGLETON
+    _FACE_BACKEND_SINGLETON = _init_face_backend()
+    return _FACE_BACKEND_SINGLETON
+
+
+class _LazyFaceBackend:
+    """A lightweight proxy that behaves like the old module-level `face_recognition`.
+
+    It initializes the real backend upon first attribute access.
+    """
+
+    def _ensure(self):
+        backend = _get_face_backend_singleton()
+        if backend is None:
+            engine = _get_selected_face_backend_engine()
+            raise ModuleNotFoundError(
+                f"人脸识别后端依赖未就绪（SUNDAY_PHOTOS_FACE_BACKEND={engine}）"
+            ) from _FACE_BACKEND_INIT_ERROR
+        return backend
+
+    def __getattr__(self, item: str):
+        backend = self._ensure()
+        return getattr(backend, item)
+
+
+# Module-level proxy (keeps old import sites working)
+face_recognition = _LazyFaceBackend()  # type: ignore
 
 logger = logging.getLogger(__name__)
 

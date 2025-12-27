@@ -12,22 +12,20 @@ def _child_report_backend(conn):
     import os
     import importlib
 
-    # Child is a fresh interpreter under spawn; import-time backend init will run here.
+    # Child is a fresh interpreter under spawn.
+    # Backend is lazily initialized; do NOT trigger heavy native/model loading here.
     mod = importlib.import_module("src.core.face_recognizer")
     mod = importlib.reload(mod)
 
     env_raw = os.environ.get("SUNDAY_PHOTOS_FACE_BACKEND", "")
     selected = mod._get_selected_face_backend_engine()
-    cls = None
-    if getattr(mod, "face_recognition", None) is not None:
-        cls = mod.face_recognition.__class__.__name__
+    cls = getattr(mod, "face_recognition", None).__class__.__name__ if getattr(mod, "face_recognition", None) is not None else None
     conn.send({"env": env_raw, "selected": selected, "class": cls})
     conn.close()
 
 
 def _reload_face_recognizer_module():
-    # 重要：face backend 在模块导入时初始化（module-level singleton）。
-    # 测试切换后端时必须 reload 才能生效。
+    # 重要：backend 选择依赖环境变量；测试切换后端时必须 reload 才能生效。
     mod = importlib.import_module("src.core.face_recognizer")
     return importlib.reload(mod)
 
@@ -89,7 +87,7 @@ def test_reference_cache_paths_are_isolated_by_backend(monkeypatch, tmp_path: Pa
 
 def test_spawn_child_inherits_face_backend_env(monkeypatch, tmp_path: Path):
     # Use dlib backend in test to avoid heavy InsightFace model init in child.
-    # In tests, face_recognition is a lightweight stub module, so import is fast.
+    # Backend is lazy; we only verify selection/env inheritance here.
     monkeypatch.setenv("SUNDAY_PHOTOS_FACE_BACKEND", "dlib")
 
     ctx = mp.get_context("spawn")
@@ -107,5 +105,5 @@ def test_spawn_child_inherits_face_backend_env(monkeypatch, tmp_path: Path):
             p.join(timeout=5.0)
 
     assert payload["selected"] == "dlib"
-    # Ensure the child actually initialized the expected compat layer
-    assert payload["class"] == "_DlibFaceRecognitionCompat"
+    # Backend is lazy: class should be the proxy, not the concrete dlib compat.
+    assert payload["class"] == "_LazyFaceBackend"
