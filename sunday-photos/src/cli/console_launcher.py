@@ -21,6 +21,9 @@ import time
 import logging
 from datetime import datetime
 import platform
+import threading
+from contextlib import contextmanager
+import subprocess
 
 # Ensure project root (containing the src/ package) is importable.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -47,6 +50,7 @@ class ConsolePhotoOrganizer:
         self.setup_complete = False
         self.teacher_helper = _try_get_teacher_helper()
         self.logger = logging.getLogger(__name__)
+        self._hud_width = 56
 
         # Packaged console app: always write a UTF-8 log file under work folder.
         # Do NOT add extra console logging here to keep teacher-facing output stable.
@@ -79,23 +83,183 @@ class ConsolePhotoOrganizer:
             return
 
     def _print_divider(self):
-        print("=" * 56)
+        if self._unicode_enabled():
+            print("┏" + ("━" * self._hud_width) + "┓")
+        else:
+            print("=" * (self._hud_width + 2))
+
+    def _unicode_enabled(self) -> bool:
+        """Best-effort decide whether unicode box drawing is safe."""
+        enc = (getattr(sys.stdout, "encoding", "") or "").lower()
+        if "utf" in enc:
+            return True
+        # macOS terminals generally support unicode even if encoding is not exposed.
+        if platform.system() == "Darwin":
+            return True
+        return False
+
+    def _hud_border(self, kind: str) -> str:
+        """Return HUD border lines (unicode when possible, ascii fallback)."""
+        if not self._unicode_enabled():
+            if kind == "top":
+                return "+" + ("-" * self._hud_width) + "+"
+            if kind == "bottom":
+                return "+" + ("-" * self._hud_width) + "+"
+            return "|" + (" " * self._hud_width) + "|"
+
+        if kind == "top":
+            return "┏" + ("━" * self._hud_width) + "┓"
+        if kind == "bottom":
+            return "┗" + ("━" * self._hud_width) + "┛"
+        return "┃" + (" " * self._hud_width) + "┃"
+
+    def _hud_line(self, content: str = "") -> str:
+        content = (content or "")
+        # Keep within width; avoid wrapping breaking the panel look.
+        if len(content) > self._hud_width:
+            content = content[: self._hud_width - 1] + "…"
+        pad = " " * max(0, self._hud_width - len(content))
+        if self._unicode_enabled():
+            return f"┃{content}{pad}┃"
+        return f"|{content}{pad}|"
+
+    def _hud_rule(self) -> str:
+        """Horizontal separator line inside the HUD panel."""
+        if self._unicode_enabled():
+            # Lighter line to avoid visual fatigue.
+            return "┃" + ("┄" * self._hud_width) + "┃"
+        return "|" + ("-" * self._hud_width) + "|"
+
+    def _tag(self, label: str, color_code: str | None = None) -> str:
+        """Return a short bracketed tag, optionally colored (TTY-only)."""
+        # Fixed width tag for a cyber/HUD look.
+        label = (label or "").strip().upper()[:5]
+        tag = f"[{label:<5}]"
+        if color_code and self._ansi_enabled():
+            return f"\033[1;{color_code}m{tag}\033[0m"
+        return tag
+
+    def _print_hud(self, label: str, text: str, *, color: str | None = None) -> None:
+        msg = f"{self._tag(label, color)} {text}"
+        print(self._hud_line(msg))
+
+    def _animation_enabled(self) -> bool:
+        """Return True if we should render animated console output.
+
+        Notes:
+        - Only enable for interactive terminals (TTY). This keeps pytest output stable
+          and prevents capturing tools from seeing carriage-return frames.
+        - Teachers can disable animations via env var for accessibility.
+        """
+        if os.environ.get("SUNDAY_PHOTOS_FORCE_ANIMATION", "").strip().lower() in ("1", "true", "yes", "y", "on"):
+            return True
+        if not getattr(sys.stdout, "isatty", lambda: False)():
+            return False
+        term = (os.environ.get("TERM", "") or "").strip().lower()
+        if term in ("dumb", "unknown"):
+            return False
+        if os.environ.get("SUNDAY_PHOTOS_NO_ANIMATION", "").strip().lower() in ("1", "true", "yes", "y", "on"):
+            return False
+        return True
+
+    def _ansi_enabled(self) -> bool:
+        if os.environ.get("SUNDAY_PHOTOS_FORCE_COLOR", "").strip().lower() in ("1", "true", "yes", "y", "on"):
+            return True
+        if not self._animation_enabled():
+            return False
+        if os.environ.get("NO_COLOR") is not None:
+            return False
+        return True
+
+    def _style(self, text: str, *, bold: bool = False) -> str:
+        if not self._ansi_enabled():
+            return text
+        if bold:
+            return f"\033[1m{text}\033[0m"
+        return text
+
+    def _color(self, text: str, code: str) -> str:
+        """Wrap text with an ANSI color code if enabled."""
+        if not self._ansi_enabled():
+            return text
+        return f"\033[{code}m{text}\033[0m"
+
+    @contextmanager
+    def _spinner(self, label: str):
+        """A tiny spinner shown while doing short blocking work (TTY only)."""
+        if not self._animation_enabled():
+            yield
+            return
+
+        # Use larger, more obvious frames for teachers.
+        frames = ["◐", "◓", "◑", "◒"]
+        stop_event = threading.Event()
+
+        def _run() -> None:
+            i = 0
+            try:
+                while not stop_event.is_set():
+                    frame = frames[i % len(frames)]
+                    msg = f"{frame} {label}"
+                    print(f"\r{self._style(msg, bold=True)}", end="", flush=True)
+                    time.sleep(0.08)
+                    i += 1
+            finally:
+                # Clear the line.
+                print("\r" + (" " * (len(label) + 4)) + "\r", end="", flush=True)
+
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        try:
+            yield
+        finally:
+            stop_event.set()
+            t.join(timeout=0.3)
+
+    def _pulse(self, label: str, seconds: float = 0.6) -> None:
+        """Render a short, obvious pulsing '...' animation (TTY only)."""
+        if not self._animation_enabled():
+            return
+        dots = ["·", "··", "···", "····"]
+        colors = ["31", "33", "32", "36", "35", "34"]  # red, yellow, green, cyan, magenta, blue
+        end_at = time.time() + max(0.0, seconds)
+        i = 0
+        while time.time() < end_at:
+            suffix = dots[i % len(dots)]
+            color = colors[i % len(colors)]
+            msg = f"● {label} {suffix}"
+
+            if self._ansi_enabled():
+                # Use a single style prefix so the whole line (dot + dots) is clearly colored.
+                styled = f"\033[1;{color}m{msg}\033[0m"
+            else:
+                styled = msg
+
+            print(f"\r{styled}", end="", flush=True)
+            time.sleep(0.12)
+            i += 1
+        print("\r" + (" " * (len(label) + 18)) + "\r", end="", flush=True)
 
     def _print_section(self, title: str):
         print()
-        print(f"【{title}】")
+        # HUD section header within a framed panel.
+        print(self._hud_border("top"))
+        header = f"◆ {title}"
+        print(self._hud_line(self._style(header, bold=True) if self._ansi_enabled() else header))
+        print(self._hud_line())
 
     def _print_tip(self, text: str):
-        print(f"提示：{text}")
+        self._print_hud("TIP", text, color="36")
 
     def _print_ok(self, text: str):
+        # Preserve "[OK]" for any downstream expectations.
         print(f"[OK] {text}")
 
     def _print_warn(self, text: str):
-        print(f"[注意] {text}")
+        self._print_hud("WARN", text, color="33")
 
     def _print_next(self, text: str):
-        print(f"下一步：{text}")
+        self._print_hud("NEXT", text, color="34")
         
     def print_header(self):
         """打印欢迎信息"""
@@ -107,13 +271,12 @@ class ConsolePhotoOrganizer:
             except Exception:
                 pass
 
-        # 兼容测试中对欢迎信息的检查：保留该关键字符串
-        print("主日学课堂照片自动整理工具")
-        self._print_divider()
+        print(self._hud_border("top"))
         run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
-        print("这是一款给老师用的‘零门槛’整理工具：按提示放照片，然后运行即可。")
-        print(f"本次运行编号：{run_id}")
-        print(f"Work folder: {self.app_directory}")
+        self._print_hud("SYS", "系统启动：SundayPhotoOrganizer Console", color="36")
+        self._print_hud("SYS", f"RUN_ID={run_id}", color="36")
+        self._print_hud("SYS", f"WORK_DIR={self.app_directory}", color="36")
+        self._print_hud("UI", "按提示放照片 → 运行 → 自动输出到 output/", color="35")
         # Teacher-friendly: don't require understanding filesystem permissions.
         override = os.environ.get("SUNDAY_PHOTOS_WORK_DIR", "").strip()
         if override:
@@ -125,16 +288,19 @@ class ConsolePhotoOrganizer:
             self._print_tip("默认使用程序所在目录；如果该位置无法创建文件夹，会自动改用桌面或主目录。")
         self._print_tip("隐私说明：照片只在本机处理，不会自动上传到网络。")
         self._print_tip("安全说明：程序不会删除照片；只会把结果复制到 output/。为了便于下次继续整理，课堂照片可能会被归档到 class_photos/ 里的日期子文件夹（例如 YYYY-MM-DD/）。")
-        print("三步完成：")
-        print(f"  ① Student reference photos: {self.app_directory / 'input' / 'student_photos'}")
-        print(f"  ② Classroom photos: {self.app_directory / 'input' / 'class_photos'}")
-        print("  ③ 再运行一次（我会自动把结果放到 output/ 并尝试打开）")
-        self._print_divider()
+        print(self._hud_line())
+        self._print_hud("BOOT", "QUICK START", color="36")
+        self._print_hud("PATH", f"STUDENTS={self.app_directory / 'input' / 'student_photos'}", color="32")
+        self._print_hud("PATH", f"CLASSROOM={self.app_directory / 'input' / 'class_photos'}", color="32")
+        self._print_hud("PATH", f"OUTPUT={self.app_directory / 'output'}", color="32")
+        self._print_hud("GO", "把照片放好后，再运行一次即可。", color="32")
+        print(self._hud_border("bottom"))
     
     def setup_directories(self):
         """自动创建目录结构"""
         self._print_section("准备工作")
-        print("正在检查并准备需要的文件夹...")
+        self._print_hud("SYS", "初始化工作区（文件夹/说明文件）", color="36")
+        self._pulse("把工作台摆整齐")
         
         directories = [
             self.app_directory,
@@ -146,11 +312,12 @@ class ConsolePhotoOrganizer:
         ]
         
         created_count = 0
-        for directory in directories:
-            if not directory.exists():
-                directory.mkdir(parents=True, exist_ok=True)
-                created_count += 1
-                # 不逐项刷屏
+        with self._spinner("正在整理工作台（创建/检查文件夹）..."):
+            for directory in directories:
+                if not directory.exists():
+                    directory.mkdir(parents=True, exist_ok=True)
+                    created_count += 1
+                    # 不逐项刷屏
 
             if directory.name == "student_photos":
                 self._ensure_instruction_file(
@@ -182,6 +349,7 @@ Supported formats: .jpg / .jpeg / .png
             self._print_ok(f"文件夹已准备好（新建 {created_count} 个）")
         else:
             self._print_ok("文件夹已准备好")
+        print(self._hud_border("bottom"))
         return True
 
     def _ensure_instruction_file(self, directory, content):
@@ -214,27 +382,29 @@ Supported formats: .jpg / .jpeg / .png
     def check_photos(self):
         """检查照片文件"""
         self._print_section("检查照片")
-        print("我来看看照片是否已经放好...")
+        self._print_hud("SCAN", "扫描输入目录（参考照/课堂照）", color="36")
+        self._pulse("启动扫描雷达")
         self._print_tip("支持格式：JPG / JPEG / PNG")
         
         student_photos_dir = self.app_directory / "input" / "student_photos"
         class_photos_dir = self.app_directory / "input" / "class_photos"
         
-        # Student reference photos: folder-only layout, so scan recursively
-        student_photos = [
-            p
-            for p in student_photos_dir.rglob("*")
-            if is_supported_nonempty_image_path(p)
-        ]
+        with self._spinner("正在数一数照片（扫描文件夹）..."):
+            # Student reference photos: folder-only layout, so scan recursively
+            student_photos = [
+                p
+                for p in student_photos_dir.rglob("*")
+                if is_supported_nonempty_image_path(p)
+            ]
+
+            # Classroom photos (allow directly under class_photos or under date subfolders)
+            class_photos = [
+                p
+                for p in class_photos_dir.rglob("*")
+                if is_supported_nonempty_image_path(p)
+            ]
         
-        # Classroom photos (allow directly under class_photos or under date subfolders)
-        class_photos = [
-            p
-            for p in class_photos_dir.rglob("*")
-            if is_supported_nonempty_image_path(p)
-        ]
-        
-        print(f"已找到：学生参考照 {len(student_photos)} 张；课堂照片 {len(class_photos)} 张")
+        self._print_hud("STAT", f"students={len(student_photos)} | classroom={len(class_photos)}", color="36")
         
         if len(student_photos) == 0:
             self._print_warn("还没有找到学生参考照。")
@@ -250,6 +420,7 @@ Supported formats: .jpg / .jpeg / .png
             return False
 
         self._print_ok("照片已就绪，可以开始整理。")
+        print(self._hud_border("bottom"))
         return True
     
     def create_config_file(self):
@@ -295,6 +466,7 @@ Supported formats: .jpg / .jpeg / .png
     def process_photos(self):
         """处理照片"""
         self._print_section("开始整理")
+        self._print_hud("AI", "进入整理模式：识别 → 分类 → 输出", color="35")
         print("整理过程中请不要关闭窗口；完成后我会告诉你结果在哪。")
         self._print_tip(f"如果中途出现问题：日志会保存在 {self.app_directory / 'logs'}")
         self._print_tip("无需任何配置文件，我会自动为你准备默认配置。")
@@ -303,11 +475,15 @@ Supported formats: .jpg / .jpeg / .png
         
         try:
             # 导入处理模块
-            from src.core.main import SimplePhotoOrganizer
-            from src.core.config_loader import ConfigLoader
+            with self._spinner("正在唤醒 AI 识别引擎（加载依赖）..."):
+                from src.core.main import SimplePhotoOrganizer
+                from src.core.config_loader import ConfigLoader
+
+            self._pulse("AI 引擎热身中", seconds=0.8)
             
             # 创建/读取配置文件（存在则不覆盖；老师无需调参）
-            config_file, created = self.create_config_file()
+            with self._spinner("正在准备默认配置（无需你动手）..."):
+                config_file, created = self.create_config_file()
             if created:
                 self._print_ok("已自动生成默认配置（无需修改）")
             else:
@@ -315,15 +491,16 @@ Supported formats: .jpg / .jpeg / .png
 
             config_loader = ConfigLoader(str(config_file))
             
-            organizer = SimplePhotoOrganizer(
-                input_dir=str(self.app_directory / "input"),
-                output_dir=str(self.app_directory / "output"),
-                log_dir=str(self.app_directory / "logs"),
-                config_file=str(config_file),
-            )
-            
-            if not organizer.initialize():
-                raise RuntimeError("系统初始化失败，请检查日志文件")
+            with self._spinner("正在启动整理流程（初始化系统）..."):
+                organizer = SimplePhotoOrganizer(
+                    input_dir=str(self.app_directory / "input"),
+                    output_dir=str(self.app_directory / "output"),
+                    log_dir=str(self.app_directory / "logs"),
+                    config_file=str(config_file),
+                )
+
+                if not organizer.initialize():
+                    raise RuntimeError("系统初始化失败，请检查日志文件")
 
             self._print_ok("AI 识别引擎已就绪")
             
@@ -335,11 +512,20 @@ Supported formats: .jpg / .jpeg / .png
             if hasattr(organizer, 'face_recognizer') and organizer.face_recognizer:
                 organizer.face_recognizer.min_face_size = min_face_size
             
-            print("第 1/4 步：读取学生参考照（建立识别资料库）...")
-            print("第 2/4 步：分析课堂照片（检测人脸 → 匹配姓名 → 分类保存）...")
-            print("第 3/4 步：保存结果并写入报告...")
-            print("第 4/4 步：尝试为你打开结果文件夹...")
-            self._print_tip("处理中请耐心等待；窗口看起来‘没动’也可能正在忙碌。")
+            self._print_hud("STEP", "1/4 载入参考照：建立识别资料库", color="36")
+            print(self._hud_rule())
+            self._print_hud("STEP", "2/4 分析课堂照：检测人脸 → 匹配姓名 → 分类保存", color="36")
+            print(self._hud_rule())
+            self._print_hud("STEP", "3/4 写入结果：复制照片 + 生成统计报告", color="36")
+            print(self._hud_rule())
+            self._print_hud("STEP", "4/4 打开输出：尝试为你打开 output/", color="36")
+            print(self._hud_rule())
+            self._print_tip("小提示：进度条在动就说明我在努力；看起来‘没动’也可能在算得很认真。")
+
+            # Clear visual boundary before the heavy pipeline output (tqdm, stats).
+            print(self._hud_line())
+            self._print_hud("RUN", "开始执行识别流水线（请关注进度条）", color="35")
+            print(self._hud_rule())
             
             # 运行完整流程
             success = organizer.run()
@@ -353,7 +539,7 @@ Supported formats: .jpg / .jpeg / .png
             report = organizer.last_run_report or {}
             organize_stats = report.get('organize_stats', {})
             pipeline_stats = report.get('pipeline_stats', {})
-            print("第 3/3 步：整理结果并生成统计...")
+            print("🎉 收尾啦：整理结果并生成统计...")
             self._print_ok("整理完成。")
             
             # 显示详细结果
@@ -365,13 +551,15 @@ Supported formats: .jpg / .jpeg / .png
             self._print_tip("If you see unknown_photos/, those are unrecognized photos; adding 2–3 clearer reference photos usually helps.")
             
             # 自动打开结果文件夹
-            print("我来帮你打开结果文件夹...")
+            print("🗂️ 我来帮你打开结果文件夹...")
             if self._try_open_folder(output_dir, "结果文件夹"):
                 self._print_ok("已打开结果文件夹。")
             else:
                 self._print_warn("我没能自动打开文件夹（不影响结果）。")
                 self._print_next("请手动打开这个文件夹查看结果")
                 print(f"  {output_dir}")
+
+            print(self._hud_border("bottom"))
 
             return True
             

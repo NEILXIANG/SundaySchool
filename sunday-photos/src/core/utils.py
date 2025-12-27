@@ -17,6 +17,10 @@ from pathlib import Path
 from typing import List, Optional, Pattern
 from .config import LOG_FORMAT, LOG_MAX_BYTES, LOG_BACKUP_COUNT, SUPPORTED_IMAGE_EXTENSIONS
 
+# Console should be teacher-friendly: keep it message-only.
+# File logs still use LOG_FORMAT for diagnostics.
+CONSOLE_LOG_FORMAT = "%(message)s"
+
 # ANSI 颜色码
 COLORS = {
     'DEBUG': '\033[94m',    # 蓝
@@ -43,9 +47,9 @@ class ColoredConsoleHandler(logging.StreamHandler):
         super().__init__()
         self.enable_color = enable_color
         if enable_color:
-            self.setFormatter(ColorFormatter(LOG_FORMAT))
+            self.setFormatter(ColorFormatter(CONSOLE_LOG_FORMAT))
         else:
-            self.setFormatter(logging.Formatter(LOG_FORMAT))
+            self.setFormatter(logging.Formatter(CONSOLE_LOG_FORMAT))
 
 def setup_logger(log_dir=None, enable_color_console=False):
     """设置日志记录器。

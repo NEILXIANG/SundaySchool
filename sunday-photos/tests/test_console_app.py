@@ -133,8 +133,8 @@ def test_console_launch():
             print("⚠️ 错误输出:")
             print(result.stderr[:500] + ("..." if len(result.stderr) > 500 else ""))
         
-        # 检查是否显示了欢迎信息
-        if "主日学课堂照片自动整理工具" in result.stdout:
+        # 检查是否显示了欢迎信息（HUD 版）
+        if "SundayPhotoOrganizer Console" in result.stdout or "WORK_DIR=" in result.stdout:
             print("✅ 应用正常启动，显示欢迎信息")
             return
         else:

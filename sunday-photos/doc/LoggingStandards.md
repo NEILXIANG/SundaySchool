@@ -48,7 +48,7 @@ logger.debug(f"持久化编码失败（不影响当前会话）: {e}")
 **示例**:
 ```python
 logger.info("=====================================")
-logger.info("主日学课堂照片自动整理工具（文件夹模式）")
+logger.info("主日学课堂照片自动整理工具")
 logger.info("[步骤 1/4] 正在初始化系统组件...")
 logger.info("✓ 系统组件初始化完成")
 logger.info(f"✓ 本次需要处理 {len(photo_files)} 张照片")

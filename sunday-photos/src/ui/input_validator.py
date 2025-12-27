@@ -254,7 +254,7 @@ class InputValidator:
             'valid': True,
             'student_count': len(student_dirs),
             'photo_count': total_photos,
-            'message': f"✅ 找到 {len(student_dirs)} 个学生文件夹，共 {total_photos} 张参考照（文件夹模式）",
+            'message': f"✅ 找到 {len(student_dirs)} 个学生文件夹，共 {total_photos} 张参考照",
         }
     
     def validate_tolerance_parameter(self, tolerance_str):

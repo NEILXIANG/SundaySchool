@@ -159,17 +159,31 @@ class SimplePhotoOrganizer:
             'pipeline_stats': pipeline_stats
         }
 
+    @staticmethod
+    def _truthy_env(name: str, default: str = "0") -> bool:
+        return os.environ.get(name, default).strip().lower() in ("1", "true", "yes", "y", "on")
+
+    def _hud_rule(self, width: int = 56) -> str:
+        # Use unicode if stdout encoding supports it; otherwise fall back.
+        enc = (getattr(sys.stdout, "encoding", "") or "").lower()
+        if "utf" in enc or sys.platform == "darwin":
+            return "━" * width
+        return "=" * width
+
+    def _hud_line(self, label: str, text: str) -> str:
+        # Fixed width tag for scanability.
+        tag = f"[{(label or '').strip().upper():<5}]"
+        return f"{tag} {text}"
+
     def initialize(self, force=False):
         """初始化各个组件"""
         if self.initialized and not force:
             self.logger.debug("系统组件已初始化，跳过重复初始化")
             return True
         try:
-            self.logger.info("=====================================")
-            self.logger.info("主日学课堂照片自动整理工具（文件夹模式）")
-            self.logger.info("=====================================")
-
-            self.logger.info("[步骤 1/4] 正在初始化系统组件...")
+            # 分隔线：每个阶段最多一条，避免刷屏
+            self.logger.info(self._hud_rule())
+            self.logger.info(self._hud_line("STEP", "1/4 初始化系统组件"))
 
             sc = self.service_container
             if sc:
@@ -206,7 +220,7 @@ class SimplePhotoOrganizer:
             if missing_photos:
                 self.logger.warning(f"警告: 有 {len(missing_photos)} 名学生缺少参考照片")
 
-            self.logger.info("✓ 系统组件初始化完成")
+            self.logger.info(self._hud_line("OK", "系统组件初始化完成"))
             self.initialized = True
             return True
 
@@ -217,7 +231,7 @@ class SimplePhotoOrganizer:
 
     def _organize_input_by_date(self):
         """将上课照片根目录下的照片按日期移动到对应子目录"""
-        self.logger.info("[步骤 2a/4] 正在按日期整理输入照片...")
+        self.logger.info(self._hud_line("STEP", "2a/4 归档输入照片（按日期整理）"))
         photo_root = Path(self.photos_dir)
         if not photo_root.exists():
             self.logger.warning(f"输入目录不存在: {photo_root}")
@@ -234,9 +248,9 @@ class SimplePhotoOrganizer:
                     shutil.move(str(file), str(target_path))
                     moved_count += 1
         if moved_count > 0:
-            self.logger.info(f"✓ 已将 {moved_count} 张照片按日期移动到子目录")
+            self.logger.info(self._hud_line("OK", f"已归档 {moved_count} 张照片 → 日期子目录"))
         else:
-            self.logger.info("✓ 输入照片已按日期整理，无需移动")
+            self.logger.info(self._hud_line("OK", "输入照片已按日期整理，无需移动"))
 
     def scan_input_directory(self):
         """扫描输入目录，返回“本次需要处理”的课堂照片列表。
@@ -247,7 +261,8 @@ class SimplePhotoOrganizer:
         - 0 字节图片会被忽略，避免产生无意义的识别异常与增量误报
         """
         self._organize_input_by_date()
-        self.logger.info(f"[步骤 2/4] 正在扫描输入目录: {self.photos_dir}")
+        self.logger.info(self._hud_rule())
+        self.logger.info(self._hud_line("STEP", f"2/4 扫描输入目录: {self.photos_dir}"))
 
         if not self.photos_dir.exists():
             self.logger.error(f"输入目录不存在: {self.photos_dir}")
@@ -259,17 +274,17 @@ class SimplePhotoOrganizer:
         self._incremental_plan = plan
 
         if previous is None:
-            self.logger.info("✓ 未找到增量快照（首次运行），将处理全部日期文件夹")
+            self.logger.info(self._hud_line("INFO", "未找到增量快照（首次运行），将处理全部日期文件夹"))
 
         if plan.deleted_dates:
             deleted_line = ", ".join(sorted(plan.deleted_dates))
-            self.logger.info(f"✓ 检测到已删除的日期文件夹，将同步清理输出: {deleted_line}")
+            self.logger.info(self._hud_line("SYNC", f"检测到删除日期，将同步清理输出: {deleted_line}"))
 
         if plan.changed_dates:
             changed_line = ", ".join(sorted(plan.changed_dates))
-            self.logger.info(f"✓ 检测到有变更的日期文件夹，将仅处理这些日期: {changed_line}")
+            self.logger.info(self._hud_line("PLAN", f"检测到变更日期，将仅处理: {changed_line}"))
         else:
-            self.logger.info("✓ 未检测到新增或变更的日期文件夹")
+            self.logger.info(self._hud_line("PLAN", "未检测到新增或变更的日期文件夹"))
 
         # 兼容多种“日期文件夹写法”：输入端可为 2025.12.23 / 2025年12月23日 等。
         # 这里统一解析为 YYYY-MM-DD，用于增量计划与输出目录命名。
@@ -321,7 +336,7 @@ class SimplePhotoOrganizer:
                         if is_supported_nonempty_image_path(p):
                             photo_files.append(str(p))
 
-        self.logger.info(f"✓ 本次需要处理 {len(photo_files)} 张照片")
+        self.logger.info(self._hud_line("STAT", f"本次需要处理 {len(photo_files)} 张照片"))
         self.stats['total_photos'] = len(photo_files)
         return photo_files
 
@@ -402,7 +417,8 @@ class SimplePhotoOrganizer:
         - error_photos：处理出错（例如损坏文件、读取失败等）
         - unknown_encodings_map: {photo_path: [encodings]} (未知人脸编码)
         """
-        self.logger.info(f"[步骤 3/4] 正在进行人脸识别...")
+        self.logger.info(self._hud_rule())
+        self.logger.info(self._hud_line("STEP", "3/4 人脸识别（检测 → 匹配 → 分类）"))
 
         recognition_results = {}
         unknown_photos = []
@@ -546,7 +562,8 @@ class SimplePhotoOrganizer:
             # 颜色与闪烁：更明显但不“吵”。
             # - 若控制台不支持/用户关闭彩色，则自动降级为纯字符动画。
             cfg_enable_color = bool(self._get_config_loader().get("enable_color_console", True))
-            use_color = bool(cfg_enable_color and sys.stdout.isatty() and (os.environ.get("NO_COLOR") is None))
+            force_color = self._truthy_env("SUNDAY_PHOTOS_FORCE_COLOR", default="0")
+            use_color = bool(cfg_enable_color and (force_color or sys.stdout.isatty()) and (os.environ.get("NO_COLOR") is None))
             bold = "\033[1m" if use_color else ""
             reset = COLORS.get("RESET", "\033[0m") if use_color else ""
             c1 = COLORS.get("INFO", "") if use_color else ""
@@ -750,22 +767,24 @@ class SimplePhotoOrganizer:
                 continue
 
         self.logger.info(f"✓ 人脸识别完成")
-        self.logger.info(f"  - 识别到学生的照片: {self.stats['recognized_photos']} 张")
-        self.logger.info(f"  - 无人脸照片: {no_face_count} 张")
-        self.logger.info(f"  - unknown_photos: {self.stats['unknown_photos']} 张")
-        self.logger.info(f"  - 处理出错照片: {error_count} 张")
+        self.logger.info(self._hud_line("STAT", f"识别到学生的照片: {self.stats['recognized_photos']} 张"))
+        self.logger.info(self._hud_line("STAT", f"无人脸照片: {no_face_count} 张"))
+        self.logger.info(self._hud_line("STAT", f"unknown_photos: {self.stats['unknown_photos']} 张"))
+        self.logger.info(self._hud_line("STAT", f"处理出错照片: {error_count} 张"))
         if self.stats['students_detected']:
             students_line = ', '.join(sorted(self.stats['students_detected']))
         else:
             students_line = '暂无'
-        self.logger.info(f"  - 识别到的学生: {students_line}")
+        self.logger.info(self._hud_line("STAT", f"识别到的学生: {students_line}"))
+        self.logger.info(self._hud_rule())
 
         all_unknown_photos = unknown_photos + no_face_photos + error_photos
         return recognition_results, all_unknown_photos, unknown_encodings_map
 
     def organize_output(self, recognition_results, unknown_photos, unknown_clusters=None):
         """组织输出目录"""
-        self.logger.info(f"[步骤 4/4] 正在整理照片...")
+        self.logger.info(self._hud_rule())
+        self.logger.info(self._hud_line("STEP", "4/4 输出整理（复制到 output/ + 生成报告）"))
 
         # 使用文件组织器整理照片
         stats = self.file_organizer.organize_photos(
@@ -778,10 +797,12 @@ class SimplePhotoOrganizer:
         # 创建整理报告
         report_file = self.file_organizer.create_summary_report(stats)
 
-        self.logger.info("✓ 照片整理完成")
+        self.logger.info(self._hud_line("OK", "照片整理完成"))
 
         if report_file:
-            self.logger.info(f"✓ 整理报告已生成: {report_file}")
+            self.logger.info(self._hud_line("OK", f"整理报告已生成: {report_file}"))
+
+        # 不额外输出分隔线，避免连续多行分隔线刷屏
 
         self._build_run_report(stats)
         return stats
@@ -875,26 +896,27 @@ class SimplePhotoOrganizer:
 
     def print_final_statistics(self):
         """打印最终统计信息"""
-        self.logger.info("=====================================")
-        self.logger.info("处理完成！")
+        self.logger.info(self._hud_rule())
+        self.logger.info(self._hud_line("DONE", "处理完成"))
+        self.logger.info(self._hud_rule())
 
         # 计算总耗时
         if self.stats['start_time'] and self.stats['end_time']:
             elapsed = self.stats['end_time'] - self.stats['start_time']
             minutes, seconds = divmod(elapsed.total_seconds(), 60)
-            self.logger.info(f"总耗时: {int(minutes)}分{int(seconds)}秒")
+            self.logger.info(self._hud_line("TIME", f"总耗时: {int(minutes)}分{int(seconds)}秒"))
 
-        self.logger.info(f"总照片数: {self.stats['total_photos']}")
-        self.logger.info(f"成功识别: {self.stats['recognized_photos']}")
-        self.logger.info(f"unknown_photos: {self.stats['unknown_photos']}")
+        self.logger.info(self._hud_line("STAT", f"总照片数: {self.stats['total_photos']}"))
+        self.logger.info(self._hud_line("STAT", f"成功识别: {self.stats['recognized_photos']}"))
+        self.logger.info(self._hud_line("STAT", f"unknown_photos: {self.stats['unknown_photos']}"))
 
         if self.stats['students_detected']:
-            self.logger.info(f"识别到的学生: {', '.join(sorted(self.stats['students_detected']))}")
+            self.logger.info(self._hud_line("STAT", f"识别到的学生: {', '.join(sorted(self.stats['students_detected']))}"))
         else:
-            self.logger.info("识别到的学生: 暂无")
+            self.logger.info(self._hud_line("STAT", "识别到的学生: 暂无"))
 
-        self.logger.info(f"输出目录: {os.path.abspath(self.output_dir)}")
-        self.logger.info("=====================================")
+        self.logger.info(self._hud_line("PATH", f"输出目录: {os.path.abspath(self.output_dir)}"))
+        self.logger.info(self._hud_rule())
 
 
 def parse_arguments(config_loader=None):
