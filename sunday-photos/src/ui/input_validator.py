@@ -6,7 +6,12 @@
 import os
 from pathlib import Path
 
-from core.utils import is_ignored_fs_entry
+try:
+    # Canonical import path
+    from src.core.utils import is_ignored_fs_entry
+except Exception:  # pragma: no cover
+    # Backward-compatible fallback (when project runs with src/ on sys.path)
+    from core.utils import is_ignored_fs_entry
 
 class InputValidator:
     """输入验证器"""

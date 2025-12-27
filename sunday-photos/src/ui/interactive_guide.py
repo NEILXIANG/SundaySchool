@@ -8,12 +8,28 @@ import sys
 import logging
 from pathlib import Path
 
-from core.config import (
-    DEFAULT_INPUT_DIR,
-    DEFAULT_OUTPUT_DIR,
-    DEFAULT_LOG_DIR,
-    DEFAULT_TOLERANCE,
-)
+try:
+    # Canonical import path
+    from src.core.config import (
+        DEFAULT_INPUT_DIR,
+        DEFAULT_OUTPUT_DIR,
+        DEFAULT_LOG_DIR,
+        DEFAULT_TOLERANCE,
+        STUDENT_PHOTOS_DIR,
+        CLASS_PHOTOS_DIR,
+        SUPPORTED_IMAGE_EXTENSIONS,
+    )
+except Exception:  # pragma: no cover
+    # Backward-compatible fallback (when project runs with src/ on sys.path)
+    from core.config import (
+        DEFAULT_INPUT_DIR,
+        DEFAULT_OUTPUT_DIR,
+        DEFAULT_LOG_DIR,
+        DEFAULT_TOLERANCE,
+        STUDENT_PHOTOS_DIR,
+        CLASS_PHOTOS_DIR,
+        SUPPORTED_IMAGE_EXTENSIONS,
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -271,7 +287,10 @@ class InteractiveGuide:
         for root, _, files in os.walk(class_photos_dir):
             for file in files:
                 file_path = os.path.join(root, file)
-                from core.utils import is_supported_nonempty_image_path
+                try:
+                    from src.core.utils import is_supported_nonempty_image_path
+                except Exception:  # pragma: no cover
+                    from core.utils import is_supported_nonempty_image_path
                 if is_supported_nonempty_image_path(file_path):
                     photo_files.append(file_path)
         

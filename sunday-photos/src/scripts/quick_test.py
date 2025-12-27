@@ -6,14 +6,14 @@ from pathlib import Path
 
 # 设置路径
 project_root = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(project_root / "src"))
+sys.path.insert(0, str(project_root))
 os.chdir(project_root)
 
 print("=== 快速功能测试 ===")
 
 # 测试1: 导入模块
 try:
-    from config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR
+    from src.core.config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR
     print("✓ config导入成功")
 except Exception as e:
     print(f"✗ config导入失败: {e}")
@@ -21,7 +21,7 @@ except Exception as e:
 
 # 测试2: 配置加载器
 try:
-    from config_loader import ConfigLoader
+    from src.core.config_loader import ConfigLoader
     config = ConfigLoader()
     input_dir = config.get_input_dir()
     print(f"✓ 配置加载成功: input_dir={input_dir}")
@@ -31,7 +31,7 @@ except Exception as e:
 
 # 测试3: 学生管理器
 try:
-    from student_manager import StudentManager
+    from src.core.student_manager import StudentManager
     sm = StudentManager(input_dir)
     students = sm.get_student_names()
     print(f"✓ 学生管理器正常: 找到{len(students)}个学生")
@@ -41,7 +41,7 @@ except Exception as e:
 
 # 测试4: 人脸识别器
 try:
-    from face_recognizer import FaceRecognizer
+    from src.core.face_recognizer import FaceRecognizer
     fr = FaceRecognizer(sm)
     print("✓ 人脸识别器初始化成功")
 except Exception as e:
@@ -50,7 +50,7 @@ except Exception as e:
 
 # 测试5: 文件整理器
 try:
-    from file_organizer import FileOrganizer
+    from src.core.file_organizer import FileOrganizer
     fo = FileOrganizer()
     print("✓ 文件整理器初始化成功")
 except Exception as e:
@@ -59,7 +59,7 @@ except Exception as e:
 
 # 测试6: 工具函数
 try:
-    from utils import setup_logger
+    from src.core.utils import setup_logger
     logger = setup_logger("test")
     print("✓ 日志设置成功")
 except Exception as e:
@@ -68,7 +68,7 @@ except Exception as e:
 
 # 测试7: 教师辅助功能
 try:
-    from ui.teacher_helper import TeacherHelper
+    from src.ui.teacher_helper import TeacherHelper
     helper = TeacherHelper()
     msg = helper.get_friendly_error(FileNotFoundError("测试文件"))
     print(f"✓ 教师辅助功能正常: {msg[:20]}...")
@@ -78,7 +78,7 @@ except Exception as e:
 
 # 测试8: 输入验证
 try:
-    from ui.input_validator import InputValidator
+    from src.ui.input_validator import InputValidator
     validator = InputValidator()
     result = validator.validate_tolerance_parameter("0.6")
     print(f"✓ 输入验证正常: {result['valid']}")
@@ -88,7 +88,7 @@ except Exception as e:
 
 # 测试9: 交互向导
 try:
-    from ui.interactive_guide import InteractiveGuide
+    from src.ui.interactive_guide import InteractiveGuide
     guide = InteractiveGuide()
     print("✓ 交互向导初始化成功")
 except Exception as e:

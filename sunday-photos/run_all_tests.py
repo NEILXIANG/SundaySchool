@@ -66,7 +66,8 @@ def main(argv: list[str]) -> int:
     sandbox_root = prepare_test_sandbox(project_root, include_release_console=args.require_packaged_artifacts)
 
     # 让本 runner 自己也能 import（虽然测试在子进程中运行）
-    sys.path.insert(0, str(sandbox_root / "src"))
+    # 使用 project-root 口径（import src.*），避免引入 core.* 与 src.core.* 双套模块。
+    sys.path.insert(0, str(sandbox_root))
     os.chdir(sandbox_root)
 
     # 确保python命令指向虚拟环境，便于测试脚本使用

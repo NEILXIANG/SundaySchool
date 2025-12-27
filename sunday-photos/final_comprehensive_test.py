@@ -12,7 +12,7 @@ from pathlib import Path
 
 # 设置路径
 project_root = Path(__file__).resolve().parent
-sys.path.insert(0, str(project_root / "src"))
+sys.path.insert(0, str(project_root))
 os.chdir(project_root)
 
 def run_command(cmd, description, timeout=60):
@@ -70,7 +70,7 @@ def main():
         ("python3 -c \"import json; print('配置文件格式正确' if json.load(open('config.json')) else '配置文件格式错误')\"", "配置文件验证"),
         
         # 4. 核心模块导入测试
-        ("python3 -c \"import sys; sys.path.insert(0, 'src'); from student_manager import StudentManager; from face_recognizer import FaceRecognizer; from file_organizer import FileOrganizer; from ui.teacher_helper import TeacherHelper; from ui.input_validator import InputValidator; from ui.interactive_guide import InteractiveGuide; print('✅ 所有核心模块导入成功')\"", "核心模块导入"),
+        ("python3 -c \"import sys; sys.path.insert(0, '.'); from src.core.student_manager import StudentManager; from src.core.face_recognizer import FaceRecognizer; from src.core.file_organizer import FileOrganizer; from src.ui.teacher_helper import TeacherHelper; from src.ui.input_validator import InputValidator; from src.ui.interactive_guide import InteractiveGuide; print('✅ 所有核心模块导入成功')\"", "核心模块导入"),
         
         # 5. 基础功能测试
         ("python3 tests/test_basic.py", "基础功能测试"),
@@ -97,10 +97,10 @@ def main():
         ("python3 tests/test_logic_scenarios.py", "复杂业务逻辑场景测试"),
         
         # 13. 主程序运行测试（仅验证启动）
-        ("python3 -c \"import sys; sys.path.insert(0, 'src'); from main import SimplePhotoOrganizer; import config; app = SimplePhotoOrganizer(config.DEFAULT_INPUT_DIR); print('✅ 主程序可正常启动')\"", "主程序启动测试"),
+        ("python3 -c \"import sys; sys.path.insert(0, '.'); from src.core.main import SimplePhotoOrganizer; from src.core import config as core_config; app = SimplePhotoOrganizer(core_config.DEFAULT_INPUT_DIR); print('✅ 主程序可正常启动')\"", "主程序启动测试"),
         
         # 13. 快速运行脚本测试
-        ("python3 -c \"import sys; sys.path.insert(0, 'src'); from cli.run import check_environment; check_environment(); print('✅ 运行脚本环境检查正常')\"", "运行脚本测试"),
+        ("python3 -c \"import sys; sys.path.insert(0, '.'); from src.cli.run import check_environment; check_environment(); print('✅ 运行脚本环境检查正常')\"", "运行脚本测试"),
     ]
     
     # 执行所有测试
