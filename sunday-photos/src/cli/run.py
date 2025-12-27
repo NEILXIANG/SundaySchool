@@ -10,12 +10,13 @@ import argparse
 import warnings
 from pathlib import Path
 
-# 添加src目录到Python路径
-SRC_DIR = Path(__file__).resolve().parents[1]
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
- 
-from core.config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_TOLERANCE
+# Ensure project root (containing the src/ package) is importable.
+# This avoids importing duplicate modules via top-level "core".
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.core.config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_TOLERANCE
 
 
 def _normalize_backend_engine(raw: str) -> str:
@@ -42,8 +43,8 @@ def _get_backend_engine_from_env_or_config() -> str:
         return _normalize_backend_engine(env_raw)
 
     try:
-        from core import config as core_config
-        from core.config_loader import ConfigLoader
+        from src.core import config as core_config
+        from src.core.config_loader import ConfigLoader
 
         # 显式传入配置路径，避免 ConfigLoader 在 import 时绑定旧的默认常量。
         return _normalize_backend_engine(
@@ -227,7 +228,7 @@ def main():
         print("\n🚀 启动照片整理程序...")
 
         # 延迟导入，减少冷启动时的重型依赖加载
-        from core.main import SimplePhotoOrganizer
+        from src.core.main import SimplePhotoOrganizer
 
         # 创建整理器实例
         organizer = SimplePhotoOrganizer(

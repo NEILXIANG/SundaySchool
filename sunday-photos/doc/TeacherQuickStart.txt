@@ -9,13 +9,13 @@
 - 下载压缩包并解压到桌面（推荐）
 
 第 2 步：放照片到 input
-- input/student_photos/：放学生参考照（每个学生 1~5 张，清晰正脸最好）
+- input/student_photos/：放学生参考照（每个学生一个文件夹，每人 1~5 张，清晰正脸最好）
 - input/class_photos/：放课堂/活动照（需要整理的所有照片）
 
 示例：
-- input/student_photos/张三_1.jpg
-- input/student_photos/张三_2.jpg
-- input/student_photos/李四_1.jpg
+- input/student_photos/张三/张三_1.jpg
+- input/student_photos/张三/张三_2.jpg
+- input/student_photos/李四/李四_1.jpg
 - input/class_photos/2025-12-25_活动_001.jpg
 
 第 3 步：运行（只点一个入口）

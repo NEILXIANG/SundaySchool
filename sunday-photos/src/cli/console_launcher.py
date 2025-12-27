@@ -22,20 +22,20 @@ import logging
 from datetime import datetime
 import platform
 
-# 添加src目录到Python路径
-SRC_DIR = Path(__file__).resolve().parents[1]
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
+# Ensure project root (containing the src/ package) is importable.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-from core.config import LOG_FORMAT, UNKNOWN_PHOTOS_DIR
-from core.platform_paths import get_default_work_root_dir, get_program_dir
-from core.utils import is_supported_nonempty_image_path
+from src.core.config import LOG_FORMAT, UNKNOWN_PHOTOS_DIR
+from src.core.platform_paths import get_default_work_root_dir, get_program_dir
+from src.core.utils import is_supported_nonempty_image_path
 
 
 def _try_get_teacher_helper():
     """Best-effort import for friendly teacher-facing error messages."""
     try:
-        from ui.teacher_helper import TeacherHelper
+        from src.ui.teacher_helper import TeacherHelper
         return TeacherHelper()
     except Exception:
         return None
@@ -303,8 +303,8 @@ Supported formats: .jpg / .jpeg / .png
         
         try:
             # 导入处理模块
-            from main import SimplePhotoOrganizer
-            from config_loader import ConfigLoader
+            from src.core.main import SimplePhotoOrganizer
+            from src.core.config_loader import ConfigLoader
             
             # 创建/读取配置文件（存在则不覆盖；老师无需调参）
             config_file, created = self.create_config_file()

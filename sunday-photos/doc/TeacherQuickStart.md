@@ -17,13 +17,13 @@
 
 ### 第 2 步：把照片放进 input
 打开解压后的文件夹，找到：
-- `input/student_photos/`：放**学生参考照**（每个学生 1~5 张，清晰正脸最好）
+- `input/student_photos/`：放**学生参考照**（每个学生一个文件夹，每人 1~5 张，清晰正脸最好）
 - `input/class_photos/`：放**课堂/活动照**（你今天拍的所有合照/抓拍）
 
 示例（你可以照着理解，不需要完全一样）：
-- `input/student_photos/张三_1.jpg`
-- `input/student_photos/张三_2.jpg`
-- `input/student_photos/李四_1.jpg`
+- `input/student_photos/张三/张三_1.jpg`
+- `input/student_photos/张三/张三_2.jpg`
+- `input/student_photos/李四/李四_1.jpg`
 - `input/class_photos/2025-12-25_圣诞活动_001.jpg`
 - `input/class_photos/2025-12-25_圣诞活动_002.jpg`
 

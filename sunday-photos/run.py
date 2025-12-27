@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""Entry wrapper delegating to src.cli.run"""
+"""Entry wrapper delegating to src.cli.run.
+
+Important:
+- Keep import paths consistent (use src.*) to avoid importing the same code twice
+    (e.g. core.* vs src.core.*), which can split global singletons and break tests.
+"""
 
 import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-SRC_DIR = PROJECT_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
+# Ensure the project root (containing the src/ package) is importable even when
+# running from a different working directory.
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.cli.run import main
 

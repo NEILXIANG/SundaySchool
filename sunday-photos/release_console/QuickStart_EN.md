@@ -17,13 +17,13 @@ This guide is for teachers: no technical background required.
 
 ### Step 2: Put photos into input
 Open the unzipped folder and locate:
-- `input/student_photos/`: put **student reference photos** (1–5 per student, clear frontal face works best)
+- `input/student_photos/`: put **student reference photos** (one folder per student; 1–5 per student; clear frontal face works best)
 - `input/class_photos/`: put **class/event photos** (all photos you want to organize)
 
 Examples (your filenames can be different):
-- `input/student_photos/Alice_1.jpg`
-- `input/student_photos/Alice_2.jpg`
-- `input/student_photos/Bob_1.jpg`
+- `input/student_photos/Alice/Alice_1.jpg`
+- `input/student_photos/Alice/Alice_2.jpg`
+- `input/student_photos/Bob/Bob_1.jpg`
 - `input/class_photos/2025-12-25_Christmas_Event_001.jpg`
 - `input/class_photos/2025-12-25_Christmas_Event_002.jpg`
 

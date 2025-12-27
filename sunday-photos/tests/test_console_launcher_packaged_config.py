@@ -5,7 +5,8 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
+# Canonical import path is src.* (project root must be on sys.path)
+sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def test_console_launcher_creates_top_level_config_and_passes_config_file(tmp_path, monkeypatch):
@@ -51,17 +52,14 @@ def test_console_launcher_creates_top_level_config_and_passes_config_file(tmp_pa
         def get_min_face_size(self):
             return 88
 
-    fake_main = types.ModuleType("main")
-    fake_main.SimplePhotoOrganizer = FakeOrganizer
-    fake_config_loader = types.ModuleType("config_loader")
-    fake_config_loader.ConfigLoader = FakeConfigLoader
-    fake_subprocess = types.ModuleType("subprocess")
-    fake_subprocess.run = lambda *_args, **_kwargs: None
+    fake_core_main = types.ModuleType("src.core.main")
+    fake_core_main.SimplePhotoOrganizer = FakeOrganizer
+    fake_core_config_loader = types.ModuleType("src.core.config_loader")
+    fake_core_config_loader.ConfigLoader = FakeConfigLoader
 
-    monkeypatch.setitem(sys.modules, "main", fake_main)
-    monkeypatch.setitem(sys.modules, "config_loader", fake_config_loader)
-    monkeypatch.setitem(sys.modules, "subprocess", fake_subprocess)
-    monkeypatch.setattr(cl.platform, "system", lambda: "Darwin")
+    monkeypatch.setitem(sys.modules, "src.core.main", fake_core_main)
+    monkeypatch.setitem(sys.modules, "src.core.config_loader", fake_core_config_loader)
+    monkeypatch.setattr(organizer, "_try_open_folder", lambda *_args, **_kwargs: True)
 
     assert organizer.process_photos() is True
 

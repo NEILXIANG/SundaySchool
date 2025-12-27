@@ -15,9 +15,7 @@ def test_cli_backend_detection_env_overrides_config(monkeypatch, tmp_path: Path)
 
     cli_run = importlib.import_module("src.cli.run")
 
-    # src/cli/run.py 通过 sys.path 注入导入的是 core.*，因此 patch core.config
-    import core.config as core_config
-
+    import src.core.config as core_config
     monkeypatch.setattr(core_config, "CONFIG_FILE_PATH", cfg_path)
     cli_run = importlib.reload(cli_run)
 
@@ -36,8 +34,7 @@ def test_cli_backend_detection_reads_config_when_no_env(monkeypatch, tmp_path: P
 
     cli_run = importlib.import_module("src.cli.run")
 
-    import core.config as core_config
-
+    import src.core.config as core_config
     monkeypatch.setattr(core_config, "CONFIG_FILE_PATH", cfg_path)
     cli_run = importlib.reload(cli_run)
 
@@ -56,8 +53,7 @@ def test_cli_backend_detection_invalid_config_falls_back(monkeypatch, tmp_path: 
 
     cli_run = importlib.import_module("src.cli.run")
 
-    import core.config as core_config
-
+    import src.core.config as core_config
     monkeypatch.setattr(core_config, "CONFIG_FILE_PATH", cfg_path)
     cli_run = importlib.reload(cli_run)
 
