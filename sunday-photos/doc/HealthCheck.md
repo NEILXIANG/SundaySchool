@@ -50,15 +50,15 @@
 
 ### 3.1 测试用例丰富度
 - 项目拥有详尽的测试套件，涵盖：
-    - 单元测试 (`test_config_loader`, `test_student_manager` 等)
+    - 单元测试 (`test_config_loader`, `test_student_manager`, `test_clustering_unit` 等)
     - 集成测试 (`test_e2e_offline_pipeline`)
     - 边界情况测试 (`test_edge_cases`)
     - 打包环境模拟测试 (`test_console_launcher_packaged_config`)
 
 ### 3.2 测试执行结果
 - **执行命令**: `python -m pytest -q`
-- **结果**: `205 passed, 6 skipped`
-- **验证**: 确认所有核心功能（配置加载、人脸识别、文件整理、增量更新）在统一导入路径后依然运行正常。
+- **结果**: `211 passed, 6 skipped` (新增 6 个聚类算法单元测试)
+- **验证**: 确认所有核心功能（配置加载、人脸识别、文件整理、增量更新、未知人脸聚类）在统一导入路径后依然运行正常。
 
 ---
 
