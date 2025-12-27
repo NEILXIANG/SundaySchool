@@ -17,6 +17,37 @@ if str(SRC_DIR) not in sys.path:
  
 from core.config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR, DEFAULT_TOLERANCE
 
+
+def _normalize_backend_engine(raw: str) -> str:
+    v = (raw or "").strip().lower()
+    if v in ("dlib", "face_recognition", "facerecognition"):
+        return "dlib"
+    return "insightface"
+
+
+def _get_backend_engine_from_env_or_config() -> str:
+    """Best-effort determine selected face backend.
+
+    Priority:
+    - env SUNDAY_PHOTOS_FACE_BACKEND
+    - config.json face_backend.engine
+    - default insightface
+
+    Note: This is used for *environment checks* (to print correct install hints).
+    Main pipeline still applies the authoritative selection logic in core.
+    """
+
+    env_raw = os.environ.get("SUNDAY_PHOTOS_FACE_BACKEND", "")
+    if env_raw.strip():
+        return _normalize_backend_engine(env_raw)
+
+    try:
+        from core.config_loader import ConfigLoader
+
+        return _normalize_backend_engine(ConfigLoader().get_face_backend_engine())
+    except Exception:
+        return "insightface"
+
 def check_environment():
     """检查运行环境"""
     print("🔍 检查运行环境...")
@@ -30,8 +61,8 @@ def check_environment():
         return False
     
     # 检查依赖包（根据人脸后端）
-    engine = os.environ.get("SUNDAY_PHOTOS_FACE_BACKEND", "").strip().lower() or "insightface"
-    if engine in ("dlib", "face_recognition", "facerecognition"):
+    engine = _get_backend_engine_from_env_or_config()
+    if engine == "dlib":
         required_packages = ['face_recognition', 'PIL', 'numpy', 'tqdm']
     else:
         required_packages = ['insightface', 'onnxruntime', 'cv2', 'PIL', 'numpy', 'tqdm']
@@ -48,7 +79,11 @@ def check_environment():
         for pkg in missing_packages:
             print(f"   - {pkg}")
         print("\n💡 请运行以下命令安装依赖:")
-        print("   pip install -r requirements.txt")
+        if engine == "dlib":
+            print("   pip install -r requirements-dlib.txt")
+            print("   # 或者：pip install face_recognition dlib")
+        else:
+            print("   pip install -r requirements.txt")
         return False
     
     print("✅ 环境检查通过")
@@ -87,6 +122,9 @@ def show_help():
     --output-dir     输出目录 (默认: {DEFAULT_OUTPUT_DIR})
     --tolerance      人脸识别阈值 (0-1, 默认: {DEFAULT_TOLERANCE})
     --no-parallel    强制禁用并行识别（排障用）
+    # 人脸识别后端切换（技术同工/维护者）：
+    #   - 环境变量优先：SUNDAY_PHOTOS_FACE_BACKEND=insightface|dlib
+    #   - 或在 config.json 中设置 face_backend.engine
     --help           显示此帮助信息
 
 🚀 运行程序:
@@ -124,6 +162,14 @@ def main():
         type=float, 
         default=DEFAULT_TOLERANCE,
         help="人脸识别阈值 (0-1, 默认: 0.6)"
+    )
+
+    # 兼容参数（历史版本/文档可能出现；不再推荐使用）
+    parser.add_argument(
+        "--classroom-dir",
+        dest="classroom_dir",
+        default=None,
+        help=argparse.SUPPRESS,
     )
 
     parser.add_argument(

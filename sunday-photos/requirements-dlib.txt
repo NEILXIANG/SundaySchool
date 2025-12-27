@@ -1,0 +1,13 @@
+# Optional dependencies for the legacy dlib/face_recognition backend.
+#
+# Use only when you explicitly select:
+#   - env: SUNDAY_PHOTOS_FACE_BACKEND=dlib
+#   - or config.json: face_backend.engine = "dlib"
+#
+# Notes:
+# - dlib can be hard to build on some platforms (especially Windows). Prefer prebuilt wheels when available.
+# - This file is intentionally separate to keep the default install lightweight and teacher-friendly.
+
+face_recognition>=1.3.0
+# dlib wheels vary by platform; keep it unpinned.
+dlib

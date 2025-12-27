@@ -98,7 +98,10 @@ python -c "import insightface; print('✓ insightface installed')"
 python -c "import onnxruntime; print('✓ onnxruntime installed')"
 python -c "import cv2; print('✓ opencv installed')"
 
-# 可选：若你要切换到 dlib/face_recognition 后端，再验证这两项
+# 可选：若你要切换到 dlib/face_recognition 后端
+# 先安装可选依赖：
+#   pip install -r requirements-dlib.txt
+# 再验证这两项
 python -c "import face_recognition; print('✓ face_recognition installed')"
 python -c "import dlib; print('✓ dlib installed')"
 ```

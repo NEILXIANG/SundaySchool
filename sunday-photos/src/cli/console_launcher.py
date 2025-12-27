@@ -261,6 +261,10 @@ Supported formats: .jpg / .jpeg / .png
             # 与 src/core/config_loader.py 读取口径保持一致（顶层字段）。
             "tolerance": 0.6,
             "min_face_size": 50,
+            "face_backend": {
+                # 默认后端：InsightFace。打包版默认只保证 InsightFace 可用；dlib/face_recognition 属于可选后端。
+                "engine": "insightface"
+            },
             "parallel_recognition": {
                 "enabled": True,
                 "workers": 6,

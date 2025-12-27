@@ -90,10 +90,10 @@
 
 ## 常见问题 / FAQ
 
-### Q1: face_recognition 警告
+### Q1: face_recognition 警告（仅当使用 dlib 后端时）
 **现象**: `pkg_resources is deprecated`
 
-**原因**: 上游库 `face_recognition` 依赖 `pkg_resources`（已弃用）
+**原因**: 可选后端 `face_recognition` 上游依赖 `pkg_resources`（已弃用）
 
 **解决**: 
 - 已在 `src/core/main.py` 中添加警告过滤
