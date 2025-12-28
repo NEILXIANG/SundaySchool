@@ -660,7 +660,15 @@ Supported formats: .jpg / .jpeg / .png
         self._print_hud("STAT", f"总照片：{total_from_pipeline} 张", color="36")
         self._print_hud("STAT", f"已分类：{results.get('copied', 0)} 张", color="36")
         self._print_hud("STAT", f"失败：{results.get('failed', 0)} 张", color="36")
-        self._print_hud("STAT", f"未识别：{pipeline_stats.get('unknown_photos', results.get('students', {}).get(UNKNOWN_PHOTOS_DIR, 0))} 张", color="36")
+        self._print_hud(
+            "STAT",
+            f"未识别（unknown）：{pipeline_stats.get('unknown_photos', results.get('students', {}).get(UNKNOWN_PHOTOS_DIR, 0))} 张",
+            color="36",
+        )
+        if 'no_face_photos' in pipeline_stats:
+            self._print_hud("STAT", f"无人脸（no_face）：{pipeline_stats.get('no_face_photos', 0)} 张", color="36")
+        if 'error_photos' in pipeline_stats:
+            self._print_hud("STAT", f"出错（error）：{pipeline_stats.get('error_photos', 0)} 张", color="36")
         
         students = results.get('students', {})
         detected_students = pipeline_stats.get('students_detected', list(students.keys()))

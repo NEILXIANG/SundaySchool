@@ -20,6 +20,10 @@
 - `input/student_photos/`：放**学生参考照**（每个学生一个文件夹，每人 1~5 张，清晰正脸最好）
 - `input/class_photos/`：放**课堂/活动照**（你今天拍的所有合照/抓拍）
 
+小提示（避免困惑）：
+- 课堂照建议按日期建子目录（例如 `input/class_photos/2025-12-25/...`）。
+- 如果你直接把照片放在 `class_photos/` 根目录，程序会自动按日期归档到子目录；遇到同名文件会自动改名（如 `photo.jpg` → `photo_001.jpg`）避免覆盖。
+
 示例（你可以照着理解，不需要完全一样）：
 - `input/student_photos/张三/张三_1.jpg`
 - `input/student_photos/张三/张三_2.jpg`
@@ -46,7 +50,7 @@
 
 更多说明（一般用不上）：
 - 详细老师指南：`doc/TeacherGuide.md`
-- 配置与高级选项：`doc/CONFIG.md`
+- 配置与高级选项（配置参考手册 / SSOT）：`doc/CONFIG_REFERENCE.md`
 
 （截图占位：output 文件夹里出现整理后的结果）
 

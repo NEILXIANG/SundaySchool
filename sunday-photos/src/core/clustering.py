@@ -26,7 +26,7 @@ class UnknownClustering:
         self.clusters: Dict[int, List[Tuple[str, np.ndarray]]] = {}
         self.next_cluster_id = 1
 
-    def add_faces(self, path: str, encodings: List[np.ndarray]):
+    def add_faces(self, path: str, encodings: List[np.ndarray]) -> None:
         """
         添加一张照片中的未知人脸编码
         :param path: 照片路径
@@ -48,7 +48,8 @@ class UnknownClustering:
         bn = float(np.linalg.norm(b) + 1e-12)
         return float(1.0 - (np.dot(a, b) / (an * bn)))
 
-    def _add_one(self, path: str, encoding: np.ndarray):
+    def _add_one(self, path: str, encoding: np.ndarray) -> None:
+        """将单个人脸编码添加到最合适的聚类簇或创建新簇。"""
         best_cluster_id = -1
         min_dist = 1.0
 

@@ -1231,7 +1231,7 @@ class FaceRecognizer:
     
     def load_reference_photos(self, input_dir):
         """加载参考照片并生成人脸编码"""
-        from .utils import is_supported_nonempty_image_path
+        from .utils.fs import is_supported_nonempty_image_path
 
         if not input_dir.exists() or not any(is_supported_nonempty_image_path(p) for p in input_dir.iterdir()):
             logger.warning("⚠️ 输入目录为空或不存在，请检查 input/student_photos 文件夹。")

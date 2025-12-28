@@ -49,7 +49,7 @@
 - **文件整理** / File Organization：
   - 输出结构：`output/学生名/日期/照片`
   - 未知照片：`output/unknown_photos/日期/` 或 `output/unknown_photos/Unknown_Person_X/日期/`
-  - 智能文件命名：保留原名 + 时间戳，避免冲突
+  - 智能文件命名：照片默认保留原名；同目录重名自动添加 `_001/_002...` 避免覆盖（整理报告文件名带时间戳前缀）
   
 - **配置管理** / Configuration Management：
   - config.json（支持注释字段）
@@ -146,13 +146,13 @@ input/
 output/
 ├── Alice/                    # 学生文件夹
 │   ├── 2025-12-21/
-│   │   ├── group_103045.jpg
-│   │   └── activity_104823.jpg
+│   │   ├── group.jpg
+│   │   └── activity.jpg
 │   └── 2025-12-28/
-│       └── discussion_101010.jpg
+│       └── discussion.jpg
 ├── Bob/
 │   └── 2025-12-21/
-│       └── group_103045.jpg
+│       └── group.jpg
 ├── unknown_photos/           # 未识别照片
 │   ├── Unknown_Person_1/     # 聚类组（v0.4.0）
 │   │   └── 2025-12-21/

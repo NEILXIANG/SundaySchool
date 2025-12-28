@@ -21,6 +21,13 @@ def test_unknown_face_clustering_disabled_does_not_run(tmp_path, monkeypatch, or
         from core.main import SimplePhotoOrganizer
 
     organizer = SimplePhotoOrganizer(input_dir=str(tmp_path / "input"), output_dir=str(tmp_path / "output"), log_dir=str(tmp_path / "logs"))
+    
+    # Initialize with proper mocks
+    from unittest.mock import MagicMock
+    
+    organizer.student_manager = MagicMock()
+    organizer.face_recognizer = MagicMock()
+    organizer.file_organizer = MagicMock()
     organizer.initialized = True
 
     monkeypatch.setattr(organizer, "scan_input_directory", lambda: ["any.jpg"])
@@ -37,8 +44,29 @@ def test_unknown_face_clustering_disabled_does_not_run(tmp_path, monkeypatch, or
         def get_unknown_face_clustering(self):
             return {"enabled": False, "threshold": 0.12, "min_cluster_size": 99}
 
-    monkeypatch.setattr(organizer, "_get_config_loader", lambda: _Cfg())
+        def get_tolerance(self):
+            return 0.6
 
+        def get_min_face_size(self):
+            return 20
+
+        def get_face_backend_engine(self):
+            return "insightface"
+
+        def get_parallel_recognition(self):
+            return {"enabled": False}
+
+        def get_input_dir(self):
+            return "input"
+
+        def get_output_dir(self):
+            return "output"
+
+        def get_log_dir(self):
+            return "logs"
+
+    # Ensure organizer uses this config (instead of reading repo config.json)
+    organizer._config_loader = _Cfg()
     # 如果错误地触发 UnknownClustering，这里会直接失败
     monkeypatch.setattr(
         organizer_module,
@@ -68,6 +96,13 @@ def test_unknown_face_clustering_enabled_passes_threshold_and_min_cluster_size(t
         from core.main import SimplePhotoOrganizer
 
     organizer = SimplePhotoOrganizer(input_dir=str(tmp_path / "input"), output_dir=str(tmp_path / "output"), log_dir=str(tmp_path / "logs"))
+    
+    # Initialize with proper mocks
+    from unittest.mock import MagicMock
+    
+    organizer.student_manager = MagicMock()
+    organizer.face_recognizer = MagicMock()
+    organizer.file_organizer = MagicMock()
     organizer.initialized = True
 
     monkeypatch.setattr(organizer, "scan_input_directory", lambda: ["any.jpg"])
@@ -84,8 +119,29 @@ def test_unknown_face_clustering_enabled_passes_threshold_and_min_cluster_size(t
         def get_unknown_face_clustering(self):
             return {"enabled": True, "threshold": 0.33, "min_cluster_size": 3}
 
-    monkeypatch.setattr(organizer, "_get_config_loader", lambda: _Cfg())
+        def get_tolerance(self):
+            return 0.6
 
+        def get_min_face_size(self):
+            return 20
+
+        def get_face_backend_engine(self):
+            return "insightface"
+
+        def get_parallel_recognition(self):
+            return {"enabled": False}
+
+        def get_input_dir(self):
+            return "input"
+
+        def get_output_dir(self):
+            return "output"
+
+        def get_log_dir(self):
+            return "logs"
+
+    # Ensure organizer uses this config (instead of reading repo config.json)
+    organizer._config_loader = _Cfg()
     calls = {"init": None, "add": []}
 
     class FakeClustering:

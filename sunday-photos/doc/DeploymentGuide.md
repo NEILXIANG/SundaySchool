@@ -70,13 +70,13 @@ input/
 output/
 ├── Alice/                     # 每个学生独立文件夹
 │   ├── 2024-12-21/            # 按日期分层
-│   │   ├── group_photo_103045.jpg
-│   │   └── game_time_104823.jpg
+│   │   ├── group_photo.jpg
+│   │   └── game_time.jpg
 │   └── 2024-12-28/
-│       └── discussion_101010.jpg
+│       └── discussion.jpg
 ├── Bob/
 │   └── 2024-12-21/
-│       └── group_photo_103045.jpg
+│       └── group_photo.jpg
 └── unknown_photos/            # 未识别照片
     ├── Unknown_Person_1/      # 🆕 v0.4.0 相似人脸自动归组
     │   └── 2024-12-21/

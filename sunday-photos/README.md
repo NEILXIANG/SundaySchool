@@ -74,7 +74,7 @@
 - **清晰目录结构**：`学生名/日期/照片` 三级组织
 - **未知人脸分组**：相似未知人脸自动归入 `Unknown_Person_X` 组
 - **详细统计报告**：处理耗时、识别成功率、学生分布等
-- **智能文件命名**：保留原文件名并添加时间戳，避免冲突
+- **智能文件命名**：照片默认保留原文件名；同目录重名自动添加 `_001/_002...` 避免覆盖；整理报告文件名带时间戳前缀避免覆盖
 
 ---
 
@@ -135,13 +135,13 @@ input/
 output/
 ├── Alice/
 │   ├── 2024-12-21/
-│   │   ├── group_photo_103045.jpg
-│   │   └── game_time_104823.jpg
+│   │   ├── group_photo.jpg
+│   │   └── game_time.jpg
 │   └── 2024-12-28/
-│       └── discussion_101010.jpg
+│       └── discussion.jpg
 ├── Bob/
 │   └── 2024-12-21/
-│       └── group_photo_103045.jpg
+│       └── group_photo.jpg
 └── unknown_photos/
    └── 2024-12-21/
    └── blurry_105632.jpg
@@ -178,13 +178,13 @@ input/
 output/
 ├── Alice/
 │   ├── 2024-12-21/
-│   │   ├── group_photo_103045.jpg
-│   │   └── game_time_104823.jpg
+│   │   ├── group_photo.jpg
+│   │   └── game_time.jpg
 │   └── 2024-12-28/
-│       └── discussion_101010.jpg
+│       └── discussion.jpg
 ├── Bob/
 │   └── 2024-12-21/
-│       └── group_photo_103045.jpg
+│       └── group_photo.jpg
 └── unknown_photos/
    └── 2024-12-21/
    └── blurry_105632.jpg

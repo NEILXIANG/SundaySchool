@@ -1,14 +1,14 @@
 # Teacher Guide (Packaged App / No Python needed)
 
 **Version**: v0.4.0  
-**Last updated**: 2025-12-26
+**Last updated**: 2025-12-28
 
 Audience: teachers who use the packaged app by double-clicking. No Python installation required.
 
 Goal: minimal steps, minimal confusion.
 
-Remember just one thing:
-Put photos into the `input/` folder next to the app, then run it again.
+One-sentence workflow:
+Unzip → put photos into `input/` → run → check `output/`.
 
 If you want the shortest “just follow the steps” doc, use:
 - `doc/TeacherQuickStart_en.md`
@@ -71,6 +71,14 @@ output/
 └── 20251221_143052_整理报告.txt
 ```
 
+Notes (to avoid confusion):
+- Photo filenames usually stay the same. If two files would have the same name in the same folder, the app adds `_001/_002...` (example: `photo.jpg` → `photo_001.jpg`) to avoid overwriting.
+- `unknown_photos/` is a “not sorted into a known student” bucket. It may include:
+  - not recognized (unknown)
+  - no face detected (no-face)
+  - processing error (error)
+  The report file (`*_整理报告.txt`) lists these numbers separately.
+
 New in v0.4.0: Unknown-face clustering
 - Similar unknown faces are grouped into `Unknown_Person_1`, `Unknown_Person_2`, ...
 - This helps you spot recurring visitors/parents/new students
@@ -84,6 +92,9 @@ New in v0.4.0: Unknown-face clustering
 Yes (this is expected):
 - Photos directly under `class_photos/` may be moved into `YYYY-MM-DD/` folders.
 - This enables incremental processing and makes browsing easier.
+
+If there is a filename conflict:
+- When two photos would land in the same date folder with the same filename, the app auto-renames (e.g. `photo.jpg` → `photo_001.jpg`) to avoid overwriting, and prints a hint in the console/log.
 
 ### Do I need to re-put photos every time?
 
@@ -136,3 +147,14 @@ More thorough (optional):
 Please send:
 1) The newest log file under `logs/` (if the app fell back, use the `Work folder:` path printed in the console)
 2) A short description + screenshot of the error (if any)
+
+### Q6: I see photos under unknown_photos — is that bad?
+
+Not necessarily.
+- Some classroom photos have faces that are too small/blurred → they may go to unknown.
+- Some photos contain no faces at all (e.g., slides, scenery) → they are counted as no-face.
+- If a file is corrupted/unreadable → it may be counted as error.
+
+What to do:
+1) Open the latest `*_整理报告.txt` in `output/` to see the breakdown.
+2) If a student should be recognized, add 2–3 clearer reference photos for that student and run again.

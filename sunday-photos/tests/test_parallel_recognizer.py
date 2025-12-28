@@ -71,7 +71,14 @@ def test_core_process_photos_parallel_fallback_to_serial(tmp_path, monkeypatch, 
     )
 
     # 并行入口直接抛异常，触发 fallback
-    monkeypatch.setattr(organizer_module, "parallel_recognize", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom")))
+    def boom(*args, **kwargs):
+        return (_ for _ in ()).throw(RuntimeError("boom"))
+
+    monkeypatch.setattr(organizer_module, "parallel_recognize", boom)
+    
+    # Also patch pipeline's parallel_recognize because Pipeline imports it directly
+    import src.core.pipeline
+    monkeypatch.setattr(src.core.pipeline, "parallel_recognize", boom)
 
     mock_recognizer = MagicMock()
     mock_recognizer.tolerance = 0.6

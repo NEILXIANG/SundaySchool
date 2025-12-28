@@ -16,9 +16,10 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from tqdm import tqdm
-from .config import DEFAULT_OUTPUT_DIR, UNKNOWN_PHOTOS_DIR, REPORT_FILE, SMART_REPORT_FILE
+from .config import DEFAULT_OUTPUT_DIR, UNKNOWN_PHOTOS_DIR, NO_FACE_PHOTOS_DIR, ERROR_PHOTOS_DIR, REPORT_FILE, SMART_REPORT_FILE
 
-from .utils import ensure_directory_exists, ensure_resolved_under, get_photo_date, safe_join_under, UnsafePathError
+from .utils.fs import ensure_directory_exists, ensure_resolved_under, safe_join_under, UnsafePathError
+from .utils.date_parser import get_photo_date
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +38,15 @@ class FileOrganizer:
         # 确保输出目录存在
         ensure_directory_exists(self.output_dir)
     
-    def organize_photos(self, input_dir, recognition_results, unknown_photos, unknown_clusters=None):
+    def organize_photos(self, input_dir, recognition_results, unknown_photos, unknown_clusters=None, *, no_face_photos=None, error_photos=None):
         """把识别结果落盘到输出目录，并返回统计信息。
 
         参数：
         - input_dir：输入目录（当前实现中主要用于日志语义，逻辑上不依赖）
         - recognition_results：{photo_path: [student_names]}，同一照片可能对应多个学生
-        - unknown_photos：未识别到任何已知学生的照片路径列表
+        - unknown_photos：未识别到任何已知学生的照片路径列表（no_matches_found）
+        - no_face_photos：未检测到人脸的照片路径列表（no_faces_detected）
+        - error_photos：识别出错的照片路径列表
         - unknown_clusters：{cluster_name: [photo_paths]} 未知人脸聚类结果
 
         返回：
@@ -53,6 +56,9 @@ class FileOrganizer:
         - 为避免同一照片被重复处理，内部会用 processed_photos 集合去重。
         """
         start_time = datetime.now()
+
+        no_face_photos = list(no_face_photos or [])
+        error_photos = list(error_photos or [])
         
         # 预处理聚类映射：photo_path -> cluster_name
         photo_to_cluster = {}
@@ -62,14 +68,27 @@ class FileOrganizer:
                     photo_to_cluster[path] = cluster_name
 
         # 统计信息（按“复制任务”计数，避免多人合影时成功数 > 总数的统计偏差）
-        total_copy_tasks = sum(len(names) for names in recognition_results.values()) + len(unknown_photos)
-        unique_photos = len(set(recognition_results.keys()) | set(unknown_photos))
+        total_copy_tasks = (
+            sum(len(names) for names in recognition_results.values())
+            + len(list(unknown_photos or []))
+            + len(no_face_photos)
+            + len(error_photos)
+        )
+        unique_photos = len(
+            set(recognition_results.keys())
+            | set(unknown_photos or [])
+            | set(no_face_photos)
+            | set(error_photos)
+        )
         stats = {
             'total': total_copy_tasks,
             'unique_photos': unique_photos,
             'processed': 0,
             'copied': 0,
             'failed': 0,
+            'unknown_total': len(list(unknown_photos or [])),
+            'no_face_total': len(no_face_photos),
+            'error_total': len(error_photos),
             'students': {}
         }
         
@@ -92,7 +111,7 @@ class FileOrganizer:
                     pbar.update(len(student_names))
 
                 # 处理未知照片
-                for photo_path in unknown_photos:
+                for photo_path in (unknown_photos or []):
                     if photo_path in processed_photos:
                         stats['failed'] += 1  # 跳过重复照片
                         stats['skipped'] = stats.get('skipped', 0) + 1  # 记录跳过的照片数量
@@ -100,6 +119,27 @@ class FileOrganizer:
                     
                     cluster_name = photo_to_cluster.get(photo_path)
                     self._process_unknown_photo(photo_path, stats, copied_files, cluster_name)
+                    processed_photos.add(photo_path)
+                    pbar.update(1)
+
+                # 处理无人脸照片：为保持老师使用习惯与旧版本兼容，仍放入 unknown_photos/<date>/。
+                # 同时在统计与报告中单独区分，避免把“无人脸”误认为“陌生人”。
+                for photo_path in no_face_photos:
+                    if photo_path in processed_photos:
+                        stats['failed'] += 1
+                        stats['skipped'] = stats.get('skipped', 0) + 1
+                        continue
+                    self._process_unknown_variant(photo_path, stats, copied_files, stats_key=NO_FACE_PHOTOS_DIR)
+                    processed_photos.add(photo_path)
+                    pbar.update(1)
+
+                # 处理识别出错照片：同样放入 unknown_photos/<date>/，但报告中分列。
+                for photo_path in error_photos:
+                    if photo_path in processed_photos:
+                        stats['failed'] += 1
+                        stats['skipped'] = stats.get('skipped', 0) + 1
+                        continue
+                    self._process_unknown_variant(photo_path, stats, copied_files, stats_key=ERROR_PHOTOS_DIR)
                     processed_photos.add(photo_path)
                     pbar.update(1)
             except Exception as e:
@@ -188,6 +228,28 @@ class FileOrganizer:
             stats['failed'] += 1
         
         stats['processed'] += 1
+
+    def _process_unknown_variant(self, photo_path, stats, copied_files=None, *, stats_key: str):
+        """把照片放入 unknown_photos/<date>/，但在 stats 中用不同 key 计数。"""
+        try:
+            photo_date = get_photo_date(photo_path)
+            unknown_dir = safe_join_under(self.output_dir, UNKNOWN_PHOTOS_DIR, photo_date)
+            ensure_directory_exists(unknown_dir)
+
+            success = self._copy_photo(photo_path, unknown_dir, copied_files)
+            if success:
+                stats['copied'] += 1
+                if stats_key not in stats['students']:
+                    stats['students'][stats_key] = 0
+                stats['students'][stats_key] += 1
+            else:
+                stats['failed'] += 1
+                logger.error(f"复制照片失败: {photo_path} -> {unknown_dir}")
+        except Exception:
+            logger.exception(f"处理照片 {photo_path} 时发生异常")
+            stats['failed'] += 1
+
+        stats['processed'] += 1
     
     def _copy_photo(self, source_path, target_dir, copied_files=None):
         """复制照片到目标目录"""
@@ -246,6 +308,17 @@ class FileOrganizer:
                 f.write(f"  总复制任务数: {stats['total']}\n")
                 f.write(f"  成功复制任务: {stats['copied']}\n")
                 f.write(f"  失败复制任务: {stats['failed']}\n\n")
+
+                # 分类口径（帮助老师理解 unknown 不等于“陌生人”）
+                if 'unknown_total' in stats or 'no_face_total' in stats or 'error_total' in stats:
+                    f.write("分类统计（按原始照片张数）:\n")
+                    if 'unknown_total' in stats:
+                        f.write(f"  未识别（unknown_photos）: {stats.get('unknown_total', 0)} 张\n")
+                    if 'no_face_total' in stats:
+                        f.write(f"  无人脸（no_face_photos）: {stats.get('no_face_total', 0)} 张\n")
+                    if 'error_total' in stats:
+                        f.write(f"  出错（error_photos）: {stats.get('error_total', 0)} 张\n")
+                    f.write("\n")
                 
                 f.write("各学生照片统计:\n")
                 for student_name, count in stats['students'].items():

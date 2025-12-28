@@ -149,6 +149,8 @@ def test_e2e_unknown_clustering_enabled_places_cluster_folders(offline_generated
             return {"Unknown_Person_1": list(self._paths)}
 
     monkeypatch.setattr(core_main, "UnknownClustering", FakeClustering)
+    import src.core.pipeline
+    monkeypatch.setattr(src.core.pipeline, "UnknownClustering", FakeClustering)
 
     sc = SC(ds.input_dir, ds.output_dir, FakeFRForUnknownClustering)
 
@@ -201,6 +203,8 @@ def test_e2e_parallel_recognize_success_path(offline_generated_dataset, monkeypa
                 yield p, {"status": "no_matches_found", "recognized_students": [], "unknown_encodings": []}
 
     monkeypatch.setattr(core_main, "parallel_recognize", _fake_parallel_recognize)
+    import src.core.pipeline
+    monkeypatch.setattr(src.core.pipeline, "parallel_recognize", _fake_parallel_recognize)
 
     sc = SC(ds.input_dir, ds.output_dir, FakeFRForParallelSuccess)
 

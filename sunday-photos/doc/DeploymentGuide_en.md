@@ -31,7 +31,7 @@ Runtime folders created automatically (next to the executable):
 ./input/
 ├── student_photos/            # Reference photos (folder-only: input/student_photos/<student_name>/...)
 └── class_photos/              # Classroom photos (e.g., 2024-12-21/group.jpg)
-./output/                      # Results (student/date/group_103045.jpg)
+./output/                      # Results (student/date/group.jpg)
 ./logs/                        # Runtime logs (safe to clear)
 ```
 If the app directory is not writable, it automatically falls back to Desktop (or Home) and prints the actual `Work folder` path.
@@ -59,13 +59,13 @@ input/
 output/
 ├── Alice/
 │   ├── 2024-12-21/
-│   │   ├── group_photo_103045.jpg
-│   │   └── game_time_104823.jpg
+│   │   ├── group_photo.jpg
+│   │   └── game_time.jpg
 │   └── 2024-12-28/
-│       └── discussion_101010.jpg
+│       └── discussion.jpg
 ├── Bob/
 │   └── 2024-12-21/
-│       └── group_photo_103045.jpg
+│       └── group_photo.jpg
 └── unknown_photos/
     └── 2024-12-21/
     └── blurry_105632.jpg

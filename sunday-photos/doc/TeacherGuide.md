@@ -1,7 +1,7 @@
 # 老师使用指南（打包版 / 不需要安装 Python）
 
 **版本**: v0.4.0  
-**更新日期**: 2025-12-26
+**更新日期**: 2025-12-28
 
 适用对象：直接双击运行发布包的老师。
 
@@ -61,14 +61,14 @@
 output/
 ├── Alice/                      # 每个学生有自己的文件夹
 │   ├── 2025-12-21/             # 按日期分类
-│   │   ├── group_photo_103045.jpg
-│   │   └── game_time_104823.jpg
+│   │   ├── group_photo.jpg
+│   │   └── game_time.jpg
 │   └── 2025-12-28/
-│       └── discussion_101010.jpg
+│       └── discussion.jpg
 ├── Bob/
 │   └── 2025-12-21/
-│       └── group_photo_103045.jpg
-├── unknown_photos/             # 未识别到的人脸
+│       └── group_photo.jpg
+├── unknown_photos/             # 未能归到已知学生的照片（详见下方说明）
 │   ├── Unknown_Person_1/       # 🆕 相似的未知人脸自动归组（如访客、家长）
 │   │   └── 2025-12-21/
 │   │       ├── visitor_a.jpg
@@ -77,6 +77,10 @@ output/
 │       └── blurry_105632.jpg
 └── 20251221_143052_整理报告.txt  # 详细统计报告
 ```
+
+说明：
+- 照片文件名默认保留原名；如果同一目录下出现同名，程序会自动改为 `xxx_001.jpg`、`xxx_002.jpg`… 以避免覆盖。
+- `unknown_photos/日期/` 里可能包含：未识别（unknown）、无人脸（no-face）、处理出错（error）三类照片；整理报告会分列统计，避免把“无人脸/出错”误当成“陌生人”。
 
 **新功能（v0.4.0）**：未知人脸智能聚类
 - 程序会自动识别相似的未知人脸（如访客、家长、新学生）
@@ -103,6 +107,9 @@ output/
 之前：class_photos/photo1.jpg
 之后：class_photos/2025-12-21/photo1.jpg
 ```
+
+**如果遇到同名怎么办？**
+- 如果同一天目录里出现同名文件，程序会自动改名（例如 `photo1.jpg` → `photo1_001.jpg`）再归档，并在控制台/日志里提示。
 
 ### 需要每次放照片吗？
 
@@ -193,6 +200,11 @@ output/
 未识别: 5 张
 处理耗时: 45 秒
 
+分类统计（按原始照片张数）:
+未识别（unknown_photos）: 3 张
+无人脸（no_face_photos）: 1 张
+出错（error_photos）: 1 张
+
 👥 学生分布
 --------------
 Alice: 12 张
@@ -267,5 +279,5 @@ unknown_photos: 2 张    # 单次出现的人脸
 源码/命令行入口与参数（如 `--tolerance`）属于开发与测试用途；老师默认走打包版 `SundayPhotoOrganizer` + 工作目录（Work folder）模式。
 
 如需调整高级参数（如识别阈值、并行配置），请参考：
-- 配置说明：[CONFIG.md](CONFIG.md)
+- 配置参考手册（SSOT）：[CONFIG_REFERENCE.md](CONFIG_REFERENCE.md)
 - 开发指南：[DeveloperGuide.md](DeveloperGuide.md)

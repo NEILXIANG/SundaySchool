@@ -10,7 +10,7 @@
 
 - 老师（只想照做）：`doc/TeacherQuickStart.md`
 - 老师（需要解释/FAQ）：`doc/TeacherGuide.md`
-- 同工（需要调参/排障/环境变量）：`doc/CONFIG.md`
+- 同工（需要调参/排障/环境变量）：`doc/CONFIG_REFERENCE.md`
 - 贡献者/维护者（看架构与实现）：`doc/ArchitectureGuide.md`、`doc/DeveloperGuide.md`
 - 发布/验收（交付稳定）：`doc/ReleaseAcceptanceChecklist.md`、`doc/ReleaseFlow.md`、`doc/TESTING.md`
 
@@ -29,8 +29,8 @@
 
 - 变更联动清单（改代码时顺手检查）
   - 改 Work folder/入口文件名：同步 `TeacherQuickStart`、`TeacherGuide`
-  - 改缓存结构/路径：同步 `CONFIG`、`ArchitectureGuide`（必要时 `HealthCheck`）
-  - 改环境变量：同步 `CONFIG`、`HealthCheck`
+  - 改缓存结构/路径：同步 `CONFIG_REFERENCE`、`ArchitectureGuide`（必要时 `HealthCheck`）
+  - 改环境变量：同步 `CONFIG_REFERENCE`、`HealthCheck`
   - 改发布产物结构：同步 `ReleaseFlow`、`ReleaseAcceptanceChecklist`
 
 ---
