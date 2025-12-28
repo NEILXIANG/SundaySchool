@@ -1,6 +1,6 @@
 # 项目健康检查清单（Health Check Checklist）
 
-**更新日期**: 2025-12-27
+**更新日期**: 2025-12-28
 
 目的：这是一份“可执行”的检查清单，用于发布前/回归前快速确认项目处于健康状态。
 
@@ -37,6 +37,36 @@
 - Work folder 行为符合预期：默认在“可执行文件同目录”创建 `input/ output/ logs/`
 - 若目录不可写：回退到 Desktop/Home，并在控制台打印 `Work folder:` 作为唯一准确信息
 - 环境变量 `SUNDAY_PHOTOS_WORK_DIR` 可强制指定 Work folder（便于便携/演示）
+
+Work folder 举例（示例路径，**实际以你控制台看到的 `Work folder:` 为准**）：
+
+- macOS（常见情况：解压到桌面后直接运行）
+  - 控制台会看到类似：
+    - `Work folder: /Users/teacher/Desktop/SundayPhotoOrganizer/`
+
+- Windows（常见情况：解压到桌面后直接运行）
+  - 控制台会看到类似：
+    - `Work folder: C:\Users\Teacher\Desktop\SundayPhotoOrganizer\`
+
+- 回退情况（目录不可写：只读U盘/系统受限目录等）
+  - 控制台会看到类似：
+    - `Work folder: /Users/teacher/Desktop/SundayPhotoOrganizer_work/`
+
+目录结构示例（带注释，老师/排障同工都能直接对照）：
+
+```
+Work folder/
+├── input/                      # 你只负责把照片放这里
+│   ├── student_photos/          # 学生参考照：一人一个文件夹
+│   └── class_photos/            # 课堂/活动照：可直接放；也可按日期建子目录
+├── output/                     # 你只负责来这里拿整理结果
+│   ├── <学生名>/YYYY-MM-DD/     # 每个学生一个文件夹，按日期分类
+│   ├── unknown_photos/          # 未归到已知学生（unknown / no-face / error）
+│   └── *_整理报告.txt            # 统计与说明（文件名带时间戳）
+├── logs/                       # 出问题时发给技术同工（整个文件夹打包）
+├── config.json                 # （可选）配置文件；一般不需要改
+└── doc/                        # 文档（老师指南/快速开始/配置参考）
+```
 
 ---
 

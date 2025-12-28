@@ -33,6 +33,38 @@ What happens on first run:
 - The program creates (next to the executable): `input/` (photos), `output/` (results), `logs/` (logs)
 - If not writable, it falls back to Desktop (or Home) and prints `Work folder:` in the console (source of truth).
 
+---
+
+## Folder map (the 3 folders teachers should remember)
+
+Your “Work folder” typically looks like this:
+
+```
+Work folder/
+├── input/                      # you only put photos here
+│   ├── student_photos/          # reference photos: one folder per student
+│   └── class_photos/            # class/event photos: can be flat or date subfolders
+├── output/                     # you only collect results from here
+│   ├── <student>/YYYY-MM-DD/    # per-student folders, grouped by date
+│   ├── unknown_photos/          # not matched to known students (unknown / no-face / error)
+│   └── *_整理报告.txt             # the report (timestamped filename)
+├── logs/                       # send this whole folder if something breaks
+├── config.json                 # optional; usually no need to edit
+└── doc/                        # docs (guide / quick start / config reference)
+```
+
+Teacher mnemonic:
+- Put photos into `input/` → run → take results from `output/`; if issues, send `logs/`.
+
+Normal things (not a problem):
+- Date folders (`YYYY-MM-DD/`) may appear under `class_photos/` (the app may move photos into them)
+- If two files would have the same name in the same folder, the app auto-renames to `*_001`, `*_002`, ...
+
+When to ask for help (send `logs/`):
+- Running twice still produces no `output/` or report file
+- The app errors/crashes immediately
+- Photos are in the right place but output stays empty
+
 ### Step 2: Put photos in the right place
 
 **Student reference photos (must follow this layout)**:

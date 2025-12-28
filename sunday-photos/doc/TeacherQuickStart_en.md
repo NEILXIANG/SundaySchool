@@ -48,6 +48,11 @@ While running: a black window shows progress. **Do not close it**.
 - Results: `output/`
 - Logs: `logs/`
 
+In `output/`, you typically see:
+- `output/<student>/YYYY-MM-DD/`: that student’s photos for that date
+- `output/unknown_photos/`: not matched to known students (can also include no-face / error; the report separates counts)
+- `output/*_整理报告.txt`: run report with statistics (timestamped filename)
+
 More docs (usually not needed):
 - Full teacher guide: `doc/TeacherGuide_en.md`
 - Configuration & advanced options (SSOT): `doc/CONFIG_REFERENCE.md` (or the archived pointer `doc/CONFIG_en.md`)

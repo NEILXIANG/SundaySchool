@@ -18,6 +18,29 @@
 
 ## 测试套件速览 / Suite Overview
 
+## 📁 input 目录示例（测试/运行都适用）
+
+多数测试用例会在临时目录里创建与真实运行一致的输入结构，核心约定如下：
+
+```text
+input/
+├── student_photos/                 # 学生参考照（每个学生一个文件夹）
+│   ├── Alice/
+│   │   ├── ref_01.jpg
+│   │   └── ref_02.jpg
+│   └── Bob/
+│       └── ref_01.jpg
+└── class_photos/                   # 课堂/活动照片（建议按日期建子目录）
+  ├── 2025-12-27/
+  │   ├── img_01.jpg
+  │   └── img_02.jpg
+  └── photo_loose.jpg             # 也允许放在根目录（程序会自动按日期归档）
+```
+
+约定说明：
+- `student_photos/<学生名>/`：文件名随意；建议每人 2–5 张清晰正脸。
+- `class_photos/`：推荐按 `YYYY-MM-DD/` 分日期；也允许直接放根目录，程序会自动移动到日期子目录（同名会自动改名避免覆盖）。
+
 ### 核心功能测试
 - **基础与修复** Basics & Fixes
   - `tests/test_basic.py`: 基础流程、配置加载、输入验证
@@ -142,8 +165,8 @@
 ## 配置说明
 
 详细配置字段与注释规则详见：
-- **中文**: [CONFIG.md](CONFIG.md)
-- **English**: [CONFIG_en.md](CONFIG_en.md)
+- 配置参考手册（SSOT）: [CONFIG_REFERENCE.md](CONFIG_REFERENCE.md)
+- 归档指引（已废弃的指针页）: [CONFIG.md](CONFIG.md), [CONFIG_en.md](CONFIG_en.md)
 
 ## 持续集成 / CI
 

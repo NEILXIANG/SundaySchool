@@ -1,6 +1,6 @@
 # Project Health Check Checklist
 
-**Last updated**: 2025-12-27
+**Last updated**: 2025-12-28
 
 Purpose: a runnable checklist for release-time / regression-time sanity checks.
 
@@ -39,6 +39,36 @@ Suggested spot checks:
 - Default Work folder: creates `input/ output/ logs/` next to the executable
 - If not writable: falls back to Desktop/Home and prints `Work folder:` in console (source of truth)
 - Env override works: `SUNDAY_PHOTOS_WORK_DIR` forces the Work folder root (portable/demo)
+
+Work folder examples (sample paths — **the printed `Work folder:` line is always the source of truth**):
+
+- macOS (typical case: unzip to Desktop and run)
+  - Console prints something like:
+    - `Work folder: /Users/teacher/Desktop/SundayPhotoOrganizer/`
+
+- Windows (typical case: unzip to Desktop and run)
+  - Console prints something like:
+    - `Work folder: C:\Users\Teacher\Desktop\SundayPhotoOrganizer\`
+
+- Fallback case (unwritable app folder: read-only drive / restricted location)
+  - Console prints something like:
+    - `Work folder: /Users/teacher/Desktop/SundayPhotoOrganizer_work/`
+
+Folder tree example (annotated):
+
+```
+Work folder/
+├── input/                      # you only put photos here
+│   ├── student_photos/          # reference photos: one folder per student
+│   └── class_photos/            # class/event photos: flat or date subfolders
+├── output/                     # you collect results from here
+│   ├── <student>/YYYY-MM-DD/    # per-student, grouped by date
+│   ├── unknown_photos/          # not matched (unknown / no-face / error)
+│   └── *_整理报告.txt             # run report (timestamped filename)
+├── logs/                       # send this whole folder if something breaks
+├── config.json                 # optional; usually no need to edit
+└── doc/                        # docs (guide / quick start / config reference)
+```
 
 ---
 

@@ -48,6 +48,11 @@
 - 整理结果在：`output/`
 - 运行日志在：`logs/`
 
+你在 `output/` 里通常会看到：
+- `output/<学生名>/YYYY-MM-DD/`：该学生在当天的照片
+- `output/unknown_photos/`：没能归到已知学生的照片（也可能是无人脸/处理出错；报告会分列统计）
+- `output/*_整理报告.txt`：本次整理的统计与说明（文件名带时间戳）
+
 更多说明（一般用不上）：
 - 详细老师指南：`doc/TeacherGuide.md`
 - 配置与高级选项（配置参考手册 / SSOT）：`doc/CONFIG_REFERENCE.md`
