@@ -91,7 +91,7 @@ CLI/run.py
 
 ### 2.1 ServiceContainer (Dependency Injection)
 
-**Location**: [src/core/main.py](src/core/main.py#L47-L77)
+**Location**: [src/core/main.py](src/core/main.py)
 
 **Responsibilities**:
 - Centrally creates and holds core component instances
@@ -190,10 +190,14 @@ class IncrementalPlan:
   "date": "2024-01-01",
   "params_fingerprint": "sha256:abc123...",
   "entries": {
-    "IMG_001.jpg|123456|1704067200": {
-      "status": "success",
-      "recognized_students": ["Alice", "Bob"],
-      "total_faces": 2
+    "IMG_001.jpg": {
+      "size": 123456,
+      "mtime": 1704067200,
+      "result": {
+        "status": "success",
+        "recognized_students": ["Alice", "Bob"],
+        "total_faces": 2
+      }
     }
   }
 }
@@ -212,7 +216,12 @@ from src.core.recognition_cache import (
     compute_params_fingerprint
 )
 
-params = {"tolerance": 0.6, "min_face_size": 50}
+params = {
+  "tolerance": 0.6,
+  "min_face_size": 50,
+  # Reference photos must also invalidate caches (add/remove/replace should take effect immediately)
+  "reference_fingerprint": "..."
+}
 fingerprint = compute_params_fingerprint(params)
 
 cache = load_date_cache(output_dir, "2024-01-01")
@@ -222,13 +231,14 @@ if cache.get("params_fingerprint") != fingerprint:
     cache = {"version": 1, "date": "2024-01-01", 
              "params_fingerprint": fingerprint, "entries": {}}
 
-# Query cache
-key = f"{rel_path}|{size}|{mtime}"
-if key in cache["entries"]:
-    result = cache["entries"][key]
+# Query cache (key=rel_path; size/mtime are validated separately)
+key = CacheKey(date="2024-01-01", rel_path=rel_path, size=size, mtime=mtime)
+cached = lookup_result(cache, key)
+if cached is not None:
+  result = cached
 else:
-    result = recognizer.recognize_faces(photo_path, return_details=True)
-    cache["entries"][key] = result
+  result = recognizer.recognize_faces(photo_path, return_details=True)
+  store_result(cache, key, result)
 
 save_date_cache_atomic(output_dir, "2024-01-01", cache)
 ```

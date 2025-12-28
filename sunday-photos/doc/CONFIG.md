@@ -16,7 +16,7 @@
 补充：
 - 环境变量 `SUNDAY_PHOTOS_NO_PARALLEL=1`（或 `true`/`yes`）会强制禁用并行识别（用于排障或低内存环境）
 - 环境变量 `SUNDAY_PHOTOS_PARALLEL=1` 可临时启用并行识别（无需修改配置文件）
- - 环境变量 `SUNDAY_PHOTOS_FACE_BACKEND=insightface|dlib` 可临时切换人脸识别后端（优先级高于 config.json）
+- 环境变量 `SUNDAY_PHOTOS_FACE_BACKEND=insightface|dlib` 可临时切换人脸识别后端（优先级高于 config.json）
 
 ## 2. 为什么 config.json 里有“注释字段”
 
@@ -72,8 +72,10 @@
 
 **重要（缓存隔离）**：参考照编码缓存会按“后端/模型”分目录保存，避免不同后端的维度混用导致报错：
 
-- 参考照缓存：`{input_dir}/logs/reference_encodings/<engine>/<model>/`
-- 参考照快照：`{input_dir}/logs/reference_index/<engine>/<model>.json`
+- 参考照缓存：`{log_dir}/reference_encodings/<engine>/<model>/`
+- 参考照快照：`{log_dir}/reference_index/<engine>/<model>.json`
+
+说明：`log_dir` 默认是 `logs`，打包版/源码版都推荐使用同一个 `logs/` 来统一保存“运行日志 + 参考照缓存”。
 
 ### 3.4 未知人脸聚类（🆕 v0.4.0）
 
@@ -146,3 +148,16 @@ output/
   - Work folder 选择规则：优先在可执行文件同目录创建；若不可写则回退到桌面（或主目录）；启动时会打印实际 Work folder 路径。
 - 源码运行时若缺少 `config.json`，也会回退到内置默认配置。
 - 路径字段若填写相对路径，会自动基于项目根目录解析；打包版则基于 Work folder 解析。
+
+## 5. 常用环境变量（排障/高级用法）
+
+面向维护者/技术同工；老师通常不需要设置。
+
+- `SUNDAY_PHOTOS_WORK_DIR`：强制指定 Work folder 根目录（打包版推荐用于便携部署）
+- `SUNDAY_PHOTOS_DIAG_ENV=1`：开启诊断输出（会打印更多环境/路径信息，便于定位依赖问题）
+- `SUNDAY_PHOTOS_QUIET_MODELS=1`：静默模型加载噪声输出（默认开启；设为 0 可看到完整依赖输出）
+- `SUNDAY_PHOTOS_INSIGHTFACE_HOME`：指定 InsightFace 模型目录（离线/便携部署时有用）
+- `SUNDAY_PHOTOS_INSIGHTFACE_MODEL`：指定 InsightFace 模型名（默认 `buffalo_l`）
+- `SUNDAY_PHOTOS_NO_PARALLEL=1`：强制串行（排障/低内存机器）
+- `SUNDAY_PHOTOS_PARALLEL=1`：强制允许并行（仍会受 workers/min_photos 约束）
+- `SUNDAY_PHOTOS_PARALLEL_MIN_PHOTOS=0`：调试用：让小批量也走并行（一般不推荐）

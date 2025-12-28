@@ -20,10 +20,30 @@ from .config import DEFAULT_TOLERANCE, MIN_FACE_SIZE
 warnings.filterwarnings("ignore", message=r"\s*Error fetching version info.*")
 
 try:
-    from insightface.app import FaceAnalysis  # type: ignore
-except Exception as e:  # pragma: no cover
-    _INSIGHTFACE_IMPORT_ERROR = e
+    # NOTE: Keep InsightFace import lazy.
+    # Importing insightface at module import time can be slow and may block
+    # multiprocessing "spawn" child startup in tests / teacher console.
     FaceAnalysis = None  # type: ignore
+except Exception as e:  # pragma: no cover
+    FaceAnalysis = None  # type: ignore
+
+_INSIGHTFACE_IMPORT_ERROR: Exception | None = None
+
+
+def _try_import_insightface_faceanalysis():
+    global FaceAnalysis, _INSIGHTFACE_IMPORT_ERROR
+    if FaceAnalysis is not None:
+        return FaceAnalysis
+    try:
+        from insightface.app import FaceAnalysis as _FaceAnalysis  # type: ignore
+
+        FaceAnalysis = _FaceAnalysis  # type: ignore
+        _INSIGHTFACE_IMPORT_ERROR = None
+        return FaceAnalysis
+    except Exception as e:  # pragma: no cover
+        _INSIGHTFACE_IMPORT_ERROR = e
+        FaceAnalysis = None  # type: ignore
+        return None
 
 
 def _normalize_face_backend_engine(raw: str) -> str:
@@ -72,7 +92,7 @@ class _InsightFaceCompat:
     """
 
     def __init__(self) -> None:
-        if FaceAnalysis is None:
+        if _try_import_insightface_faceanalysis() is None:
             raise ModuleNotFoundError(
                 "未安装 InsightFace（人脸识别依赖）。请先安装 requirements.txt 中的依赖。"
             ) from _INSIGHTFACE_IMPORT_ERROR
@@ -341,7 +361,7 @@ logger = logging.getLogger(__name__)
 class FaceRecognizer:
     """人脸识别器"""
     
-    def __init__(self, student_manager, tolerance=None, min_face_size=None):
+    def __init__(self, student_manager, tolerance=None, min_face_size=None, log_dir=None):
         """初始化人脸识别器。
 
         参数：
@@ -354,6 +374,7 @@ class FaceRecognizer:
         if min_face_size is None:
             min_face_size = MIN_FACE_SIZE
         self.student_manager = student_manager
+        self._log_dir = Path(log_dir) if log_dir else None
         self.tolerance = tolerance
         self.min_face_size = int(min_face_size)
         self.students_encodings = {}
@@ -438,14 +459,23 @@ class FaceRecognizer:
         return []
 
     def _resolve_ref_cache_dir(self) -> Path:
-        """参考照编码缓存目录（跟随 input_dir/logs，打包版也可用）。"""
-        try:
-            input_dir = Path(getattr(self.student_manager, 'input_dir'))
-        except Exception:
-            input_dir = Path(".")
+        """参考照编码缓存目录。
+
+        约定：优先跟随 log_dir（默认 logs/），便于把“运行日志”和“参考照缓存”放在同一处。
+
+        兼容：若未提供 log_dir，则回退使用旧路径 input_dir/logs（历史版本行为）。
+        """
+        if self._log_dir is not None:
+            base = Path(self._log_dir)
+        else:
+            try:
+                input_dir = Path(getattr(self.student_manager, 'input_dir'))
+            except Exception:
+                input_dir = Path(".")
+            base = input_dir / "logs"
         engine = _safe_key(getattr(self, "_backend_engine", _get_selected_face_backend_engine()))
         model = _safe_key(getattr(self, "_backend_model", _get_backend_model_name(_get_selected_face_backend_engine())))
-        d = input_dir / "logs" / "reference_encodings" / engine / model
+        d = base / "reference_encodings" / engine / model
         try:
             d.mkdir(parents=True, exist_ok=True)
         except Exception:
@@ -454,13 +484,17 @@ class FaceRecognizer:
         return d
 
     def _resolve_ref_snapshot_path(self) -> Path:
-        try:
-            input_dir = Path(getattr(self.student_manager, 'input_dir'))
-        except Exception:
-            input_dir = Path(".")
+        if self._log_dir is not None:
+            base = Path(self._log_dir)
+        else:
+            try:
+                input_dir = Path(getattr(self.student_manager, 'input_dir'))
+            except Exception:
+                input_dir = Path(".")
+            base = input_dir / "logs"
         engine = _safe_key(getattr(self, "_backend_engine", _get_selected_face_backend_engine()))
         model = _safe_key(getattr(self, "_backend_model", _get_backend_model_name(_get_selected_face_backend_engine())))
-        p = input_dir / "logs" / "reference_index" / engine / f"{model}.json"
+        p = base / "reference_index" / engine / f"{model}.json"
         return p
 
     def _load_ref_snapshot(self) -> dict:

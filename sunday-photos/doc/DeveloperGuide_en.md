@@ -12,9 +12,9 @@ Teacher-facing quick start (included in release bundles):
 
 ## Key structure
 - Source: `sunday-photos/src/` (entry `src/cli/run.py`, core logic in `src/core/`).
-- macOS packaging script: `sunday-photos/scripts/build_mac_app.sh` (console onefile, honors `TARGET_ARCH`).
-- Release dir: `sunday-photos/release_console/` (executable `SundayPhotoOrganizer` + launcher + docs).
-- Windows output: `sunday-photos/release_console/` (onefile `SundayPhotoOrganizer.exe` + `Launch_SundayPhotoOrganizer.bat`).
+- macOS packaging script: `sunday-photos/scripts/build_mac_app.sh` (console onedir, honors `TARGET_ARCH`).
+- macOS teacher-friendly wrapper: `sunday-photos/scripts/build_mac_teacher_app.sh` (produces `release_mac_app/SundayPhotoOrganizer.app`).
+- Release dir: `sunday-photos/release_console/` (onedir folder `SundayPhotoOrganizer/` + launchers + docs).
 
 ## Local dev & test
 1) Python 3.7+ (recommended), create venv:
@@ -34,11 +34,16 @@ Teacher-facing quick start (included in release bundles):
 ## Local packaging (macOS)
 ```bash
 cd sunday-photos
-bash scripts/build_mac_app.sh               # onefile for current arch
+bash scripts/build_mac_app.sh               # onedir for current arch
 TARGET_ARCH=x86_64 bash scripts/build_mac_app.sh
 TARGET_ARCH=arm64  bash scripts/build_mac_app.sh
 ```
-Output: `release_console/SundayPhotoOrganizer` (onefile executable).
+Output: `release_console/SundayPhotoOrganizer/` (onedir folder).
+
+If you only changed docs/launchers and want to refresh `release_console/` without re-running PyInstaller:
+```bash
+SKIP_PYINSTALLER=1 bash scripts/build_mac_app.sh
+```
 
 ## Local packaging (Windows)
 Run on Windows (PyInstaller cannot cross-compile):
@@ -46,9 +51,11 @@ Run on Windows (PyInstaller cannot cross-compile):
 cd sunday-photos
 powershell -ExecutionPolicy Bypass -File scripts\build_windows_console_app.ps1
 ```
-Output: `release_console/SundayPhotoOrganizer.exe` (onefile executable).
+Output: `release_console/SundayPhotoOrganizer/` (onedir bundle).
 
-Note: Older builds may have used an onedir layout like `release_console/SundayPhotoOrganizer/SundaySchool`. Current script outputs onefile.
+Windows executable: `release_console/SundayPhotoOrganizer/SundayPhotoOrganizer.exe`.
+
+Note: Current releases use an onedir layout; the launchers are the recommended entry points.
 
 ## GitHub Actions
 - macOS universal bundle (arm64 + x86_64): `.github/workflows/macos-universal-bundle.yml` (manual trigger, artifact `macos-universal`).
@@ -63,7 +70,7 @@ Note: Older builds may have used an onedir layout like `release_console/SundayPh
 
 ## Models & size
 - Default backend is InsightFace. The first run may download models into `~/.insightface/` (or `SUNDAY_PHOTOS_INSIGHTFACE_HOME`). For offline deployments, pre-download and ship the model folder.
-- onedir bundles Python and deps (larger but faster start); onefile is smaller but slower (Windows uses onefile).
+- onedir bundles Python and deps (larger but faster start). This project uses onedir for both macOS and Windows releases.
 
 ## Troubleshooting
 - `requirements.txt` missing: ensure working directory is `sunday-photos` (CI already sets this).

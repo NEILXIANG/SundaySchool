@@ -27,8 +27,9 @@ a = Analysis(
     ["console_launcher.py"],
     pathex=["src", "."],
     binaries=binaries,
-    # 额外打包 src/ 与 config.json，确保控制台启动器可加载到完整运行时文件。
-    datas=datas + [("src", "src"), ("config.json", ".")],
+    # 额外打包 src/，确保控制台启动器可加载到完整运行时文件。
+    # 注意：不要把 config.json 打进包里（老师端需要在工作目录生成/使用自己的配置，避免携带开发机绝对路径）。
+    datas=datas + [("src", "src")],
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
@@ -39,7 +40,7 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
-# 该 spec 生成 onefile 控制台可执行文件：dist/SundayPhotoOrganizer
+# 该 spec 生成 onedir 控制台应用目录：dist/SundayPhotoOrganizer/
 # Windows 不支持 .icns；若未安装 Pillow 则无法自动转换，导致打包失败。
 # 为保证 CI 稳定：Windows 不设置 icon；其他平台继续使用 app_icon.icns。
 icon_files = [] if sys.platform.startswith("win") else ["app_icon.icns"]
@@ -52,9 +53,8 @@ target_arch_value = env_target_arch if sys.platform == "darwin" else None
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
+    exclude_binaries=True,
     name="SundayPhotoOrganizer",
     debug=False,
     bootloader_ignore_signals=False,
@@ -69,4 +69,15 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=icon_files,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    name="SundayPhotoOrganizer",
 )

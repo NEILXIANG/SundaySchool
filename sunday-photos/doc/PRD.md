@@ -238,9 +238,9 @@ dlib
 - **文档**：doc/ 目录（PRD/README/开发指南/测试说明/配置说明）
 
 ### 7.2 打包产物
-- **macOS (x86_64)**：release_console/SundayPhotoOrganizer (Intel芯片)
-- **macOS (ARM64)**：release_console/SundayPhotoOrganizer (M1/M2芯片)
-- **Windows (x86_64)**：release_console/SundayPhotoOrganizer.exe
+- **macOS（老师双击版 .app）**：release_mac_app/SundayPhotoOrganizer.app
+- **macOS（控制台版 onedir）**：release_console/SundayPhotoOrganizer/SundayPhotoOrganizer（按构建架构分别生成 x86_64 / arm64）
+- **Windows（控制台版 onedir）**：release_console/SundayPhotoOrganizer/SundayPhotoOrganizer.exe
 
 ### 7.3 用户文档
 - **老师指南**：doc/TeacherGuide.md（中文） + doc/TeacherGuide_en.md（英文）

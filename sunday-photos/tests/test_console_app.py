@@ -66,7 +66,18 @@ def test_executable():
     if _skip_if_missing_release_console():
         return
     
-    executable_path = Path("release_console/SundayPhotoOrganizer")
+    bundle_path = Path("release_console/SundayPhotoOrganizer")
+
+    def _resolve_executable() -> Path:
+        if bundle_path.is_file():
+            return bundle_path
+        if bundle_path.is_dir():
+            if sys.platform.startswith("win"):
+                return bundle_path / "SundayPhotoOrganizer.exe"
+            return bundle_path / "SundayPhotoOrganizer"
+        return bundle_path
+
+    executable_path = _resolve_executable()
     if not executable_path.exists():
         print("❌ 可执行文件不存在")
         if _require_packaged_artifacts():
@@ -102,7 +113,18 @@ def test_console_launch():
         print("ℹ️ 未设置 RUN_CONSOLE_BINARY_TESTS=1，跳过实际启动二进制（仅做静态检查）。")
         return
     
-    executable_path = Path("release_console/SundayPhotoOrganizer")
+    bundle_path = Path("release_console/SundayPhotoOrganizer")
+
+    def _resolve_executable() -> Path:
+        if bundle_path.is_file():
+            return bundle_path
+        if bundle_path.is_dir():
+            if sys.platform.startswith("win"):
+                return bundle_path / "SundayPhotoOrganizer.exe"
+            return bundle_path / "SundayPhotoOrganizer"
+        return bundle_path
+
+    executable_path = _resolve_executable()
     if not executable_path.exists():
         print("❌ 可执行文件不存在")
         if _require_packaged_artifacts():
@@ -155,7 +177,7 @@ def test_documentation():
     if _skip_if_missing_release_console():
         return
     
-    doc_path = Path("release_console/使用说明.txt")
+    doc_path = Path("release_console/使用说明.md")
     if not doc_path.exists():
         print("❌ 使用说明文档不存在")
         assert False, "使用说明文档不存在"
@@ -325,7 +347,7 @@ def main():
     
     print(f"\n📂 交付文件:")
     print("• release_console/SundayPhotoOrganizer - 可执行文件")
-    print("• release_console/使用说明.txt - 使用说明")
+    print("• release_console/使用说明.md - 使用说明")
     print("• release_console/启动工具.sh - 启动脚本")
     
     print(f"\n🚀 老师使用方法:")

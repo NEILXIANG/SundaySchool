@@ -12,7 +12,8 @@ From highest to lowest priority:
 
 Additionally:
 - Environment variable `SUNDAY_PHOTOS_NO_PARALLEL=1` (or `true`/`yes`) forces serial mode (useful for troubleshooting or low-memory machines).
- - Environment variable `SUNDAY_PHOTOS_FACE_BACKEND=insightface|dlib` switches the face backend (higher priority than config.json).
+- Environment variable `SUNDAY_PHOTOS_PARALLEL=1` can temporarily enable parallel recognition (without editing `config.json`).
+- Environment variable `SUNDAY_PHOTOS_FACE_BACKEND=insightface|dlib` switches the face backend (higher priority than config.json).
 
 ## 2. Why there are “comment fields” in config.json
 
@@ -67,8 +68,10 @@ Priority: if `SUNDAY_PHOTOS_FACE_BACKEND` is set, it overrides `config.json`.
 
 **Important (cache isolation)**: reference encodings are stored under backend/model-specific folders to prevent mixing 128-d and 512-d caches:
 
-- Reference cache: `{input_dir}/logs/reference_encodings/<engine>/<model>/`
-- Reference snapshot: `{input_dir}/logs/reference_index/<engine>/<model>.json`
+- Reference cache: `{log_dir}/reference_encodings/<engine>/<model>/`
+- Reference snapshot: `{log_dir}/reference_index/<engine>/<model>.json`
+
+Note: `log_dir` defaults to `logs`. Both source and packaged workflows should keep runtime logs and reference caches under the same `logs/` folder.
 
 ### 3.4 Unknown face clustering (v0.4.0)
 
@@ -114,3 +117,16 @@ By default, snapshots and caches speed up repeat runs. If you suspect “new pho
 - Remove incremental/cache traces under `output/.state/` (snapshot) and any per-date caches (if present), then run again.
 - Or rename/move the specific date folder under `class_photos/` (e.g., `2025-12-21` → `2025-12-21-new`); the app will treat it as new input and fully process it.
 Note: Deleting caches does **not** delete original photos; it only forces re-recognition and regenerates outputs/reports.
+
+## 4. Common environment variables (troubleshooting / advanced)
+
+For maintainers/technical helpers. Teachers typically don’t need these.
+
+- `SUNDAY_PHOTOS_WORK_DIR`: force the Work folder root directory (useful for portable deployments)
+- `SUNDAY_PHOTOS_DIAG_ENV=1`: enable diagnostic output (prints extra environment/path info)
+- `SUNDAY_PHOTOS_QUIET_MODELS=1`: suppress noisy model-loading output (default on; set to `0` to see full output)
+- `SUNDAY_PHOTOS_INSIGHTFACE_HOME`: override InsightFace model directory (offline/portable)
+- `SUNDAY_PHOTOS_INSIGHTFACE_MODEL`: override InsightFace model name (default: `buffalo_l`)
+- `SUNDAY_PHOTOS_NO_PARALLEL=1`: force serial mode
+- `SUNDAY_PHOTOS_PARALLEL=1`: force allow parallel mode (still constrained by workers/min_photos)
+- `SUNDAY_PHOTOS_PARALLEL_MIN_PHOTOS=0`: debug-only; allow parallel even for small batches

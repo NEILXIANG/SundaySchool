@@ -11,8 +11,8 @@
 2. **SundayPhotoOrganizer.exe** (Windows 可执行文件)
 3. **启动工具.sh** (macOS 启动脚本；可双击或终端运行)
 4. **Launch_SundayPhotoOrganizer.bat** (Windows 启动脚本；双击运行)
-5. **使用说明.txt** (中文用户指南)
-6. **USAGE_EN.txt** (英文用户指南)
+5. **使用说明.md** (中文用户指南)
+6. **USAGE_EN.md** (英文用户指南)
 
 分发给老师时，请保持这些文件在同一目录下。
 
@@ -113,15 +113,17 @@ output/
 ## ▶️ 启动方式
 
 ### macOS
-- **双击运行**: 双击 `release_console/SundayPhotoOrganizer` 或 `release_console/启动工具.sh`
-- **终端运行**: `./release_console/SundayPhotoOrganizer` (如需要先执行 `chmod +x`)
+- **双击运行（推荐）**: 双击 `release_mac_app/SundayPhotoOrganizer.app`
+- **控制台版双击运行**: 双击 `release_console/启动工具.sh`
+- **终端运行（控制台版）**: `./release_console/SundayPhotoOrganizer/SundayPhotoOrganizer`（如需要先执行 `chmod +x release_console/SundayPhotoOrganizer/SundayPhotoOrganizer`）
 
 **首次运行提示**: 如果 macOS 阻止运行，请前往"系统设置 → 隐私与安全性"选择"仍要打开"。
 
 ### Windows
-- **双击运行**: 双击 `release_console/SundayPhotoOrganizer.exe` 或 `release_console/Launch_SundayPhotoOrganizer.bat`
+- **双击运行（推荐）**: 双击 `release_console/Launch_SundayPhotoOrganizer.bat`
+- **直接运行可执行文件**: `release_console/SundayPhotoOrganizer/SundayPhotoOrganizer.exe`
 
-**注意**: 较旧的构建版本可能使用目录布局（如 `release_console/SundayPhotoOrganizer/SundaySchool`）。当前版本使用单文件模式：`release_console/SundayPhotoOrganizer`。
+**注意**: 当前发布包为目录模式（onedir）：可执行文件位于 `release_console/SundayPhotoOrganizer/` 目录内。
 
 ## 🧪 验证与测试
 

@@ -10,10 +10,11 @@ Updated: 2025-12-26
 
 ## 2. Validation Results (Automated)
 - Source mode: `pytest -q` passed (example: `198 passed, 6 skipped`).
-- Packaged mode: macOS onefile console artifact was built; `REQUIRE_PACKAGED_ARTIFACTS=1 pytest -q` passed (example: `198 passed, 6 skipped`).
+- Packaged mode: the console onedir bundle (`release_console/SundayPhotoOrganizer/`) was built; `REQUIRE_PACKAGED_ARTIFACTS=1 pytest -q` passed (example: `198 passed, 6 skipped`).
 
 Recommended “release acceptance” steps:
 - Build: `bash scripts/build_mac_app.sh`
+- (Optional) Teacher double-click app: `bash scripts/build_mac_teacher_app.sh`
 - Validate packaged artifacts: `REQUIRE_PACKAGED_ARTIFACTS=1 python -m pytest -q`
 
 ## 3. Core Modules Review (Responsibilities)

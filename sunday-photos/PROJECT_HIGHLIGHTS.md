@@ -93,8 +93,8 @@ Sunday School Photo Organizer 是一款为主日学老师设计的智能照片�
 ### 4. 跨平台部署
 
 **打包方式**
-- macOS: PyInstaller + `--onefile` 单文件可执行
-- Windows: PyInstaller + `.exe` + 启动脚本
+- macOS: PyInstaller onedir 控制台发布包（可选提供老师双击版 `.app`，会打开终端显示日志）
+- Windows: PyInstaller onedir 发布包（`.exe` 在目录内）+ 启动脚本
 - 支持架构：x86_64、ARM64（Apple Silicon）
 
 **启动脚本优化**
@@ -105,7 +105,7 @@ Sunday School Photo Organizer 是一款为主日学老师设计的智能照片�
 **依赖管理**
 - 全静态链接：无需安装Python运行时
 - 依赖打包：默认 InsightFace + onnxruntime（CPU），也支持可选 dlib/face_recognition 后端
-- 体积优化：压缩后 < 100MB
+- 体积：取决于打包后端/依赖与模型版本，以实际发布包为准
 
 ---
 

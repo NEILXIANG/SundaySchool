@@ -205,7 +205,8 @@ output/
 - AI 提示词模板（用于后续迭代/修复）：[doc/AI_prompt_templates.md](doc/AI_prompt_templates.md)
 
 ### 1) 运行
-- macOS：双击 `release_console/启动工具.sh`（推荐），或双击 `release_console/SundayPhotoOrganizer`
+- macOS：双击 `release_mac_app/SundayPhotoOrganizer.app`（推荐；会自动打开终端显示日志）
+  - 也可使用控制台发布包：双击 `release_console/启动工具.sh`，或在终端运行 `release_console/SundayPhotoOrganizer/SundayPhotoOrganizer`
 
 ### 2) 放照片（只需要这一步）
 首次运行会创建工作目录结构（以运行时弹出的黑色窗口/终端窗口里打印的 `Work folder:` 为准；通常是程序所在目录，若不可写会自动回退到桌面或主目录）：
@@ -292,9 +293,9 @@ SUNDAY_PHOTOS_NO_PARALLEL=1 python run.py
 ## 🧪 测试与质量
 
 - 运行全套测试：`python run_all_tests.py`
-- 打包（macOS 控制台 onefile，可生成 release_console/SundayPhotoOrganizer）：`bash scripts/build_mac_app.sh`
+- 打包（macOS 控制台 onedir，可生成 release_console/SundayPhotoOrganizer/）：`bash scripts/build_mac_app.sh`
 - 打包产物强校验（发布前验收用）：`REQUIRE_PACKAGED_ARTIFACTS=1 python -m pytest -q`
-   - 默认情况下，若未生成 `release_console/SundayPhotoOrganizer`，相关用例会自动跳过（不影响日常开发/CI）。
+  - 默认情况下，若未生成 `release_console/SundayPhotoOrganizer/`，相关用例会自动跳过（不影响日常开发/CI）。
    - 也可以使用一键脚本：`python run_all_tests.py --require-packaged-artifacts`
 - 主要测试文件在 [tests/](tests) 目录，涵盖：
    - 基础/修复/集成：如 [tests/test_basic.py](tests/test_basic.py)、[tests/test_integration.py](tests/test_integration.py)

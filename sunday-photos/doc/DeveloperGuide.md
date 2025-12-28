@@ -45,13 +45,18 @@ sunday-photos/
 │   ├── test_recognition_cache.py # 缓存测试
 │   └── ...
 ├── scripts/                     # 打包脚本
-│   ├── build_mac_app.sh         # macOS打包（onefile）
-│   └── build_windows_console_app.ps1 # Windows打包
+│   ├── build_mac_app.sh         # 构建/刷新控制台发布包（onedir，release_console/）
+│   ├── build_mac_teacher_app.sh # 构建老师双击版（.app，release_mac_app/）
+│   └── build_windows_console_app.ps1 # Windows控制台发布包（onedir）
 ├── release_console/             # 打包产物目录
-│   ├── SundayPhotoOrganizer     # macOS可执行文件
-│   ├── SundayPhotoOrganizer.exe # Windows可执行文件
-│   ├── 启动工具.sh               # macOS启动脚本
-│   └── Launch_SundayPhotoOrganizer.bat # Windows启动脚本
+│   ├── SundayPhotoOrganizer/     # 控制台发布包目录（onedir）
+│   │   ├── SundayPhotoOrganizer     # macOS可执行文件（在目录内）
+│   │   └── SundayPhotoOrganizer.exe # Windows可执行文件（在目录内）
+│   ├── 启动工具.sh                # macOS 启动脚本（推荐入口，固定工作目录）
+│   ├── Launch_SundayPhotoOrganizer.bat # Windows 启动脚本
+│   ├── 使用说明.md                # 中文使用说明（md-only）
+│   └── USAGE_EN.md              # English usage (md-only)
+├── release_mac_app/             # macOS 老师双击版（.app + input/output/logs）
 ├── doc/                         # 项目文档
 ├── config.json                  # 配置文件（示例）
 ├── requirements.txt             # Python依赖
@@ -266,9 +271,9 @@ SimplePhotoOrganizer (src/core/main.py)
 - 失效机制：参数指纹变化（tolerance/min_face_size/参考照指纹）
 
 **4. 参考照增量缓存**：
-- 位置：`logs/reference_encodings/*.npy`
+- 位置：`{log_dir}/reference_encodings/<engine>/<model>/*.npy`
 - 内容：每张参考照的 face encoding（numpy数组）
-- 快照：`logs/reference_index.json`（记录 rel_path/size/mtime/status/cache）
+- 快照：`{log_dir}/reference_index/<engine>/<model>.json`（记录 rel_path/size/mtime/status/cache 等元信息）
 - 优势：参考照未变化时复用，提升 3-5倍 启动速度
 
 **5. 未知人脸聚类**（v0.4.0）：
@@ -299,14 +304,21 @@ TARGET_ARCH=arm64 bash scripts/build_mac_app.sh
 ```
 
 **产物位置**：
-- `release_console/SundayPhotoOrganizer`（onefile可执行文件）
-- `release_console/启动工具.sh`（启动脚本）
+- `release_console/SundayPhotoOrganizer/`（onedir 发布包目录）
+  - 可执行文件：`release_console/SundayPhotoOrganizer/SundayPhotoOrganizer`
+  - 启动脚本：`release_console/启动工具.sh`
+- （可选）老师双击版：`release_mac_app/SundayPhotoOrganizer.app`
 
 **打包原理**：
-- 使用 `PyInstaller --onefile`
-- 打包模式：单文件（启动慢但分发方便）
+- 使用 PyInstaller 目录模式（onedir）
+- 打包模式：目录（更稳定，便于携带依赖/资源；本项目发布口径统一用 onedir）
 - 包含所有依赖（Python运行时 + face_recognition + dlib + models）
 - 体积约 150-200MB
+
+**仅刷新发布目录（不重新跑 PyInstaller）**：
+```bash
+SKIP_PYINSTALLER=1 bash scripts/build_mac_app.sh
+```
 
 ### Windows 打包
 
@@ -321,7 +333,8 @@ powershell -ExecutionPolicy Bypass -File scripts\\build_windows_console_app.ps1
 ```
 
 **产物位置**：
-- `release_console/SundayPhotoOrganizer.exe`（onefile可执行文件）
+- `release_console/SundayPhotoOrganizer/`（onedir 发布包目录）
+  - 可执行文件：`release_console/SundayPhotoOrganizer/SundayPhotoOrganizer.exe`
 - `release_console/Launch_SundayPhotoOrganizer.bat`（启动脚本，防止闪退）
 
 **注意事项**：

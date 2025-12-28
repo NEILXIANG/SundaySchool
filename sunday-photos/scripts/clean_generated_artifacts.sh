@@ -9,10 +9,11 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  bash scripts/clean_generated_artifacts.sh [--all] [--venv] [--yes]
+  bash scripts/clean_generated_artifacts.sh [--all] [--packaging] [--venv] [--yes]
 
 Options:
-  --all   Also remove build outputs and caches: build/, dist/, output/, logs/, _downloaded_images/, .debug_work/ and .DS_Store
+  --all        Also remove build outputs and caches: build/, dist/, output/, logs/, _downloaded_images/, .debug_work/ and .DS_Store
+  --packaging  Also remove packaging outputs: release_console/, release_mac_app/ and build/pyinstaller-cache
   --venv  Also remove legacy local venv: .venv310/
   --yes   Do not prompt for confirmation
 
@@ -28,11 +29,13 @@ EOF
 }
 
 ALL=0
+PACKAGING=0
 VENV=0
 YES=0
 for arg in "$@"; do
   case "$arg" in
     --all) ALL=1 ;;
+    --packaging) PACKAGING=1 ;;
     --venv) VENV=1 ;;
     --yes) YES=1 ;;
     -h|--help) usage; exit 0 ;;
@@ -66,6 +69,12 @@ if [[ "$ALL" == "1" ]]; then
 
   # macOS Finder artifacts
   while IFS= read -r -d '' p; do delete_paths+=("$p"); done < <(find . -name '.DS_Store' -print0)
+fi
+
+if [[ "$PACKAGING" == "1" ]]; then
+  [[ -d build/pyinstaller-cache ]] && delete_paths+=("build/pyinstaller-cache")
+  [[ -d release_console ]] && delete_paths+=("release_console")
+  [[ -d release_mac_app ]] && delete_paths+=("release_mac_app")
 fi
 
 if [[ "$VENV" == "1" ]]; then

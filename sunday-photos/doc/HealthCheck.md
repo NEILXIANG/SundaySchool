@@ -1,98 +1,66 @@
-# Sunday Photos 项目体检报告 (Health Check Report)
+# 项目健康检查清单（Health Check Checklist）
 
-**日期**: 2025-12-26
-**状态**: 已完成结构性修复与验证
+**更新日期**: 2025-12-27
 
-## 1. 总体评估 (Executive Summary)
-项目整体架构清晰，功能实现完整，具备良好的可扩展性和生产环境可用性。在本次体检中，重点解决了一个潜在的架构风险（导入路径不一致）和一个文档与代码的逻辑偏差（学生照片存储结构）。目前项目处于健康状态，测试覆盖率高（231 passed, 6 skipped）。
+目的：这是一份“可执行”的检查清单，用于发布前/回归前快速确认项目处于健康状态。
 
----
-
-## 2. 详细分析 (Detailed Analysis)
-
-### 2.1 代码合理性与模块化 (Rationality & Modularity)
-- **评估**: 模块划分清晰，分为 `core` (核心逻辑), `cli` (命令行界面), `ui` (交互引导), `utils` (工具类)。
-- **改进**: 
-    - 统一了导入规范。之前存在 `import core` 和 `import src.core` 混用的情况，这会导致 Python 重复加载模块并造成全局状态（如单例、配置）碎片化。
-    - 现已统一为以项目根目录为基准的 `src.*` 导入方式。
-- **结论**: 模块化程度高，职责分离明确。
-
-### 2.2 代码逻辑与结构 (Logic & Structure)
-- **评估**: 
-    - **核心逻辑**: 采用人脸识别 + 聚类 + 增量更新的流水线，逻辑严密。
-    - **入口管理**: 提供了 `run.py` (源码入口) 和 `console_launcher.py` (打包入口)，适配不同使用场景。
-- **修复**: 
-    - 修正了学生参考照片的目录逻辑。代码强制要求 `input/student_photos/<学生姓名>/照片.jpg`，而文档曾描述为扁平结构。现已将文档与代码完全对齐，确保用户不会因目录结构错误导致识别失败。
-- **结论**: 结构合理，入口统一，逻辑一致性已修复。
-
-### 2.3 执行效率 (Efficiency)
-- **评估**: 
-    - **并行处理**: 在人脸特征提取阶段支持多进程并行，显著提升了处理大量照片的速度。
-    - **增量更新**: 引入了 `incremental_state.py`，通过快照机制避免重复处理已识别的照片，极大优化了二次运行的效率。
-- **结论**: 效率优化到位，适合处理百级至千级规模的照片集。
-
-### 2.4 数据结构使用 (Data Structures)
-- **评估**: 
-    - 使用 `JSON` 存储配置和增量状态，易于阅读和调试。
-    - 使用 `numpy` 数组处理人脸特征向量，保证了计算性能。
-- **结论**: 数据结构选择合理，兼顾了性能与可维护性。
-
-### 2.5 代码与文档匹配度 (Code-Doc Alignment)
-- **评估**: 之前存在较大偏差，特别是关于输入目录结构的说明。
-- **修复**: 
-    - 更新了全部 8 份快速入门文档（中英文、MD/TXT 格式）。
-    - 确保所有文档中的示例路径与 `src/core/student_manager.py` 中的校验逻辑完全一致。
-- **结论**: 目前匹配度 100%。
+说明：历史的“体检报告类总结”请参考 `doc/HealthCheckReport.md` / `doc/HealthCheckReport_en.md`。
 
 ---
 
-## 3. 测试验证 (Testing & Verification)
+## 1) 文档口径一致性（必须）
 
-### 3.1 测试用例丰富度
-- 项目拥有详尽的测试套件，涵盖：
-    - 单元测试 (`test_config_loader`, `test_student_manager`, `test_clustering_unit` 等)
-    - 性能分析测试 (`test_performance_analysis.py`) - 验证大规模数据处理性能
-    - 逻辑验证测试 (`test_logic_validation.py`) - 验证路径安全、增量处理、并发安全性
-    - 集成测试 (`test_e2e_offline_pipeline`)
-    - 边界情况测试 (`test_edge_cases`)
-    - 打包环境模拟测试 (`test_console_launcher_packaged_config`)
+- 入口名称一致：`SundayPhotoOrganizer`（macOS app + console onedir + Windows onedir）
+- 老师端唯一输入规范一致：`input/student_photos/<学生名>/*.jpg|png...`（禁止根目录直接放图；禁止更深层嵌套）
+- 自动按日期归档课堂照的解释存在：`class_photos/` 根目录照片会被移动到 `YYYY-MM-DD/`
+- “不准时三步法”一致：只允许建议补参考照/提高参考照质量/课堂照更清晰，不引导老师调参
 
-### 3.2 测试执行结果
-- **执行命令**: `python -m pytest -q`
-- **结果**: `231 passed, 6 skipped` (新增 20 个性能与逻辑验证测试，聚类单元测试 6 个)
-- **验证内容**:
-    - 增量处理性能：快照构建 5000 张照片 <1s ✓
-    - 聚类性能：500 个未知人脸聚类 <2s ✓
-    - 路径安全：防止目录遍历和符号链接逃逸 ✓
-    - 增量一致性：变更检测和删除检测 ✓
-    - 并发安全：多线程快照构建 ✓
-    - 配置验证：边界值和默认值 ✓
-    - 内存效率：单个编码 <1KB，1000 个编码 <1.5MB ✓
+建议抽查：
+- `doc/TeacherQuickStart.md` / `doc/TeacherQuickStart_en.md`
+- `doc/TeacherGuide.md` / `doc/TeacherGuide_en.md`
+- `doc/CONFIG.md` / `doc/CONFIG_en.md`
 
 ---
 
-## 4. 维护建议 (Recommendations)
-1. **持续集成**: 建议在 CI 流程中加入 `pytest` 自动校验，防止导入路径再次退化。
-2. **类型检查**: 虽然已有 `pyrightconfig.json`，但建议在核心模块进一步加强类型标注 (Type Hints)。
-3. **日志清理**: 生产环境下可适当调高日志级别，减少 `logs/` 目录的占用空间。
-4. **聚类性能优化**: 当未知人脸数量超过 1000 时，考虑采用更高效的聚类算法（如 DBSCAN）替代贪婪算法。
-5. **增量处理缓存**: 建议在增量快照中增加 MD5 哈希校验，防止文件内容变更但 mtime 相同的情况。
+## 2) 打包与产物结构（必须）
+
+- onedir 产物存在：`release_console/SundayPhotoOrganizer/`
+  - macOS 可执行：`release_console/SundayPhotoOrganizer/SundayPhotoOrganizer`
+  - Windows 可执行：`release_console/SundayPhotoOrganizer/SundayPhotoOrganizer.exe`
+- macOS 老师双击版存在（如需要）：`release_mac_app/SundayPhotoOrganizer.app`
+- 发布包内只保留说明类 `.md`（md-only 口径）；必要的 `.txt`（例如运行生成的报告）不在此限制内
 
 ---
 
-## 5. 性能基准 (Performance Benchmarks)
+## 3) 运行目录与权限（必须）
 
-基于本次测试验证的性能指标：
-
-| 操作项 | 规模 | 耗时 | 结果 |
-|------|------|------|------|
-| 快照构建 | 5000 张照片（31 个日期） | <1s | ✓ 优秀 |
-| 人脸聚类 | 500 张未知人脸 | <2s | ✓ 良好 |
-| 人脸编码内存 | 1000 个编码 | <1.5MB | ✓ 高效 |
-| 多线程快照 | 5 并发线程 | 稳定 | ✓ 无竞态 |
+- Work folder 行为符合预期：默认在“可执行文件同目录”创建 `input/ output/ logs/`
+- 若目录不可写：回退到 Desktop/Home，并在控制台打印 `Work folder:` 作为唯一准确信息
+- 环境变量 `SUNDAY_PHOTOS_WORK_DIR` 可强制指定 Work folder（便于便携/演示）
 
 ---
 
-**报告人**: GitHub Copilot  
-**报告版本**: v2 (含性能与逻辑验证)  
-**最后更新**: 2025-12-26
+## 4) 缓存与增量（建议检查）
+
+- 增量快照：`output/.state/class_photos_snapshot.json`
+- 识别缓存（按日期）：`output/.state/recognition_cache_by_date/YYYY-MM-DD.json`
+- 参考照缓存与快照统一在 `log_dir` 下（默认 `logs/`）：
+  - `{log_dir}/reference_encodings/<engine>/<model>/*.npy`
+  - `{log_dir}/reference_index/<engine>/<model>.json`
+
+---
+
+## 5) 并行与排障（建议检查）
+
+- 默认并行策略：满足阈值才并行；并行失败会自动回退串行
+- 排障开关可用：
+  - 强制串行：`SUNDAY_PHOTOS_NO_PARALLEL=1`
+  - 诊断输出：`SUNDAY_PHOTOS_DIAG_ENV=1`
+
+---
+
+## 6) 验收命令（推荐）
+
+- 开发模式：`pytest -q`
+- 发布严格模式（要求打包产物存在）：`REQUIRE_PACKAGED_ARTIFACTS=1 pytest -q`
+

@@ -80,7 +80,29 @@ class ServiceContainer:
             sm = self.get_student_manager()
             tolerance = self.config.get('tolerance') if self.config else None
             min_face_size = self.config.get('min_face_size') if self.config else None
-            self._services['face_recognizer'] = FaceRecognizer(sm, tolerance, min_face_size)
+            log_dir = self.config.get('log_dir') if self.config else None
+            # Prefer a single explicit interface: FaceRecognizer(..., log_dir=...).
+            # Backward-compat: if a stub/older class does not accept log_dir, fall back.
+            try:
+                fr = FaceRecognizer(
+                    sm,
+                    tolerance=tolerance,
+                    min_face_size=min_face_size,
+                    log_dir=log_dir,
+                )
+            except TypeError:
+                fr = FaceRecognizer(sm, tolerance, min_face_size)
+
+                # Best-effort injection for legacy objects.
+                try:
+                    if log_dir and hasattr(fr, "_resolve_ref_cache_dir") and hasattr(fr, "_resolve_ref_snapshot_path"):
+                        setattr(fr, "_log_dir", Path(str(log_dir)))
+                        setattr(fr, "_ref_cache_dir", fr._resolve_ref_cache_dir())
+                        setattr(fr, "_ref_snapshot_path", fr._resolve_ref_snapshot_path())
+                except Exception:
+                    pass
+
+            self._services['face_recognizer'] = fr
         return self._services['face_recognizer']
 
     def get_file_organizer(self):
@@ -208,11 +230,20 @@ class SimplePhotoOrganizer:
                     os.environ["SUNDAY_PHOTOS_FACE_BACKEND"] = engine
 
                 from .face_recognizer import FaceRecognizer
-                self.face_recognizer = FaceRecognizer(
-                    self.student_manager,
-                    tolerance=float(getattr(cfg, 'get_tolerance')()),
-                    min_face_size=int(getattr(cfg, 'get_min_face_size')()),
-                )
+                try:
+                    self.face_recognizer = FaceRecognizer(
+                        self.student_manager,
+                        tolerance=float(getattr(cfg, 'get_tolerance')()),
+                        min_face_size=int(getattr(cfg, 'get_min_face_size')()),
+                        log_dir=str(self.log_dir),
+                    )
+                except TypeError:
+                    # Backward-compat fallback
+                    self.face_recognizer = FaceRecognizer(
+                        self.student_manager,
+                        tolerance=float(getattr(cfg, 'get_tolerance')()),
+                        min_face_size=int(getattr(cfg, 'get_min_face_size')()),
+                    )
                 self.file_organizer = FileOrganizer(self.output_dir)
 
             # 检查学生参考照片

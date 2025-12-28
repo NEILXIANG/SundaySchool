@@ -6,10 +6,11 @@
 
 - 目标目录：`sunday-photos/release_console/`
 - 关键文件：
-  - macOS：`release_console/SundayPhotoOrganizer`
-  - Windows：`release_console/SundayPhotoOrganizer.exe`
+  - 打包目录（onedir）：`release_console/SundayPhotoOrganizer/`
+  - macOS 可执行文件：`release_console/SundayPhotoOrganizer/SundayPhotoOrganizer`
+  - Windows 可执行文件：`release_console/SundayPhotoOrganizer/SundayPhotoOrganizer.exe`
   - 启动脚本：`release_console/启动工具.sh`（macOS）、`release_console/Launch_SundayPhotoOrganizer.bat`（Windows）
-  - 说明文件：`release_console/使用说明.txt`、`release_console/USAGE_EN.txt`
+  - 说明文件：`release_console/使用说明.md`、`release_console/USAGE_EN.md`
   - 运行期目录（首次运行会自动创建）：`input/`, `output/`, `logs/`
 
 ## 总体时序图（发布者视角）

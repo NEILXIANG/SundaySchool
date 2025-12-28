@@ -91,7 +91,7 @@ CLI/run.py
 
 ### 2.1 ServiceContainer（依赖注入容器）
 
-**位置**: [src/core/main.py](src/core/main.py#L47-L77)
+**位置**: [src/core/main.py](src/core/main.py)
 
 **职责**:
 - 集中创建并持有核心组件实例
@@ -190,10 +190,14 @@ class IncrementalPlan:
   "date": "2024-01-01",
   "params_fingerprint": "sha256:abc123...",
   "entries": {
-    "IMG_001.jpg|123456|1704067200": {
-      "status": "success",
-      "recognized_students": ["张三", "李四"],
-      "total_faces": 2
+    "IMG_001.jpg": {
+      "size": 123456,
+      "mtime": 1704067200,
+      "result": {
+        "status": "success",
+        "recognized_students": ["张三", "李四"],
+        "total_faces": 2
+      }
     }
   }
 }
@@ -212,7 +216,12 @@ from src.core.recognition_cache import (
     compute_params_fingerprint
 )
 
-params = {"tolerance": 0.6, "min_face_size": 50}
+params = {
+  "tolerance": 0.6,
+  "min_face_size": 50,
+  # 参考照变化也必须触发失效（补/删/替换参考照应立刻生效）
+  "reference_fingerprint": "..."
+}
 fingerprint = compute_params_fingerprint(params)
 
 cache = load_date_cache(output_dir, "2024-01-01")
@@ -222,13 +231,14 @@ if cache.get("params_fingerprint") != fingerprint:
     cache = {"version": 1, "date": "2024-01-01", 
              "params_fingerprint": fingerprint, "entries": {}}
 
-# 查询缓存
-key = f"{rel_path}|{size}|{mtime}"
-if key in cache["entries"]:
-    result = cache["entries"][key]
+# 查询缓存（key=rel_path；size/mtime 用于二次校验）
+key = CacheKey(date="2024-01-01", rel_path=rel_path, size=size, mtime=mtime)
+cached = lookup_result(cache, key)
+if cached is not None:
+  result = cached
 else:
-    result = recognizer.recognize_faces(photo_path, return_details=True)
-    cache["entries"][key] = result
+  result = recognizer.recognize_faces(photo_path, return_details=True)
+  store_result(cache, key, result)
 
 save_date_cache_atomic(output_dir, "2024-01-01", cache)
 ```

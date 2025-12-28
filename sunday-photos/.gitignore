@@ -49,7 +49,7 @@ output/
 # Input directory (user photos)
 input/
 
-# Packaged console binary (onefile) - too large for normal git hosting; build locally.
+# Packaged console artifacts (onedir) - build locally.
 release_console/SundayPhotoOrganizer
 
 # Testdata cache (downloaded assets)

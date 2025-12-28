@@ -10,10 +10,11 @@
 
 ## 2. 验收结果（自动化）
 - 源码态：`pytest -q` 通过（示例输出：`198 passed, 6 skipped`）。
-- 打包态：已构建 macOS onefile 控制台产物，并运行 `REQUIRE_PACKAGED_ARTIFACTS=1 pytest -q` 通过（示例输出：`198 passed, 6 skipped`）。
+- 打包态：已构建控制台 onedir 发布包（`release_console/SundayPhotoOrganizer/`），并运行 `REQUIRE_PACKAGED_ARTIFACTS=1 pytest -q` 通过（示例输出：`198 passed, 6 skipped`）。
 
 建议的“发布验收一键动作”：
 - 先构建：`bash scripts/build_mac_app.sh`
+- （可选）老师双击版：`bash scripts/build_mac_teacher_app.sh`
 - 再验收：`REQUIRE_PACKAGED_ARTIFACTS=1 python -m pytest -q`
 
 ## 3. 核心模块体检（结构与职责）

@@ -118,6 +118,30 @@ output/
 - Pillow
 - numpy
 - tqdm
+
+---
+
+## 6. Testing
+- Primary test runner: `pytest -q`.
+- Release acceptance (packaged artifacts required): `REQUIRE_PACKAGED_ARTIFACTS=1 python -m pytest -q`.
+
+---
+
+## 7. Deliverables
+
+### 7.1 Source Repository
+- Implementation: `src/` (core modules + CLI).
+- Tests: `tests/`.
+- Docs: `doc/` (PRD / guides / checklists).
+
+### 7.2 Packaged Artifacts
+- macOS teacher app (.app): `release_mac_app/SundayPhotoOrganizer.app`.
+- macOS console bundle (onedir): `release_console/SundayPhotoOrganizer/SundayPhotoOrganizer` (built per target arch: x86_64 / arm64).
+- Windows console bundle (onedir): `release_console/SundayPhotoOrganizer/SundayPhotoOrganizer.exe`.
+
+### 7.3 User Docs
+- Teacher guide: `doc/TeacherGuide.md` (ZH) + `doc/TeacherGuide_en.md` (EN).
+- Config guide: `doc/CONFIG.md` (ZH) + `doc/CONFIG_en.md` (EN).
 - requests
 
 Optional (only if you select `dlib` backend):

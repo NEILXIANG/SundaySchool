@@ -32,7 +32,7 @@ Examples (your filenames can be different):
 ### Step 3: Run (single entrypoint)
 Inside the unzipped folder, run:
 
-- macOS: double-click `SundayPhotoOrganizer` (or `启动工具.sh`)
+- macOS: double-click `SundayPhotoOrganizer.app` (recommended) or `启动工具.sh`
 - Windows: double-click `Launch_SundayPhotoOrganizer.bat`
 
 While running: a black window shows progress. **Do not close it**.
@@ -43,6 +43,10 @@ While running: a black window shows progress. **Do not close it**.
 
 - Results: `output/`
 - Logs: `logs/`
+
+More docs (usually not needed):
+- Full teacher guide: `doc/TeacherGuide_en.md`
+- Configuration & advanced options: `doc/CONFIG_en.md`
 
 (Screenshot placeholder: output folder contains organized results)
 
@@ -61,14 +65,14 @@ Option A (recommended):
 (Screenshot placeholder: Privacy & Security page with “Open Anyway”)
 
 Option B:
-1. Right click `SundayPhotoOrganizer` → Open
+1. Right click `SundayPhotoOrganizer.app` → Open
 2. Confirm Open again
 
 (Screenshot placeholder: right-click menu → Open)
 
 ### 2) Window closes immediately / nothing happens
 1. Ensure photos are inside `input/student_photos/` and `input/class_photos/`
-2. Ensure you are launching the entrypoint (macOS: `SundayPhotoOrganizer`; Windows: the `.bat`)
+2. Ensure you are launching the entrypoint (macOS: `SundayPhotoOrganizer.app` or `启动工具.sh`; Windows: the `.bat`)
 3. If still stuck: send the entire `logs/` folder to the maintainer
 
 ## If something goes wrong, send these two things

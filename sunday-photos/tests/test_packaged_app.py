@@ -21,8 +21,26 @@ os.chdir(PROJECT_ROOT)
 
 RELEASE_DIR = PROJECT_ROOT / "release_console"
 EXECUTABLE = RELEASE_DIR / "SundayPhotoOrganizer"
-DOC_PATH = RELEASE_DIR / "使用说明.txt"
+DOC_PATH = RELEASE_DIR / "使用说明.md"
 LAUNCHER = RELEASE_DIR / "启动工具.sh"
+
+
+def _resolve_console_executable() -> Path:
+    """Resolve the actual runnable console executable.
+
+    Supports both legacy onefile layout and current onedir layout.
+    - Legacy: release_console/SundayPhotoOrganizer (file)
+    - Onedir:  release_console/SundayPhotoOrganizer/SundayPhotoOrganizer (mac)
+             release_console/SundayPhotoOrganizer/SundayPhotoOrganizer.exe (win)
+    """
+    candidate = EXECUTABLE
+    if candidate.is_file():
+        return candidate
+    if candidate.is_dir():
+        if sys.platform.startswith("win"):
+            return candidate / "SundayPhotoOrganizer.exe"
+        return candidate / "SundayPhotoOrganizer"
+    return candidate
 
 
 def _truthy_env(name: str, default: str = "0") -> bool:
@@ -48,11 +66,12 @@ def test_artifacts_exist():
     if _skip_if_missing_release_dir():
         return
 
-    if not EXECUTABLE.exists() and not _require_packaged_artifacts():
+    resolved_executable = _resolve_console_executable()
+    if not resolved_executable.exists() and not _require_packaged_artifacts():
         print("ℹ️ 未发现可执行文件（可能未打包完成），跳过打包产物完整性测试。")
         pytest.skip("未发现 release_console/SundayPhotoOrganizer（可能未打包），跳过")
 
-    required_items = [RELEASE_DIR, EXECUTABLE, DOC_PATH, LAUNCHER]
+    required_items = [RELEASE_DIR, EXECUTABLE, resolved_executable, DOC_PATH, LAUNCHER]
     all_good = True
 
     for item in required_items:
@@ -71,13 +90,14 @@ def test_executable_permission():
     if _skip_if_missing_release_dir():
         return
 
-    if not EXECUTABLE.exists():
+    resolved_executable = _resolve_console_executable()
+    if not resolved_executable.exists():
         print("❌ 可执行文件不存在")
         if _require_packaged_artifacts():
             assert False, "可执行文件不存在"
         pytest.skip("未发现 release_console/SundayPhotoOrganizer（可能未打包），跳过")
 
-    if os.access(EXECUTABLE, os.X_OK):
+    if os.access(resolved_executable, os.X_OK):
         print("✅ 可执行权限正常")
         return
 
@@ -185,9 +205,10 @@ def main():
     print(f"成功率: {passed/total*100:.1f}%")
 
     print("\n📂 交付文件:")
-    print("• release_console/SundayPhotoOrganizer - 可执行文件")
+    print("• release_console/SundayPhotoOrganizer/ - 控制台发布包目录（onedir）")
+    print("  - release_console/SundayPhotoOrganizer/SundayPhotoOrganizer(.exe) - 可执行文件")
     print("• release_console/启动工具.sh - 启动脚本")
-    print("• release_console/使用说明.txt - 用户手册")
+    print("• release_console/使用说明.md - 用户手册")
 
     return passed == total
 

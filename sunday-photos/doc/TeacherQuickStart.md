@@ -32,7 +32,7 @@
 ### 第 3 步：运行（只点一个入口）
 在解压后的文件夹里，找到并运行：
 
-- macOS：双击 `SundayPhotoOrganizer`（或双击 `启动工具.sh`）
+- macOS：双击 `SundayPhotoOrganizer.app`（推荐）或双击 `启动工具.sh`
 - Windows：双击 `Launch_SundayPhotoOrganizer.bat`
 
 运行中：会弹出一个黑色窗口并显示进度，**请不要关闭**。
@@ -43,6 +43,10 @@
 
 - 整理结果在：`output/`
 - 运行日志在：`logs/`
+
+更多说明（一般用不上）：
+- 详细老师指南：`doc/TeacherGuide.md`
+- 配置与高级选项：`doc/CONFIG.md`
 
 （截图占位：output 文件夹里出现整理后的结果）
 
@@ -56,7 +60,7 @@
 A. 系统设置方式（推荐）
 1. 先点“取消”
 2. 打开「系统设置」→「隐私与安全性」
-3. 往下翻，找到“已阻止打开 SundayPhotoOrganizer”
+3. 往下翻，找到“已阻止打开 SundayPhotoOrganizer”或“SundayPhotoOrganizer.app”
 4. 点“仍要打开（Open Anyway）”
 5. 回到文件夹，再双击运行一次
 
@@ -71,7 +75,7 @@ B. 右键打开方式
 ### 2) 双击后窗口一闪就没了 / 没反应
 请按顺序检查：
 1. 确认照片放在 `input/student_photos/` 和 `input/class_photos/`
-2. 确认你点的是入口（macOS 点 `SundayPhotoOrganizer`；Windows 点 `.bat`）
+2. 确认你点的是入口（macOS 点 `SundayPhotoOrganizer.app` 或 `启动工具.sh`；Windows 点 `.bat`）
 3. 仍不行：把 `logs/` 文件夹发给技术同工
 
 ## 如果出错，你只需要发我两样东西

@@ -24,10 +24,13 @@ def _install_dummy_face_recognizer_module(monkeypatch):
     dummy = types.ModuleType("src.core.face_recognizer")
 
     class DummyFaceRecognizer:
-        def __init__(self, student_manager, tolerance=None, min_face_size=None):
+        def __init__(self, student_manager, tolerance=None, min_face_size=None, log_dir=None):
             self.student_manager = student_manager
             self.tolerance = tolerance
             self.min_face_size = int(min_face_size) if min_face_size is not None else None
+
+            # Optional; exists to mirror the production interface.
+            self.log_dir = log_dir
 
     dummy.FaceRecognizer = DummyFaceRecognizer
     monkeypatch.setitem(sys.modules, "src.core.face_recognizer", dummy)

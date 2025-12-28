@@ -6,8 +6,8 @@ Console/CLI distribution only, located under `release_console/`:
 2. **SundayPhotoOrganizer.exe** (Windows executable)
 3. **启动工具.sh** (macOS launcher script; double-click or run via terminal)
 4. **Launch_SundayPhotoOrganizer.bat** (Windows launcher; double-click)
-5. **使用说明.txt** (Chinese user guide)
-6. **USAGE_EN.txt** (English user guide)
+5. **使用说明.md** (Chinese user guide)
+6. **USAGE_EN.md** (English user guide)
 
 Keep these files together when distributing to teachers.
 
@@ -92,11 +92,13 @@ output/
 - Output: written to `output/`, organized by student → date; reports generated
 
 ## ▶️ Launch Methods
-- macOS: double-click `release_console/SundayPhotoOrganizer` or `release_console/启动工具.sh`
-- macOS terminal: `./release_console/SundayPhotoOrganizer` (after chmod +x if needed)
-- Windows: double-click `release_console/SundayPhotoOrganizer.exe` or `release_console/Launch_SundayPhotoOrganizer.bat`
+- macOS (recommended): double-click `release_mac_app/SundayPhotoOrganizer.app`
+- macOS (console bundle): double-click `release_console/启动工具.sh`
+- macOS terminal (console bundle): `./release_console/SundayPhotoOrganizer/SundayPhotoOrganizer` (run `chmod +x release_console/SundayPhotoOrganizer/SundayPhotoOrganizer` if needed)
+- Windows (recommended): double-click `release_console/Launch_SundayPhotoOrganizer.bat`
+- Windows executable: `release_console/SundayPhotoOrganizer/SundayPhotoOrganizer.exe`
 
-Note: Older builds may have used an onedir layout like `release_console/SundayPhotoOrganizer/SundaySchool`. Current releases use onefile: `release_console/SundayPhotoOrganizer`.
+Note: Current releases use an onedir layout; the executable lives under `release_console/SundayPhotoOrganizer/`.
 
 macOS first-run gatekeeper: if blocked, go to System Settings → Privacy & Security → "Open Anyway".
 

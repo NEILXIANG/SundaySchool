@@ -8,6 +8,9 @@
 本指南以"**最少操作、最少疑惑**"为目标：老师只需要记住一件事——
 **把照片放进程序同目录下的 input/ 文件夹，然后再双击运行一次即可。**
 
+如果你只想“照做就行”，请优先看快速开始（更短、更像操作说明）：
+- `doc/TeacherQuickStart.md`
+
 ---
 
 ## 🎯 三步完成照片整理
@@ -15,40 +18,26 @@
 ### 第一步：首次运行（自动创建目录）
 
 **macOS**：
-- 双击 `release_console/启动工具.sh`（推荐）
-- 或双击 `release_console/SundayPhotoOrganizer`
+- （推荐）双击 `SundayPhotoOrganizer.app`
+- 或双击 `启动工具.sh`
 
 **Windows**：
-- 双击 `release_console/Launch_SundayPhotoOrganizer.bat`（推荐）
-- 或双击 `release_console/SundayPhotoOrganizer.exe`
+- 双击 `Launch_SundayPhotoOrganizer.bat`（推荐）
+- 或双击 `SundayPhotoOrganizer.exe`
 
 > **macOS安全提示**：第一次运行可能被阻止，解决方法：
 > 系统设置 → 隐私与安全性 → 仍要打开
 
 **首次运行会发生什么**：
-- 程序会在**可执行文件同目录**创建工作目录结构：
-   - `input/`：输入（老师把照片放这里）
-      - `input/student_photos/`：学生参考照
-      - `input/class_photos/`：课堂照片
-   - `output/`：整理结果
-   - `logs/`：日志（遇到问题时用）
-   - 若程序所在位置“不可写”（比如把程序放在只读U盘/只读目录/被系统限制的目录）：会自动改用桌面（或主目录），并在运行时弹出的黑色窗口/终端窗口里用 `Work folder:` 打印实际路径（以这行显示的路径为准）
+- 程序会在**可执行文件同目录**创建：`input/`（放照片）、`output/`（结果）、`logs/`（日志）
+- 若程序所在位置不可写：会自动改用桌面（或主目录），并在控制台打印 `Work folder:`（以这行显示的路径为准）
 
 ### 第二步：放照片
 
 **学生参考照**（必须按这个方式）：
-- 位置：`input/student_photos/`
-- **唯一方式**：为每个学生创建一个文件夹 `student_photos/<student_name>/...`
-- 文件名随意（不需要改名）
-- 示例：
-  ```
-  student_photos/
-  ├── Alice/
-  │   ├── ref_01.jpg
-  │   └── ref_02.png
-  └── Bob/
-      └── img_0001.png
-  ```
+- 放在：`input/student_photos/<学生名>/*.jpg|png...`
+- 每个学生一个文件夹；文件名随意
+- 示例与截图请看 `doc/TeacherQuickStart.md`
 
 **课堂照片**：
 - 位置：`input/class_photos/`
@@ -180,7 +169,7 @@ output/
 **更彻底的做法（可选）**：
 - 打开 `output/`，删除 `.state/` 目录（增量记录）和同日期下的缓存文件（如果存在），再运行一次。原始照片不会被删除，只会重新识别。
 
-### Q4: 程序运行出错怎么办？
+### Q5: 程序运行出错怎么办？
 **需要求助时**，请提供：
 1. `logs/` 里最新的日志文件（在程序同目录的 logs/ 内；若程序回退到桌面/主目录，请以控制台提示的 Work folder 为准）
 2. 描述问题（什么时候出错、错误提示等）
