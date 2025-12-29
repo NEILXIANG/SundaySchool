@@ -15,12 +15,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from .utils import UnsafePathError, ensure_resolved_under
+from .utils.fs import UnsafePathError, ensure_resolved_under
 
+logger = logging.getLogger(__name__)
 
 CACHE_VERSION = 1
 STATE_DIR_NAME = ".state"
@@ -85,7 +87,18 @@ def load_date_cache(output_dir: Path, date: str) -> Dict[str, Any]:
             }
         data.setdefault("entries", {})
         return data
-    except Exception:
+    except (OSError, IOError) as e:
+        # 文件读取错误（静默回退空缓存）
+        logger.debug(f"缓存文件读取失败 {date}: {e}")
+        return {
+            "version": CACHE_VERSION,
+            "date": date,
+            "params_fingerprint": "",
+            "entries": {},
+        }
+    except (json.JSONDecodeError, ValueError) as e:
+        # JSON 解析错误（缓存文件损坏）
+        logger.warning(f"缓存文件损坏 {date}: {e}，已清空")
         return {
             "version": CACHE_VERSION,
             "date": date,

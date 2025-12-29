@@ -1,0 +1,9 @@
+{
+  "_comment": "发布包最小配置：仅覆盖并行识别参数；其他均使用程序默认值。",
+  "parallel_recognition": {
+    "enabled": true,
+    "workers": 4,
+    "chunk_size": 12,
+    "min_photos": 30
+  }
+}

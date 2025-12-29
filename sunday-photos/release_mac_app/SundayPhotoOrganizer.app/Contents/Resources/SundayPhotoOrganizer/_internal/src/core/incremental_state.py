@@ -21,7 +21,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from .config import STATE_DIR_NAME, CLASS_PHOTOS_SNAPSHOT_FILENAME, SNAPSHOT_VERSION, DATE_DIR_PATTERN
-from .utils import is_supported_nonempty_image_path, is_ignored_fs_entry, parse_date_from_text
+from .utils.fs import is_supported_nonempty_image_path, is_ignored_fs_entry
+from .utils.date_parser import parse_date_from_text
 
 
 # 全局锁用于并发安全

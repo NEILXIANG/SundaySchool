@@ -4,6 +4,7 @@
 """
 
 import os
+import sys
 import logging
 import warnings
 import contextlib
@@ -14,6 +15,8 @@ import json
 from pathlib import Path
 from typing import Any
 from .config import DEFAULT_TOLERANCE, MIN_FACE_SIZE
+
+logger = logging.getLogger(__name__)
 
 # InsightFace 的部分依赖（如 albumentations）在导入时可能尝试联网检查版本，离线/打包环境会产生噪声警告。
 # 注意：该 warning 的 message 可能以换行开头，因此用 \s* 兼容。
@@ -85,6 +88,96 @@ def _normalize(v: np.ndarray) -> np.ndarray:
     return v / n
 
 
+def _is_frozen_runtime() -> bool:
+    try:
+        return bool(getattr(sys, "frozen", False))
+    except Exception:
+        return False
+
+
+def _log_insightface_runtime_diagnostics(model_root: str | None, model_name: str) -> None:
+    """Log key runtime info to debug InsightFace failures in packaged apps.
+
+    - Always logs in frozen builds.
+    - In non-frozen runs, logs only when SUNDAY_PHOTOS_DIAG_ENV=1.
+    """
+    try:
+        diag_enabled = os.environ.get("SUNDAY_PHOTOS_DIAG_ENV", "").strip().lower() in ("1", "true", "yes")
+        if (not _is_frozen_runtime()) and (not diag_enabled):
+            return
+
+        import platform
+
+        logger.info(
+            "[INSIGHTFACE][ENV] frozen=%s platform=%s machine=%s py=%s",
+            _is_frozen_runtime(),
+            platform.platform(),
+            platform.machine(),
+            sys.version.split(" ")[0],
+        )
+
+        try:
+            import insightface  # type: ignore
+
+            logger.info("[INSIGHTFACE][ENV] insightface_version=%s", getattr(insightface, "__version__", "?"))
+        except Exception as e:
+            logger.warning("[INSIGHTFACE][ENV] insightface_import_failed=%s", e)
+
+        try:
+            import onnxruntime as ort  # type: ignore
+
+            providers = "?"
+            try:
+                providers = ort.get_available_providers()
+            except Exception:
+                pass
+            logger.info(
+                "[INSIGHTFACE][ENV] onnxruntime_version=%s providers=%s",
+                getattr(ort, "__version__", "?"),
+                providers,
+            )
+        except Exception as e:
+            logger.warning("[INSIGHTFACE][ENV] onnxruntime_import_failed=%s", e)
+
+        try:
+            effective_root = Path(model_root) if model_root else (Path.home() / ".insightface")
+            model_dir = effective_root / "models" / model_name
+            if not model_dir.exists():
+                logger.warning(
+                    "[INSIGHTFACE][MODEL] model_dir_missing=%s (set SUNDAY_PHOTOS_INSIGHTFACE_HOME for offline/portable deploy)",
+                    str(model_dir),
+                )
+            else:
+                onnx_count = len(list(model_dir.rglob("*.onnx")))
+                logger.info("[INSIGHTFACE][MODEL] model_dir=%s onnx=%s", str(model_dir), onnx_count)
+        except Exception as e:
+            logger.warning("[INSIGHTFACE][MODEL] model_dir_check_failed=%s", e)
+    except Exception:
+        return
+
+
+def _maybe_set_bundled_insightface_home(model_name: str) -> None:
+    """If running in a PyInstaller frozen app, default InsightFace model root to bundled data.
+
+    We bundle model files under: <MEIPASS>/insightface_home/models/<model_name>
+    and set SUNDAY_PHOTOS_INSIGHTFACE_HOME=<MEIPASS>/insightface_home.
+    """
+    try:
+        if not _is_frozen_runtime():
+            return
+        if os.environ.get("SUNDAY_PHOTOS_INSIGHTFACE_HOME", "").strip():
+            return
+        base = Path(getattr(sys, "_MEIPASS", ""))
+        if not base:
+            return
+        candidate = base / "insightface_home"
+        if (candidate / "models" / model_name).exists():
+            os.environ["SUNDAY_PHOTOS_INSIGHTFACE_HOME"] = str(candidate)
+            logger.info("[INSIGHTFACE][MODEL] using_bundled_home=%s", str(candidate))
+    except Exception:
+        return
+
+
 class _InsightFaceCompat:
     """A minimal face_recognition-like API backed by InsightFace.
 
@@ -126,8 +219,11 @@ class _InsightFaceCompat:
         # Model storage:
         # - Default: ~/.insightface
         # - Optional override via env for portable/offline deployments
-        model_root = os.environ.get("SUNDAY_PHOTOS_INSIGHTFACE_HOME", "").strip() or None
         model_name = os.environ.get("SUNDAY_PHOTOS_INSIGHTFACE_MODEL", "").strip() or "buffalo_l"
+        _maybe_set_bundled_insightface_home(model_name=model_name)
+        model_root = os.environ.get("SUNDAY_PHOTOS_INSIGHTFACE_HOME", "").strip() or None
+
+        _log_insightface_runtime_diagnostics(model_root=model_root, model_name=model_name)
 
         # 注意：InsightFace 的 FaceAnalysis 不接受 root=None（会触发 TypeError）。
         # - 未提供 override 时，直接省略 root 参数，让其使用默认 ~/.insightface。
@@ -145,8 +241,9 @@ class _InsightFaceCompat:
                     app = FaceAnalysis(name=model_name, providers=["CPUExecutionProvider"])
                 else:
                     app = FaceAnalysis(name=model_name, root=model_root, providers=["CPUExecutionProvider"])
-                # det_size affects detection quality/speed; keep a sensible default.
-                app.prepare(ctx_id=0, det_size=(640, 640))
+                # For InsightFace, ctx_id<0 means CPU; keep packaged runs consistent.
+                # (Also triggers some model classes to force CPU provider in prepare())
+                app.prepare(ctx_id=-1, det_size=(640, 640))
         self._app = app
         return app
 
@@ -167,7 +264,20 @@ class _InsightFaceCompat:
         app = self._get_app()
         # InsightFace expects BGR
         image_bgr = image_rgb[:, :, ::-1]
-        faces = app.get(image_bgr) or []
+        try:
+            faces = app.get(image_bgr) or []
+        except Exception as e:
+            # Keep traceback even when DIAG is off; this is critical for packaged build debugging.
+            try:
+                logger.exception(
+                    "[INSIGHTFACE][GET] failed: exc=%s image_dtype=%s image_shape=%s",
+                    type(e).__name__,
+                    getattr(image_bgr, "dtype", "?"),
+                    getattr(image_bgr, "shape", "?"),
+                )
+            except Exception:
+                pass
+            raise
         return faces
 
     def face_locations(self, image, *args, **kwargs):
@@ -355,13 +465,14 @@ class _LazyFaceBackend:
 # Module-level proxy (keeps old import sites working)
 face_recognition = _LazyFaceBackend()  # type: ignore
 
-logger = logging.getLogger(__name__)
+def _diag_enabled() -> bool:
+    return os.environ.get("SUNDAY_PHOTOS_DIAG_ENV", "").strip().lower() in ("1", "true", "yes")
 
 
 class FaceRecognizer:
     """人脸识别器"""
     
-    def __init__(self, student_manager, tolerance=None, min_face_size=None):
+    def __init__(self, student_manager, tolerance=None, min_face_size=None, log_dir=None):
         """初始化人脸识别器。
 
         参数：
@@ -374,6 +485,7 @@ class FaceRecognizer:
         if min_face_size is None:
             min_face_size = MIN_FACE_SIZE
         self.student_manager = student_manager
+        self._log_dir = Path(log_dir) if log_dir else None
         self.tolerance = tolerance
         self.min_face_size = int(min_face_size)
         self.students_encodings = {}
@@ -417,8 +529,54 @@ class FaceRecognizer:
         """
 
         # 为了可测试性：统一委托给 face_recognition.load_image_file。
-        # InsightFace 兼容层内部已处理 EXIF 转正与 RGB 输出。
-        return face_recognition.load_image_file(image_path)
+        # InsightFace/Dlib 兼容层内部已处理 EXIF 转正与 RGB 输出。
+        try:
+            image = face_recognition.load_image_file(image_path)
+        except Exception as e:
+            # 给出更可操作的上下文（尤其是打包环境里依赖/解码问题）。
+            try:
+                st = os.stat(image_path)
+                size = int(st.st_size)
+            except Exception:
+                size = -1
+            msg = (
+                f"图片读取失败（可能是文件损坏/格式不兼容/打包环境缺少解码库）：{image_path} "
+                f"(size={size}) backend={getattr(self, '_backend_engine', '?')} model={getattr(self, '_backend_model', '?')}"
+            )
+            if _diag_enabled():
+                logger.exception(msg)
+            raise RuntimeError(msg) from e
+
+        # Defensive validation: some decoders may return None for unreadable/corrupted files.
+        # Downstream code often assumes an image object and may crash with confusing
+        # errors like "'NoneType' object has no attribute 'shape'".
+        #
+        # NOTE: Do NOT enforce ndarray/shape here because tests may use mocked image
+        # objects that don't expose .shape.
+        if image is None:
+            try:
+                st = os.stat(image_path)
+                size = int(st.st_size)
+            except Exception:
+                size = -1
+            raise ValueError(
+                f"图片无法解码（返回 None）：{image_path} (size={size})。建议重新导出为标准 JPG/PNG 后替换该文件。"
+            )
+
+        if _diag_enabled():
+            try:
+                arr = np.asarray(image)
+                shape = getattr(arr, "shape", None)
+                dtype = getattr(arr, "dtype", None)
+                logger.info(
+                    f"[DIAG] 参考照已读取: {image_path} shape={shape} dtype={dtype} "
+                    f"backend={getattr(self, '_backend_engine', '?')} model={getattr(self, '_backend_model', '?')}"
+                )
+            except Exception:
+                # 不让诊断信息影响主流程
+                pass
+
+        return image
 
     def _face_locations_for_reference(self, image):
         """参考照的人脸检测策略：更偏向“尽量找出来”，允许更慢一点。
@@ -458,14 +616,23 @@ class FaceRecognizer:
         return []
 
     def _resolve_ref_cache_dir(self) -> Path:
-        """参考照编码缓存目录（跟随 input_dir/logs，打包版也可用）。"""
-        try:
-            input_dir = Path(getattr(self.student_manager, 'input_dir'))
-        except Exception:
-            input_dir = Path(".")
+        """参考照编码缓存目录。
+
+        约定：优先跟随 log_dir（默认 logs/），便于把“运行日志”和“参考照缓存”放在同一处。
+
+        兼容：若未提供 log_dir，则回退使用旧路径 input_dir/logs（历史版本行为）。
+        """
+        if self._log_dir is not None:
+            base = Path(self._log_dir)
+        else:
+            try:
+                input_dir = Path(getattr(self.student_manager, 'input_dir'))
+            except Exception:
+                input_dir = Path(".")
+            base = input_dir / "logs"
         engine = _safe_key(getattr(self, "_backend_engine", _get_selected_face_backend_engine()))
         model = _safe_key(getattr(self, "_backend_model", _get_backend_model_name(_get_selected_face_backend_engine())))
-        d = input_dir / "logs" / "reference_encodings" / engine / model
+        d = base / "reference_encodings" / engine / model
         try:
             d.mkdir(parents=True, exist_ok=True)
         except Exception:
@@ -474,13 +641,17 @@ class FaceRecognizer:
         return d
 
     def _resolve_ref_snapshot_path(self) -> Path:
-        try:
-            input_dir = Path(getattr(self.student_manager, 'input_dir'))
-        except Exception:
-            input_dir = Path(".")
+        if self._log_dir is not None:
+            base = Path(self._log_dir)
+        else:
+            try:
+                input_dir = Path(getattr(self.student_manager, 'input_dir'))
+            except Exception:
+                input_dir = Path(".")
+            base = input_dir / "logs"
         engine = _safe_key(getattr(self, "_backend_engine", _get_selected_face_backend_engine()))
         model = _safe_key(getattr(self, "_backend_model", _get_backend_model_name(_get_selected_face_backend_engine())))
-        p = input_dir / "logs" / "reference_index" / engine / f"{model}.json"
+        p = base / "reference_index" / engine / f"{model}.json"
         return p
 
     def _load_ref_snapshot(self) -> dict:
@@ -657,7 +828,21 @@ class FaceRecognizer:
 
                 try:
                     image = self._load_image_with_exif_fix(photo_path)
+                    if _diag_enabled():
+                        logger.info(
+                            f"[DIAG] 开始参考照检测: student={student_name} photo={photo_path} "
+                            f"backend={self._backend_engine} model={self._backend_model}"
+                        )
                     face_locations = self._face_locations_for_reference(image)
+
+                    if _diag_enabled():
+                        try:
+                            n_faces = len(face_locations or [])
+                        except Exception:
+                            n_faces = -1
+                        logger.info(
+                            f"[DIAG] 参考照检测结果: student={student_name} photo={photo_path} faces={n_faces}"
+                        )
 
                     if not face_locations:
                         logger.warning(f"在照片中未检测到人脸: {photo_path}")
@@ -670,6 +855,15 @@ class FaceRecognizer:
                         continue
 
                     face_encoding = face_recognition.face_encodings(image, face_locations)[0]
+
+                    if _diag_enabled():
+                        try:
+                            enc_dim = int(np.asarray(face_encoding).reshape(-1).shape[0])
+                        except Exception:
+                            enc_dim = -1
+                        logger.info(
+                            f"[DIAG] 参考照编码成功: student={student_name} photo={photo_path} enc_dim={enc_dim}"
+                        )
 
                     # 写入 per-photo 缓存
                     cache_key = hashlib.sha1(f"{rel}|{mtime}|{size}".encode("utf-8")).hexdigest()
@@ -697,7 +891,22 @@ class FaceRecognizer:
                     # 内存不足时不再继续尝试更多参考照（避免雪崩）
                     break
                 except Exception as e:
-                    logger.error(f"加载学生 {student_name} 的照片 {photo_path} 失败: {str(e)}")
+                    try:
+                        st = os.stat(photo_path)
+                        size_hint = int(st.st_size)
+                    except Exception:
+                        size_hint = -1
+
+                    base_msg = (
+                        f"加载学生 {student_name} 的照片 {photo_path} 失败: {str(e)} "
+                        f"(exc={type(e).__name__}, size={size_hint}) "
+                        f"backend={self._backend_engine} model={self._backend_model}"
+                    )
+
+                    if _diag_enabled():
+                        logger.exception(base_msg)
+                    else:
+                        logger.error(base_msg)
                     student_items.append({'rel_path': rel, 'mtime': mtime, 'size': size, 'status': 'error', 'error': str(e)[:120]})
                     error_by_student.setdefault(student_name, []).append(rel)
                     if image is not None:
@@ -769,7 +978,7 @@ class FaceRecognizer:
         self._save_ref_snapshot(next_snapshot)
 
         logger.info(f"成功加载 {loaded_count} 名学生的面部编码，失败 {failed_count} 名")
-        
+
         # 允许空数据集：无参考照时继续运行，后续识别将返回未知
         if loaded_count == 0:
             logger.warning("未加载到学生面部编码，将作为空数据集继续运行")
@@ -1217,7 +1426,7 @@ class FaceRecognizer:
     
     def load_reference_photos(self, input_dir):
         """加载参考照片并生成人脸编码"""
-        from .utils import is_supported_nonempty_image_path
+        from .utils.fs import is_supported_nonempty_image_path
 
         if not input_dir.exists() or not any(is_supported_nonempty_image_path(p) for p in input_dir.iterdir()):
             logger.warning("⚠️ 输入目录为空或不存在，请检查 input/student_photos 文件夹。")

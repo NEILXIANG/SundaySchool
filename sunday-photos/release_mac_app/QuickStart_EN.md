@@ -20,6 +20,10 @@ Open the unzipped folder and locate:
 - `input/student_photos/`: put **student reference photos** (one folder per student; 1–5 per student; clear frontal face works best)
 - `input/class_photos/`: put **class/event photos** (all photos you want to organize)
 
+Tip (to avoid surprises):
+- Date subfolders are recommended (e.g. `input/class_photos/2025-12-25/...`).
+- If you put photos directly under `class_photos/`, the app will auto-sort them into date folders. If there is a filename conflict, it auto-renames (e.g. `photo.jpg` → `photo_001.jpg`) to avoid overwriting.
+
 Examples (your filenames can be different):
 - `input/student_photos/Alice/Alice_1.jpg`
 - `input/student_photos/Alice/Alice_2.jpg`
@@ -43,6 +47,15 @@ While running: a black window shows progress. **Do not close it**.
 
 - Results: `output/`
 - Logs: `logs/`
+
+In `output/`, you typically see:
+- `output/<student>/YYYY-MM-DD/`: that student’s photos for that date
+- `output/unknown_photos/`: not matched to known students (can also include no-face / error; the report separates counts)
+- `output/*_整理报告.txt`: run report with statistics (timestamped filename)
+
+More docs (usually not needed):
+- Full teacher guide: `doc/TeacherGuide_en.md`
+- Configuration & advanced options (SSOT): `doc/CONFIG_REFERENCE.md` (or the archived pointer `doc/CONFIG_en.md`)
 
 (Screenshot placeholder: output folder contains organized results)
 

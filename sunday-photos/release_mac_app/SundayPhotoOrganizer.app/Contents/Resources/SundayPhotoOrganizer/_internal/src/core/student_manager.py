@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import logging
 from .config import STUDENT_PHOTOS_DIR, SUPPORTED_IMAGE_EXTENSIONS
-from .utils import is_ignored_fs_entry
+from .utils.fs import is_ignored_fs_entry
 
 logger = logging.getLogger(__name__)
 

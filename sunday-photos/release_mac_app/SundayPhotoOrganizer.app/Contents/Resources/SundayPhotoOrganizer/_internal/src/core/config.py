@@ -19,6 +19,8 @@ STUDENT_PHOTOS_DIR = "student_photos"  # 存放学生参考照片的目录名
 CLASS_PHOTOS_DIR = "class_photos"     # 存放课堂合照的目录名
 UNSORTED_PHOTOS_DIR = "unsorted_photos"  # 存放待整理照片的目录名
 UNKNOWN_PHOTOS_DIR = "unknown_photos"     # 存放无法识别照片的目录名
+NO_FACE_PHOTOS_DIR = "no_face_photos"     # 存放未检测到人脸的照片
+ERROR_PHOTOS_DIR = "error_photos"         # 存放识别过程中出错的照片
 
 # 文件名配置
 REPORT_FILE = "整理报告.txt"
@@ -73,7 +75,7 @@ DEFAULT_CONFIG = {
 }
 
 
-def resolve_path(path_value, base_dir: Path = BASE_DIR) -> Path:
+def resolve_path(path_value: str | Path | None, base_dir: Path = BASE_DIR) -> Path:
 	"""将相对路径解析为基于项目根目录的绝对路径。"""
 
 	if path_value is None:

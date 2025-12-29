@@ -23,7 +23,8 @@ else
 fi
 
 # 强制工作目录为解压根目录：确保 input/output/logs 都在老师能看到的位置。
-SUNDAY_PHOTOS_WORK_DIR="$DIR" "$EXECUTABLE" "$@"
+# 默认关闭控制台动画（spinner/pulse）。某些终端对 \r 支持不佳会导致“刷屏/轮询打印”。
+SUNDAY_PHOTOS_WORK_DIR="$DIR" SUNDAY_PHOTOS_NO_ANIMATION=1 "$EXECUTABLE" "$@"
 
 echo ""
 echo "程序运行完成。按回车键退出..."

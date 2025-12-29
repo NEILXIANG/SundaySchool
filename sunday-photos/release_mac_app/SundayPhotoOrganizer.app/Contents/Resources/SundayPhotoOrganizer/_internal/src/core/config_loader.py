@@ -47,8 +47,17 @@ class ConfigLoader:
                 raw = {}
 
             self.config_data = self._merge_with_defaults(raw)
-        except Exception:
-            logger.exception("加载配置文件失败，使用默认配置")
+        except (OSError, IOError) as e:
+            # 文件读取错误（权限、不存在等）
+            logger.error(f"配置文件读取失败: {e}，使用默认配置")
+            self.config_data = dict(DEFAULT_CONFIG)
+        except (json.JSONDecodeError, ValueError) as e:
+            # JSON 解析错误（语法错误、格式错误）
+            logger.error(f"配置文件格式错误: {e}，使用默认配置")
+            self.config_data = dict(DEFAULT_CONFIG)
+        except Exception as e:
+            # 未预期错误（应该记录完整堆栈以便排查）
+            logger.exception(f"加载配置文件时发生未预期错误: {e}")
             self.config_data = dict(DEFAULT_CONFIG)
 
     def save_config(self) -> bool:
@@ -60,8 +69,13 @@ class ConfigLoader:
                 json.dump(self.config_data, f, indent=4, ensure_ascii=False)
             logger.info(f"配置已保存到: {self.config_file}")
             return True
-        except Exception:
-            logger.exception("保存配置文件失败")
+        except (OSError, IOError) as e:
+            # 文件写入错误（权限、磁盘空间等）
+            logger.error(f"配置文件保存失败: {e}")
+            return False
+        except Exception as e:
+            # 未预期错误
+            logger.exception(f"保存配置时发生未预期错误: {e}")
             return False
 
     def _merge_with_defaults(self, raw: Dict[str, Any]) -> Dict[str, Any]:
@@ -84,17 +98,21 @@ class ConfigLoader:
             pass
 
         # 确保并行配置结构完整
-        pr = dict(DEFAULT_PARALLEL_RECOGNITION)
-        pr.update(merged.get("parallel_recognition", {}) or {})
+        pr: Dict[str, Any] = dict(DEFAULT_PARALLEL_RECOGNITION)
+        pr_config = merged.get("parallel_recognition", {}) or {}
+        if isinstance(pr_config, dict):
+            pr.update(pr_config)
         merged["parallel_recognition"] = pr
 
         # 确保未知聚类配置结构完整
-        uc = dict(DEFAULT_UNKNOWN_FACE_CLUSTERING)
-        uc.update(merged.get("unknown_face_clustering", {}) or {})
+        uc: Dict[str, Any] = dict(DEFAULT_UNKNOWN_FACE_CLUSTERING)
+        uc_config = merged.get("unknown_face_clustering", {}) or {}
+        if isinstance(uc_config, dict):
+            uc.update(uc_config)
         merged["unknown_face_clustering"] = uc
         return merged
 
-    def get(self, key: str, default=None):
+    def get(self, key: str, default: Any = None) -> Any:
         return self.config_data.get(key, default)
 
     def set(self, key: str, value: Any) -> None:
@@ -224,15 +242,16 @@ class ConfigLoader:
         """
 
         env = os.environ.get("SUNDAY_PHOTOS_FACE_BACKEND", "").strip().lower()
+        raw: str
         if env:
             raw = env
         else:
-            raw = self.get("face_backend", None)
-            if isinstance(raw, dict):
-                raw = raw.get("engine")
-
-            if isinstance(raw, str):
-                raw = raw.strip().lower()
+            raw_value = self.get("face_backend", None)
+            if isinstance(raw_value, dict):
+                engine_val = raw_value.get("engine")
+                raw = str(engine_val).strip().lower() if engine_val else ""
+            elif isinstance(raw_value, str):
+                raw = raw_value.strip().lower()
             else:
                 raw = ""
 

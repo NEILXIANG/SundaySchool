@@ -12,6 +12,9 @@ cd /d "%DIR%"
 REM Force work dir to the extracted folder root (so input/output/logs live next to this .bat)
 set "SUNDAY_PHOTOS_WORK_DIR=%DIR%"
 
+REM Default: disable console animations (spinner/pulse). Some consoles render \r poorly and will spam lines.
+set "SUNDAY_PHOTOS_NO_ANIMATION=1"
+
 set "EXE=%DIR%SundayPhotoOrganizer\SundayPhotoOrganizer.exe"
 if not exist "%EXE%" set "EXE=%DIR%SundayPhotoOrganizer.exe"
 if not exist "%EXE%" set "EXE=%DIR%SundayPhotoOrganizer"
