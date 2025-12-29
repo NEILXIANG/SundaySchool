@@ -68,6 +68,10 @@ sequenceDiagram
   - `powershell -ExecutionPolicy Bypass -File scripts\build_windows_console_app.ps1`
 - 输出：`sunday-photos/release_console/`（包含 `SundayPhotoOrganizer.exe`）
 
+> 说明：Windows 打包默认会把 InsightFace 模型一起打包进发布包（离线可用）。
+> 这要求打包机上存在模型目录：`%USERPROFILE%\.insightface\models\buffalo_l`。
+> 如需关闭打包模型（减小体积/加快构建）：`set BUNDLE_INSIGHTFACE_MODELS=0` 或 `$env:BUNDLE_INSIGHTFACE_MODELS="0"`。
+
 ### 3) CI 打包（推荐的发布方式）
 
 - 输入：仓库 `main` 分支

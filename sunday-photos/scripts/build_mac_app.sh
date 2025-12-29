@@ -64,16 +64,31 @@ if [ $? -eq 0 ]; then
 
     RELEASE_DIR="release_console"
 
-    # 清理旧发布产物（保留说明文件）
+    # 确保发布目录干净：避免把本机残留照片/日志带进发布包。
+    # 注意：release_console/ 作为“完全可分发产物”，input/output/logs 应该是空模板。
+    rm -rf "$RELEASE_DIR/input" "$RELEASE_DIR/output" "$RELEASE_DIR/logs" || true
+    find "$RELEASE_DIR" -name '.DS_Store' -delete 2>/dev/null || true
+
+    # 准备发布产物目录（说明文件会在下面重新生成/覆盖）
     mkdir -p "$RELEASE_DIR"
     mkdir -p "$RELEASE_DIR/input/class_photos"
     mkdir -p "$RELEASE_DIR/input/student_photos"
     mkdir -p "$RELEASE_DIR/output"
     mkdir -p "$RELEASE_DIR/logs"
 
-    # 删除可能残留的 config.json（它可能包含开发机绝对路径）。
-    # 打包版会在首次运行时自动生成正确的配置。
-    rm -f "$RELEASE_DIR/config.json" || true
+    # 生成发布用的最小 config.json：只包含老师需要的“并行识别”关键参数。
+    # 这样既能固定 workers（降低卡顿/资源争用），也避免把开发机绝对路径带进发布包。
+    cat > "$RELEASE_DIR/config.json" <<'EOF'
+{
+    "_comment": "发布包最小配置：仅覆盖并行识别参数；其他均使用程序默认值。",
+    "parallel_recognition": {
+        "enabled": true,
+        "workers": 4,
+        "chunk_size": 12,
+        "min_photos": 30
+    }
+}
+EOF
 
     # 给老师的占位说明：把照片放到正确的 input 子目录
     cat > "$RELEASE_DIR/input/student_photos/把学生参考照放这里.md" <<'EOF'
@@ -151,7 +166,8 @@ else
 fi
 
 # 强制工作目录为解压根目录：确保 input/output/logs 都在老师能看到的位置。
-SUNDAY_PHOTOS_WORK_DIR="$DIR" "$EXECUTABLE" "$@"
+# 默认关闭控制台动画（spinner/pulse）。某些终端对 \r 支持不佳会导致“刷屏/轮询打印”。
+SUNDAY_PHOTOS_WORK_DIR="$DIR" SUNDAY_PHOTOS_NO_ANIMATION=1 "$EXECUTABLE" "$@"
 
 echo ""
 echo "程序运行完成。按回车键退出..."
@@ -175,6 +191,9 @@ cd /d "%DIR%"
 
 REM Force work dir to the extracted folder root (so input/output/logs live next to this .bat)
 set "SUNDAY_PHOTOS_WORK_DIR=%DIR%"
+
+REM Default: disable console animations (spinner/pulse). Some consoles render \r poorly and will spam lines.
+set "SUNDAY_PHOTOS_NO_ANIMATION=1"
 
 set "EXE=%DIR%SundayPhotoOrganizer\SundayPhotoOrganizer.exe"
 if not exist "%EXE%" set "EXE=%DIR%SundayPhotoOrganizer.exe"

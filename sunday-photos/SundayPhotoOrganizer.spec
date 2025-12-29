@@ -3,16 +3,43 @@
 import os
 import sys
 from PyInstaller.utils.hooks import collect_all
+from PyInstaller.building.datastruct import Tree
 
 
 datas = []
 binaries = []
 hiddenimports = []
+extra_collect = []
 
-# 收集 core（主逻辑）与 face_recognition_models（依赖模型数据）。
+
+def _truthy(v: str) -> bool:
+    return (v or "").strip().lower() in ("1", "true", "yes")
+
+
+# Optional: bundle InsightFace model(s) into the packaged artifact for offline teacher deployment.
+# Enable via env:
+#   SUNDAY_PHOTOS_BUNDLE_INSIGHTFACE_MODELS=1
+# Optional overrides:
+#   SUNDAY_PHOTOS_INSIGHTFACE_HOME=/path/to/.insightface
+#   SUNDAY_PHOTOS_INSIGHTFACE_MODEL=buffalo_l
+if _truthy(os.environ.get("SUNDAY_PHOTOS_BUNDLE_INSIGHTFACE_MODELS", "")):
+    model_name = (os.environ.get("SUNDAY_PHOTOS_INSIGHTFACE_MODEL") or "").strip() or "buffalo_l"
+    model_home = (os.environ.get("SUNDAY_PHOTOS_INSIGHTFACE_HOME") or "").strip() or os.path.expanduser("~/.insightface")
+    src_model_dir = os.path.join(model_home, "models", model_name)
+    if not os.path.isdir(src_model_dir):
+        raise SystemExit(
+            "❌ 未找到 InsightFace 模型目录，无法打包离线模型：\n"
+            f"- expected: {src_model_dir}\n"
+            "你可以先运行一次开发版以下载模型，或设置 SUNDAY_PHOTOS_INSIGHTFACE_HOME 指向已有模型目录。"
+        )
+    # Bundle only the selected model directory to control size.
+    # IMPORTANT: Tree is a build target and must be passed to COLLECT (not Analysis.datas).
+    extra_collect.append(Tree(src_model_dir, prefix=f"insightface_home/models/{model_name}"))
+
+# 收集 core（主逻辑）与相关依赖的数据文件。
 # 注：在某些开发环境里 face_recognition_models 可能未安装；此时允许继续打包，
 # 以便生成基本可执行文件并通过“产物存在性/权限/文档”等验收检查。
-for pkg in ("core", "face_recognition_models"):
+for pkg in ("core", "face_recognition_models", "insightface"):
     try:
         d, b, h = collect_all(pkg)
         datas += d
@@ -76,6 +103,7 @@ coll = COLLECT(
     a.binaries,
     a.zipfiles,
     a.datas,
+    *extra_collect,
     strip=False,
     upx=False,
     upx_exclude=[],

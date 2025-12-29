@@ -28,6 +28,44 @@ import subprocess
 import re
 import shutil
 import unicodedata
+import importlib
+import logging
+import tempfile
+
+
+def _early_setup_matplotlib_env() -> None:
+    """Best-effort: configure Matplotlib *before* any third-party import.
+
+    In multiprocessing spawn, the child process imports __main__ (this file) first.
+    If any dependency imports Matplotlib during that phase, multiple workers may try
+    to build the font cache concurrently, which can look like a hang.
+
+    We set:
+    - MPLBACKEND=Agg (non-GUI, safe for packaged console)
+    - MPLCONFIGDIR=<work_dir>/logs/.mplconfig/pid_<pid> (per-process, avoids contention)
+      Falling back to a temp directory if work_dir is unknown.
+    """
+
+    try:
+        os.environ.setdefault("MPLBACKEND", "Agg")
+
+        if os.environ.get("MPLCONFIGDIR", "").strip():
+            return
+
+        work_dir = os.environ.get("SUNDAY_PHOTOS_WORK_DIR", "").strip()
+        if work_dir:
+            base = Path(work_dir) / "logs" / ".mplconfig"
+        else:
+            base = Path(tempfile.gettempdir()) / "SundayPhotoOrganizer" / "mplconfig"
+
+        cfg_dir = base / f"pid_{os.getpid()}"
+        cfg_dir.mkdir(parents=True, exist_ok=True)
+        os.environ["MPLCONFIGDIR"] = str(cfg_dir)
+    except Exception:
+        return
+
+
+_early_setup_matplotlib_env()
 
 # Ensure project root (containing the src/ package) is importable.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -68,7 +106,115 @@ class ConsolePhotoOrganizer:
 
         # Packaged console app: always write a UTF-8 log file under work folder.
         # Do NOT add extra console logging here to keep teacher-facing output stable.
+        self._setup_matplotlib_runtime_cache()
         self._ensure_file_logging()
+        self._log_startup_diagnostics()
+
+    def _setup_matplotlib_runtime_cache(self) -> None:
+        """Best-effort: make Matplotlib cache location deterministic and writable.
+
+        Some third-party deps may import matplotlib (directly or indirectly).
+        In multiprocessing spawn, multiple workers can simultaneously build the font cache,
+        causing heavy CPU/disk churn and noisy output.
+
+        We pin MPLCONFIGDIR to a folder under work_dir/logs/ so it is writable and shared.
+        """
+
+        try:
+            # Do not override if user explicitly set it.
+            if os.environ.get("MPLCONFIGDIR", "").strip():
+                return
+
+            mpl_dir = self.app_directory / "logs" / ".mplconfig"
+            mpl_dir.mkdir(parents=True, exist_ok=True)
+            os.environ["MPLCONFIGDIR"] = str(mpl_dir)
+
+            # Prefer non-GUI backend for packaged console runs.
+            os.environ.setdefault("MPLBACKEND", "Agg")
+        except Exception:
+            return
+
+    def _log_startup_diagnostics(self) -> None:
+        """Write startup diagnostics to log file (never to console by default).
+
+        This helps debug issues that only happen in packaged/teacher builds,
+        such as runaway multiprocessing spawn (process explosion).
+        """
+
+        try:
+            import socket
+            import multiprocessing as mp
+
+            pid = os.getpid()
+            try:
+                ppid = os.getppid()
+            except Exception:
+                ppid = -1
+
+            stdout_isatty = bool(getattr(sys.stdout, "isatty", lambda: False)())
+            stderr_isatty = bool(getattr(sys.stderr, "isatty", lambda: False)())
+            stdin_isatty = bool(getattr(sys.stdin, "isatty", lambda: False)())
+
+            proc_name = ""
+            try:
+                proc_name = mp.current_process().name
+            except Exception:
+                proc_name = ""
+
+            parent_proc = None
+            try:
+                parent_proc = getattr(mp, "parent_process", lambda: None)()
+            except Exception:
+                parent_proc = None
+
+            self.logger.info("[STARTUP] ===== SundayPhotoOrganizer startup =====")
+            self.logger.info(
+                "[STARTUP] pid=%s ppid=%s host=%s user=%s",
+                pid,
+                ppid,
+                socket.gethostname(),
+                os.environ.get("USER") or os.environ.get("USERNAME") or "",
+            )
+            self.logger.info(
+                "[STARTUP] platform=%s python=%s frozen=%s sys.executable=%s",
+                sys.platform,
+                sys.version.replace("\n", " "),
+                bool(getattr(sys, "frozen", False)),
+                sys.executable,
+            )
+            self.logger.info("[STARTUP] cwd=%s", os.getcwd())
+            self.logger.info("[STARTUP] argv=%s", sys.argv)
+            self.logger.info("[STARTUP] program_dir=%s work_dir=%s", self._program_dir, self.app_directory)
+            self.logger.info(
+                "[STARTUP] isatty(stdin=%s stdout=%s stderr=%s) TERM=%s",
+                stdin_isatty,
+                stdout_isatty,
+                stderr_isatty,
+                os.environ.get("TERM", ""),
+            )
+            self.logger.info(
+                "[STARTUP] mp.current_process=%s mp.parent_process=%s",
+                proc_name,
+                getattr(parent_proc, "name", None) if parent_proc is not None else None,
+            )
+
+            # Key env vars that affect runtime behavior.
+            keys = [
+                "SUNDAY_PHOTOS_WORK_DIR",
+                "SUNDAY_PHOTOS_NO_PARALLEL",
+                "SUNDAY_PHOTOS_PARALLEL",
+                "SUNDAY_PHOTOS_PARALLEL_MIN_PHOTOS",
+                "SUNDAY_PHOTOS_FACE_BACKEND",
+                "SUNDAY_PHOTOS_PRINT_DIAG",
+                "SUNDAY_PHOTOS_DIAG_ENV",
+                "SUNDAY_PHOTOS_NO_ANIMATION",
+                "SUNDAY_PHOTOS_FORCE_ANIMATION",
+            ]
+            env_snapshot = {k: os.environ.get(k, "") for k in keys}
+            self.logger.info("[STARTUP] env=%s", env_snapshot)
+        except Exception:
+            # Diagnostics must never block teacher usage.
+            return
 
     def _ensure_file_logging(self) -> None:
         """Best-effort configure root logger to write logs/xxx.log.
@@ -80,7 +226,8 @@ class ConsolePhotoOrganizer:
             log_dir.mkdir(parents=True, exist_ok=True)
 
             root_logger = logging.getLogger()
-            if root_logger.level == logging.NOTSET:
+            # Ensure INFO logs reach the file handler (without touching console output).
+            if root_logger.level == logging.NOTSET or root_logger.level > logging.INFO:
                 root_logger.setLevel(logging.INFO)
 
             # Avoid adding duplicate file handlers.
@@ -90,11 +237,91 @@ class ConsolePhotoOrganizer:
 
             log_file = log_dir / f"photo_organizer_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
             file_handler = logging.FileHandler(str(log_file), encoding="utf-8")
+            file_handler.setLevel(logging.INFO)
             file_handler.setFormatter(logging.Formatter(LOG_FORMAT))
             root_logger.addHandler(file_handler)
         except Exception:
             # Logging must never block teacher usage.
             return
+
+    def _diag_enabled(self) -> bool:
+        return os.environ.get("SUNDAY_PHOTOS_PRINT_DIAG", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "y",
+            "on",
+        )
+
+    def _normalize_engine_name(self, raw: str) -> str:
+        v = (raw or "").strip().lower()
+        if v in ("insightface", "insight", "arcface"):
+            return "insightface"
+        if v in ("dlib", "face_recognition", "facerecognition"):
+            return "dlib"
+        return "insightface"
+
+    def _try_pkg_version(self, dist_name: str) -> str:
+        try:
+            # Prefer stdlib importlib.metadata when available.
+            try:
+                from importlib import metadata as md  # type: ignore
+            except Exception:  # pragma: no cover
+                md = None  # type: ignore
+            if md is not None:
+                return str(md.version(dist_name))
+        except Exception:
+            pass
+        return "(unknown)"
+
+    def _print_runtime_diagnostics(self, *, config_file: Path | None = None, config_loader=None) -> None:
+        if not self._diag_enabled():
+            return
+
+        try:
+            frozen = bool(getattr(sys, "frozen", False))
+        except Exception:
+            frozen = False
+
+        env_engine = os.environ.get("SUNDAY_PHOTOS_FACE_BACKEND", "").strip()
+        resolved_engine = self._normalize_engine_name(env_engine)
+        cfg_engine = ""
+        try:
+            if config_loader is not None and hasattr(config_loader, "get_face_backend_engine"):
+                cfg_engine = str(config_loader.get_face_backend_engine()).strip()
+        except Exception:
+            cfg_engine = ""
+
+        # Keep output compact and searchable.
+        self._print_divider()
+        self._print_hud("DIAG", "Runtime diagnostics (SUNDAY_PHOTOS_PRINT_DIAG=1)", color="35")
+        self._print_hud("DIAG", f"frozen={1 if frozen else 0} python={sys.version.split()[0]}", color="35")
+        self._print_hud("DIAG", f"sys.executable={sys.executable}", color="35")
+        self._print_hud("DIAG", f"program_dir={self._program_dir}", color="35")
+        self._print_hud("DIAG", f"work_dir={self.app_directory}", color="35")
+        if config_file is not None:
+            self._print_hud("DIAG", f"config_file={config_file}", color="35")
+        self._print_hud(
+            "DIAG",
+            f"face_backend env='{env_engine or '-'}' config='{cfg_engine or '-'}' resolved='{resolved_engine}'",
+            color="35",
+        )
+        self._print_hud(
+            "DIAG",
+            "versions: "
+            + ", ".join(
+                [
+                    f"insightface={self._try_pkg_version('insightface')}",
+                    f"onnxruntime={self._try_pkg_version('onnxruntime')}",
+                    f"opencv-python-headless={self._try_pkg_version('opencv-python-headless')}",
+                    f"Pillow={self._try_pkg_version('Pillow')}",
+                    f"face-recognition={self._try_pkg_version('face-recognition')}",
+                    f"dlib={self._try_pkg_version('dlib')}",
+                ]
+            ),
+            color="35",
+        )
+        self._print_divider()
 
     def _print_divider(self):
         print(self._hud_border("rule"))
@@ -555,6 +782,9 @@ Supported formats: .jpg / .jpeg / .png
                 self._print_tip("检测到已有配置，将直接使用。")
 
             config_loader = ConfigLoader(str(config_file))
+
+            # Optional: print runtime diagnostics to help confirm backend/deps in packaged builds.
+            self._print_runtime_diagnostics(config_file=Path(config_file), config_loader=config_loader)
             
             with self._spinner("正在启动整理流程（初始化系统）..."):
                 organizer = SimplePhotoOrganizer(
@@ -717,6 +947,8 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         description="主日学课堂照片自动整理工具（打包控制台版）",
     )
     parser.add_argument("-h", "--help", action="store_true", help="显示此帮助信息并退出")
+    # Hidden: used by CI/smoke tests to validate packaged entry startup.
+    parser.add_argument("--smoke", action="store_true", help=argparse.SUPPRESS)
     return parser
 
 
@@ -740,6 +972,16 @@ def _print_console_help() -> None:
 
 def main():
     """主函数"""
+    # PyInstaller / frozen app + multiprocessing (spawn) requires freeze_support.
+    # Without it, child processes may re-run the main program and quickly exhaust
+    # system resources (looks like memory/GPU runaway in the teacher .app).
+    try:
+        import multiprocessing as mp
+
+        mp.freeze_support()
+    except Exception:
+        pass
+
     is_interactive = bool(getattr(sys.stdin, "isatty", lambda: False)()) and bool(
         getattr(sys.stdout, "isatty", lambda: False)()
     )
@@ -748,6 +990,16 @@ def main():
         args, _unknown = parser.parse_known_args(sys.argv[1:])
         if getattr(args, "help", False):
             _print_console_help()
+            return True
+
+        # Smoke mode: initialize and exit quickly (writes startup diagnostics to logs/).
+        if getattr(args, "smoke", False):
+            _ = ConsolePhotoOrganizer()
+            # Ensure file handlers flush before exiting.
+            try:
+                logging.shutdown()
+            except Exception:
+                pass
             return True
 
         organizer = ConsolePhotoOrganizer()

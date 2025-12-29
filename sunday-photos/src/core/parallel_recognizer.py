@@ -9,8 +9,12 @@
 from __future__ import annotations
 
 import os
+import sys
 import logging
 import warnings
+import tempfile
+import concurrent.futures
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Iterator, List, Tuple
 
@@ -42,6 +46,24 @@ def _truthy_env(name: str, default: str = "0") -> bool:
 def init_worker(known_encodings: List[Any], known_names: List[str], tolerance: float, min_face_size: int) -> None:
     # 兼容历史：某些依赖可能产生噪声警告；并行下会被放大。
     warnings.filterwarnings("ignore", message=r"pkg_resources is deprecated as an API\.")
+
+    # 修复 Matplotlib 在多进程下的竞态条件（构建字体缓存导致死锁/卡顿）
+    # 强制每个子进程使用独立的 MPLCONFIGDIR
+    try:
+        os.environ["MPLBACKEND"] = "Agg"
+        
+        work_dir = os.environ.get("SUNDAY_PHOTOS_WORK_DIR", "").strip()
+        if work_dir:
+            base = Path(work_dir) / "logs" / ".mplconfig"
+        else:
+            base = Path(tempfile.gettempdir()) / "SundayPhotoOrganizer" / "mplconfig"
+            
+        # 使用当前子进程 PID 隔离配置目录
+        cfg_dir = base / f"pid_{os.getpid()}"
+        cfg_dir.mkdir(parents=True, exist_ok=True)
+        os.environ["MPLCONFIGDIR"] = str(cfg_dir)
+    except Exception:
+        pass
 
     global _G_KNOWN_ENCODINGS, _G_KNOWN_NAMES, _G_TOLERANCE, _G_MIN_FACE_SIZE
     _G_KNOWN_ENCODINGS = known_encodings
@@ -170,6 +192,45 @@ def parallel_recognize(
     if workers <= 1 or len(photo_paths) <= 1:
         for p in photo_paths:
             yield recognize_one(p)
+        return
+
+    # Strategy selection.
+    #
+    # Why:
+    # - In macOS PyInstaller frozen builds, multiprocessing spawn can look like a hang
+    #   because each worker process re-imports heavy deps and may contend on resources.
+    # - For packaged teacher builds, a thread pool is often more stable (no spawn).
+    #
+    # Override:
+    # - SUNDAY_PHOTOS_PARALLEL_STRATEGY=threads|processes
+    strategy = (os.environ.get("SUNDAY_PHOTOS_PARALLEL_STRATEGY", "") or "").strip().lower()
+    if strategy not in ("threads", "processes"):
+        is_frozen = bool(getattr(sys, "frozen", False))
+        if is_frozen and sys.platform == "darwin":
+            strategy = "threads"
+        else:
+            strategy = "processes"
+
+    if strategy == "threads":
+        # Initialize globals once in the main process. recognize_one reads these.
+        init_worker(known_encodings, known_names, float(tolerance), int(min_face_size))
+
+        # threads: keep chunksize semantics simple; we still yield as soon as futures complete.
+        max_workers = int(max(2, workers))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futures = {ex.submit(recognize_one, p): p for p in photo_paths}
+            for fut in concurrent.futures.as_completed(futures):
+                p = futures[fut]
+                try:
+                    yield fut.result()
+                except Exception as e:
+                    logger.exception("并行识别线程任务失败: %s", p)
+                    yield p, {
+                        "status": "error",
+                        "message": f"并行识别线程任务失败: {str(e)}",
+                        "recognized_students": [],
+                        "total_faces": 0,
+                    }
         return
 
     import multiprocessing as mp

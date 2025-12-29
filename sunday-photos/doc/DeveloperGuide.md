@@ -312,8 +312,8 @@ TARGET_ARCH=arm64 bash scripts/build_mac_app.sh
 **打包原理**：
 - 使用 PyInstaller 目录模式（onedir）
 - 打包模式：目录（更稳定，便于携带依赖/资源；本项目发布口径统一用 onedir）
-- 包含所有依赖（Python运行时 + face_recognition + dlib + models）
-- 体积约 150-200MB
+- 包含所有依赖（Python 运行时 + 第三方库 + 运行所需资源文件）
+- 体积会随依赖与是否内置 InsightFace 模型显著变化（老师离线版通常更大）
 
 **仅刷新发布目录（不重新跑 PyInstaller）**：
 ```bash
@@ -331,6 +331,14 @@ SKIP_PYINSTALLER=1 bash scripts/build_mac_app.sh
 cd sunday-photos
 powershell -ExecutionPolicy Bypass -File scripts\\build_windows_console_app.ps1
 ```
+
+**关于 InsightFace 离线模型（默认已内置）**：
+- Windows 打包脚本默认会把 InsightFace 模型一起打包进发布包，便于老师离线使用。
+- 这要求打包机上已存在模型目录（默认）：`%USERPROFILE%\.insightface\models\buffalo_l`。
+  - 若目录不存在：先在开发环境运行一次（让 InsightFace 下载模型），或把模型文件拷贝到该目录。
+- 如需临时关闭“打包模型”（减小体积/加快构建）：
+  - PowerShell：`$env:BUNDLE_INSIGHTFACE_MODELS="0"`
+  - CMD：`set BUNDLE_INSIGHTFACE_MODELS=0`
 
 **产物位置**：
 - `release_console/SundayPhotoOrganizer/`（onedir 发布包目录）

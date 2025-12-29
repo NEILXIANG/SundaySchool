@@ -70,6 +70,10 @@ PyInstaller does not cross-compile; run on Windows.
   - `powershell -ExecutionPolicy Bypass -File scripts\build_windows_console_app.ps1`
 - Output: `sunday-photos/release_console/` (includes `SundayPhotoOrganizer.exe`)
 
+Note: Windows packaging now bundles the InsightFace model by default for offline use.
+- Prerequisite on the build machine: `%USERPROFILE%\.insightface\models\buffalo_l`
+- To opt out (smaller/faster build): set `BUNDLE_INSIGHTFACE_MODELS=0`
+
 ### 3) CI packaging (recommended for releases)
 
 - Input: `main` branch

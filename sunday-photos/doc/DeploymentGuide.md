@@ -203,6 +203,10 @@ output/
 - **macOS**: `bash scripts/build_mac_app.sh`
 - **Windows**: `powershell scripts/build_windows_console_app.ps1`
 
+说明（离线分发）：
+- 发布包可选择内置 InsightFace 模型，确保老师机器离线也能运行；代价是安装包体积会更大。
+- Windows 打包脚本默认内置模型；如需关闭可设置 `BUNDLE_INSIGHTFACE_MODELS=0`。
+
 详见 [DeveloperGuide.md](DeveloperGuide.md) 的打包章节。
 
 ### 环境要求

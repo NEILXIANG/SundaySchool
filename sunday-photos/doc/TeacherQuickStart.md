@@ -87,6 +87,11 @@ B. 右键打开方式
 2. 确认你点的是入口（macOS 点 `SundayPhotoOrganizer.app` 或 `启动工具.sh`；Windows 点 `.bat`）
 3. 仍不行：把 `logs/` 文件夹发给技术同工
 
+### 3) 第一次运行提示“Matplotlib is building the font cache”
+这是正常现象：程序首次运行会生成一次字体缓存。
+
+老师版 `.app` 已内置优化：字体缓存会写到工作目录的 `logs/mplconfig/`；第一次生成后，后续启动会明显更快。
+
 ## 如果出错，你只需要发我两样东西
 
 1. `logs/` 文件夹（整个打包发我）

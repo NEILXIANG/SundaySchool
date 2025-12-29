@@ -28,13 +28,58 @@ Write-Host "Using python: $PYTHON"
 $SPEC_FILE = "SundayPhotoOrganizer.spec"
 
 # Use a project-local cache to avoid flaky global cache issues.
-$env:PYINSTALLER_CACHEDIR = (Join-Path (Get-Location).Path "build\pyinstaller-cache")
-New-Item -ItemType Directory -Force -Path $env:PYINSTALLER_CACHEDIR | Out-Null
+# Prefer PYINSTALLER_CONFIG_DIR (used by PyInstaller for config + cache).
+$cacheDir = (Join-Path (Get-Location).Path "build\pyinstaller-cache")
+$env:PYINSTALLER_CONFIG_DIR = $cacheDir
+$env:PYINSTALLER_CACHEDIR = $cacheDir
+New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
+
+# Bundle InsightFace model(s) into the packaged artifact for offline deployment.
+# Default ON for Windows release packaging.
+# Opt out:
+#   $env:BUNDLE_INSIGHTFACE_MODELS = "0"
+$bundle = $env:BUNDLE_INSIGHTFACE_MODELS
+if ([string]::IsNullOrWhiteSpace($bundle)) { $bundle = "1" }
+
+if ($bundle -eq "1") {
+  $env:SUNDAY_PHOTOS_BUNDLE_INSIGHTFACE_MODELS = "1"
+
+  $m = $env:SUNDAY_PHOTOS_INSIGHTFACE_MODEL
+  if ([string]::IsNullOrWhiteSpace($m)) { $m = "buffalo_l" }
+  $env:SUNDAY_PHOTOS_INSIGHTFACE_MODEL = $m
+
+  if ([string]::IsNullOrWhiteSpace($env:SUNDAY_PHOTOS_INSIGHTFACE_HOME)) {
+    # Default InsightFace home on Windows.
+    $env:SUNDAY_PHOTOS_INSIGHTFACE_HOME = (Join-Path $env:USERPROFILE ".insightface")
+  }
+
+  $modelDir = Join-Path $env:SUNDAY_PHOTOS_INSIGHTFACE_HOME (Join-Path "models" $m)
+  if (-not (Test-Path $modelDir)) {
+    Write-Host "❌ InsightFace 模型目录不存在，无法进行离线模型打包：" -ForegroundColor Red
+    Write-Host "- expected: $modelDir" -ForegroundColor Red
+    Write-Host "解决方法：先在开发环境运行一次下载模型，或把模型拷贝到上述目录；" -ForegroundColor Yellow
+    Write-Host "也可以临时关闭打包模型：set BUNDLE_INSIGHTFACE_MODELS=0" -ForegroundColor Yellow
+    exit 1
+  }
+
+  Write-Host "Bundling InsightFace model for offline use: $m" -ForegroundColor Cyan
+  Write-Host "- home: $($env:SUNDAY_PHOTOS_INSIGHTFACE_HOME)" -ForegroundColor Cyan
+}
 
 & $PYTHON -m PyInstaller --clean --noconfirm $SPEC_FILE
 
 $RELEASE_DIR = "release_console"
 $APP_NAME = "SundayPhotoOrganizer"
+
+# Ensure the release work dirs are clean (do not ship local photos/logs).
+$inputDir = Join-Path $RELEASE_DIR "input"
+$outputDir = Join-Path $RELEASE_DIR "output"
+$logsDir = Join-Path $RELEASE_DIR "logs"
+foreach ($p in @($inputDir, $outputDir, $logsDir)) {
+  if (Test-Path $p) {
+    Remove-Item -Recurse -Force $p
+  }
+}
 
 New-Item -ItemType Directory -Force -Path $RELEASE_DIR | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $RELEASE_DIR "input\class_photos") | Out-Null

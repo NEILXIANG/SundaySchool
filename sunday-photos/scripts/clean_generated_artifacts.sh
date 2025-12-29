@@ -95,7 +95,8 @@ done
 if [[ "$YES" != "1" ]]; then
   echo
   read -r -p "Proceed? [y/N] " ans
-  case "${ans,,}" in
+  ans_lower="$(printf '%s' "$ans" | tr '[:upper:]' '[:lower:]')"
+  case "$ans_lower" in
     y|yes) ;;
     *) echo "Aborted."; exit 0 ;;
   esac

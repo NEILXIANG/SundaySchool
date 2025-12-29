@@ -257,8 +257,27 @@ class Pipeline:
                 photo_count = len(to_recognize)
                 workers = int(parallel_cfg.get('workers', 1))
                 chunk_size = int(parallel_cfg.get('chunk_size', 1))
-                
+
                 can_parallel = config_enabled and photo_count >= min_photos_threshold and workers > 1
+
+                # macOS 打包（PyInstaller frozen）环境下，多进程 spawn 容易出现“卡住无日志”的情况
+                # （尤其是子进程重复初始化 Matplotlib font cache 等重依赖）。默认禁用；可用环境变量强制开/关。
+                try:
+                    import sys
+
+                    force_disable = bool(os.environ.get("SUNDAY_PHOTOS_NO_PARALLEL", "").strip())
+                    force_enable = bool(os.environ.get("SUNDAY_PHOTOS_PARALLEL", "").strip())
+
+                    if force_disable:
+                        can_parallel = False
+                    # 移除 macOS 打包环境的强制禁用逻辑，信任 parallel_recognizer 中的环境隔离修复
+                    # elif not force_enable and getattr(sys, "frozen", False) and sys.platform == "darwin":
+                    #     if can_parallel:
+                    #         logger.info("ℹ️ 检测到 macOS 打包环境，默认禁用多进程并行识别（如需启用可设置 SUNDAY_PHOTOS_PARALLEL=1）")
+                    #     can_parallel = False
+                except Exception:
+                    # 保守：判断失败不应影响主流程
+                    pass
                 
                 if can_parallel:
                     logger.info("🚀 启用并行识别")

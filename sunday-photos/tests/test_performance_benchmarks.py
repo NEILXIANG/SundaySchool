@@ -49,8 +49,13 @@ class BenchmarkRecognizer:
 
 
 @pytest.fixture
-def benchmark_env(tmp_path):
+def benchmark_env(tmp_path, monkeypatch):
     """基准测试环境"""
+    # 性能基准测试使用 BenchmarkRecognizer（不读取真实图片内容）。
+    # 若启用并行识别路径，会走 parallel_recognizer 并尝试解码图片，
+    # 而本文件生成的 photo_*.jpg 是“伪图片”（随机文本），会导致大量解码异常并拖慢用例。
+    monkeypatch.setenv("SUNDAY_PHOTOS_NO_PARALLEL", "1")
+
     work_dir = tmp_path / "benchmark_work"
     input_dir = work_dir / "input"
     output_dir = work_dir / "output"

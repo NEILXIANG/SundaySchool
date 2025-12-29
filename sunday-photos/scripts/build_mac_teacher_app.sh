@@ -22,14 +22,31 @@ APP_BUNDLE="$RELEASE_APP_DIR/$APP_NAME.app"
 ICON_ICNS="app_icon.icns"
 RUN_MODE="${RUN_MODE:-terminal}"
 
+# Bundle InsightFace models into the packaged artifact for offline teacher deployment.
+# Default ON for teacher .app build.
+BUNDLE_INSIGHTFACE_MODELS="${BUNDLE_INSIGHTFACE_MODELS:-1}"
+MODEL_NAME="${SUNDAY_PHOTOS_INSIGHTFACE_MODEL:-buffalo_l}"
+
 if [ ! -f "$ICON_ICNS" ]; then
   echo "❌ 缺少图标文件: $ICON_ICNS"
   exit 1
 fi
 
+# If bundling is enabled, ensure the console artifact includes the bundled model directory.
+NEED_MODEL_REBUILD=0
+if [ "$BUNDLE_INSIGHTFACE_MODELS" = "1" ]; then
+  if [ ! -d "$CONSOLE_DIR/insightface_home/models/$MODEL_NAME" ]; then
+    NEED_MODEL_REBUILD=1
+  fi
+fi
+
 # Ensure we have a console app dir to wrap.
-if [ "${FORCE_REBUILD_CONSOLE:-}" = "1" ] || [ ! -x "$CONSOLE_ENTRY" ]; then
+if [ "${FORCE_REBUILD_CONSOLE:-}" = "1" ] || [ "$NEED_MODEL_REBUILD" = "1" ] || [ ! -x "$CONSOLE_ENTRY" ]; then
   echo "🔧 构建控制台可执行文件（用于 .app 内部调用）..."
+  if [ "$BUNDLE_INSIGHTFACE_MODELS" = "1" ]; then
+    echo "📦 将 InsightFace 模型打包进产物（离线可用）: $MODEL_NAME"
+    export SUNDAY_PHOTOS_BUNDLE_INSIGHTFACE_MODELS=1
+  fi
   bash "scripts/build_mac_app.sh"
 else
   echo "✅ 使用已存在的控制台可执行文件: $CONSOLE_ENTRY"
@@ -41,14 +58,36 @@ if [ ! -x "$CONSOLE_ENTRY" ]; then
 fi
 
 # Clean and prepare release dir.
-rm -rf "$RELEASE_APP_DIR"
+# NOTE: When the teacher .app is launched in Terminal mode, the spawned shell can
+# end up with its CWD set to release_mac_app/. On macOS, removing a process's CWD
+# directory can fail (sometimes reported as "Permission denied").
+#
+# To make rebuilds reliable, keep the directory and wipe its contents.
 mkdir -p "$RELEASE_APP_DIR"
+rm -rf \
+  "$RELEASE_APP_DIR"/* \
+  "$RELEASE_APP_DIR"/.[!.]* \
+  "$RELEASE_APP_DIR"/..?* \
+  2>/dev/null || true
 
 # Prepare teacher-facing work folders next to the .app (so teachers can see input/output/logs).
 mkdir -p "$RELEASE_APP_DIR/input/class_photos"
 mkdir -p "$RELEASE_APP_DIR/input/student_photos"
 mkdir -p "$RELEASE_APP_DIR/output"
 mkdir -p "$RELEASE_APP_DIR/logs"
+
+# Generate release config.json (minimal): keep parallel enabled and cap workers for stability.
+cat > "$RELEASE_APP_DIR/config.json" <<'EOF'
+{
+  "_comment": "发布包最小配置：仅覆盖并行识别参数；其他均使用程序默认值。",
+  "parallel_recognition": {
+    "enabled": true,
+    "workers": 4,
+    "chunk_size": 12,
+    "min_photos": 30
+  }
+}
+EOF
 
 cat > "$RELEASE_APP_DIR/input/student_photos/把学生参考照放这里.md" <<'EOF'
 请把“学生参考照”放到这个文件夹里（用于识别每位学生）。
@@ -92,7 +131,14 @@ on run
   set parentDir to do shell script "/usr/bin/dirname " & quoted form of appBundlePath
   set resourcesDir to appBundlePath & "Contents/Resources"
   set exePath to resourcesDir & "/SundayPhotoOrganizer/SundayPhotoOrganizer"
-  set cmd to "cd " & quoted form of parentDir & " && /usr/bin/nohup /usr/bin/env SUNDAY_PHOTOS_WORK_DIR=" & quoted form of parentDir & " " & quoted form of exePath & " >/dev/null 2>&1 &"
+  set mplConfigDir to parentDir & "/logs/mplconfig"
+  set cmd to "cd " & quoted form of parentDir & " && /bin/mkdir -p " & quoted form of mplConfigDir & " && /usr/bin/nohup /usr/bin/env " & ¬
+    "SUNDAY_PHOTOS_WORK_DIR=" & quoted form of parentDir & " " & ¬
+    "MPLBACKEND=Agg " & ¬
+    "MPLCONFIGDIR=" & quoted form of mplConfigDir & " " & ¬
+    "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 " & ¬
+    "SUNDAY_PHOTOS_PARALLEL_STRATEGY=threads " & ¬
+    quoted form of exePath & " >/dev/null 2>&1 &"
   do shell script cmd
 end run
 APPLESCRIPT
@@ -103,7 +149,14 @@ on run
   set parentDir to do shell script "/usr/bin/dirname " & quoted form of appBundlePath
   set resourcesDir to appBundlePath & "Contents/Resources"
   set exePath to resourcesDir & "/SundayPhotoOrganizer/SundayPhotoOrganizer"
-  set cmd to "cd " & quoted form of parentDir & " && /usr/bin/env SUNDAY_PHOTOS_WORK_DIR=" & quoted form of parentDir & " " & quoted form of exePath
+  set mplConfigDir to parentDir & "/logs/mplconfig"
+  set cmd to "cd " & quoted form of parentDir & " && /bin/mkdir -p " & quoted form of mplConfigDir & " && /usr/bin/env " & ¬
+    "SUNDAY_PHOTOS_WORK_DIR=" & quoted form of parentDir & " " & ¬
+    "MPLBACKEND=Agg " & ¬
+    "MPLCONFIGDIR=" & quoted form of mplConfigDir & " " & ¬
+    "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 " & ¬
+    "SUNDAY_PHOTOS_PARALLEL_STRATEGY=threads " & ¬
+    quoted form of exePath
 
   tell application "Terminal"
     activate
@@ -137,7 +190,7 @@ rm -f \
   "$RELEASE_APP_DIR/QuickStart_EN.txt" \
   || true
 
-cat > "$RELEASE_APP_DIR/使用说明_启动方式.md" <<EOF
+cat > "$RELEASE_APP_DIR/使用说明_启动方式.md" <<'EOF'
 # macOS 启动方式（老师版 .app）
 
 1) 双击 `SundayPhotoOrganizer.app` 启动。
