@@ -121,6 +121,9 @@ jobs:
     runs-on: macos-14
     needs: [build_arm64, build_x86_64]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download arm64 artifact
         uses: actions/download-artifact@v4
         with:
@@ -240,15 +243,23 @@ jobs:
           ls -la release_console_universal | head -n 50
 
       - name: Build macOS .app wrapper (universal)
-        working-directory: sunday-photos
         shell: bash
         run: |
           set -euo pipefail
           
-          # Create release_mac_app_universal structure
-          RELEASE_DIR="release_mac_app_universal"
+          # Paths
+          CONSOLE_UNIVERSAL_DIR="release_console_universal"
+          RELEASE_DIR="sunday-photos/release_mac_app_universal"
           APP_BUNDLE="$RELEASE_DIR/SundayPhotoOrganizer.app"
           
+          # Validate universal launcher exists
+          if [ ! -f "$CONSOLE_UNIVERSAL_DIR/SundayPhotoOrganizer" ]; then
+            echo "Error: Universal launcher not found at $CONSOLE_UNIVERSAL_DIR/SundayPhotoOrganizer"
+            ls -la "$CONSOLE_UNIVERSAL_DIR" || true
+            exit 1
+          fi
+          
+          # Create release_mac_app_universal structure
           rm -rf "$RELEASE_DIR"
           mkdir -p "$RELEASE_DIR"
           mkdir -p "$RELEASE_DIR/input/class_photos"
@@ -257,7 +268,7 @@ jobs:
           mkdir -p "$RELEASE_DIR/logs"
           
           # Copy config
-          cp -f config.json "$RELEASE_DIR/"
+          cp -f sunday-photos/config.json "$RELEASE_DIR/"
           
           # Create placeholder files
           echo "将课堂合照放在这里" > "$RELEASE_DIR/input/class_photos/PUT_CLASS_PHOTOS_HERE.txt"
@@ -304,15 +315,15 @@ jobs:
           
           # Copy universal launcher into app bundle
           mkdir -p "$APP_BUNDLE/Contents/Resources"
-          cp release_console_universal/SundayPhotoOrganizer "$APP_BUNDLE/Contents/Resources/"
+          cp "$CONSOLE_UNIVERSAL_DIR/SundayPhotoOrganizer" "$APP_BUNDLE/Contents/Resources/"
           chmod +x "$APP_BUNDLE/Contents/Resources/SundayPhotoOrganizer"
           
           # Replace default applet icon with custom icon
-          if [ -f app_icon.iconset/icon_512x512.png ]; then
+          if [ -f sunday-photos/app_icon.iconset/icon_512x512.png ]; then
             # Generate .icns from iconset if needed
-            ICON_ICNS="app_icon.icns"
-            if [ ! -f "$ICON_ICNS" ] || [ app_icon.iconset -nt "$ICON_ICNS" ]; then
-              iconutil -c icns -o "$ICON_ICNS" app_icon.iconset 2>/dev/null || true
+            ICON_ICNS="sunday-photos/app_icon.icns"
+            if [ ! -f "$ICON_ICNS" ] || [ sunday-photos/app_icon.iconset -nt "$ICON_ICNS" ]; then
+              iconutil -c icns -o "$ICON_ICNS" sunday-photos/app_icon.iconset 2>/dev/null || true
             fi
             
             if [ -f "$ICON_ICNS" ]; then
@@ -323,8 +334,8 @@ jobs:
           fi
           
           # Copy teacher docs
-          cp -f doc/TeacherQuickStart.md "$RELEASE_DIR/老师快速开始.md"
-          cp -f doc/TeacherQuickStart_en.md "$RELEASE_DIR/QuickStart_EN.md"
+          cp -f sunday-photos/doc/TeacherQuickStart.md "$RELEASE_DIR/老师快速开始.md"
+          cp -f sunday-photos/doc/TeacherQuickStart_en.md "$RELEASE_DIR/QuickStart_EN.md"
           
           cat > "$RELEASE_DIR/使用说明_启动方式.md" <<'EOF'
           # macOS 启动方式（老师版 .app）
@@ -344,7 +355,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-universal-console
-          path: sunday-photos/release_console_universal/
+          path: release_console_universal/
           retention-days: 7
 
       - name: Upload .app bundle artifact
