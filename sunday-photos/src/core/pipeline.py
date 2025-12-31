@@ -5,6 +5,8 @@ import os
 import sys
 import logging
 import shutil
+import threading
+import time
 from pathlib import Path
 from datetime import datetime
 from tqdm import tqdm
@@ -32,6 +34,38 @@ from .reporter import Reporter
 from .scanner import Scanner
 
 logger = logging.getLogger(__name__)
+
+
+def _teacher_mode_enabled() -> bool:
+    try:
+        return os.environ.get("SUNDAY_PHOTOS_TEACHER_MODE", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "y",
+            "on",
+        )
+    except Exception:
+        return False
+
+
+def _ansi_enabled() -> bool:
+    try:
+        if os.environ.get("NO_COLOR") is not None:
+            return False
+        return bool(getattr(sys.stdout, "isatty", lambda: False)())
+    except Exception:
+        return False
+
+
+def _c(text: str, code: str) -> str:
+    if not _ansi_enabled():
+        return text
+    return f"\033[{code}m{text}\033[0m"
+
+
+def _stage_lights(scan: str, match: str, sort: str, report: str) -> str:
+    return "  ".join([scan, match, sort, report])
 
 class Pipeline:
     def __init__(self, container, input_dir, output_dir, log_dir, config_loader, parallel_recognize_fn=None):
@@ -200,20 +234,62 @@ class Pipeline:
         to_recognize = []
         cache_hit_count = 0
 
-        # Progress bar setup (simplified for brevity, keeping core logic)
-        bar_format_warm = "{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}] {postfix}"
-        bar_format_full = "{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}"
+        # Progress bar setup (teacher-friendly, stronger "sense of progress")
+        bar_format_warm = "{desc} {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}] {postfix}"
+        bar_format_full = "{desc} {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {postfix}"
+
+        desc_prefix = _c("● MATCH", "36")
+        desc_text = f"{desc_prefix} 人脸识别"
+
+        # Make sure the progress bar starts on its own clean line.
+        try:
+            tqdm.write(_c("[RUN ] 正在识别人脸（MATCH）", "36"))
+            tqdm.write(
+                _stage_lights(
+                    _c("✓ SCAN", "32"),
+                    _c("● MATCH", "36"),
+                    _c("○ SORT", "90"),
+                    _c("○ REPORT", "90"),
+                )
+            )
+        except Exception:
+            pass
         
         with tqdm(
             total=len(photo_files),
-            desc="[AI] 人脸识别",
+            desc=desc_text,
             unit="张",
             dynamic_ncols=True,
             mininterval=0.2,
             smoothing=0.05,
             bar_format=bar_format_warm,
+            leave=not _teacher_mode_enabled(),
         ) as pbar:
-            import time
+            # Heartbeat: refresh postfix periodically if we haven't advanced.
+            last_progress_at = time.time()
+            stop_heartbeat = threading.Event()
+
+            def _heartbeat() -> None:
+                frames = ["·", "··", "···", "····"]
+                i = 0
+                while not stop_heartbeat.wait(8.0):
+                    try:
+                        if (time.time() - last_progress_at) < 8.0:
+                            continue
+                        pbar.set_postfix_str(_c(f"计算中{frames[i % len(frames)]}", "90"))
+                        pbar.refresh()
+                        i += 1
+                    except Exception:
+                        return
+
+            t = threading.Thread(target=_heartbeat, daemon=True)
+            t.start()
+
+            # Make the progress bar feel alive without being noisy.
+            try:
+                pbar.set_postfix_str(_c("缓存检查", "90"))
+            except Exception:
+                pass
             
             # ... (Progress bar helpers omitted for brevity, can be copied if needed or simplified) ...
             # For now, using simple updates.
@@ -236,20 +312,36 @@ class Pipeline:
                         cache_hit_count += 1
                         _apply_result(photo_path, cached)
                         pbar.update(1)
+                        last_progress_at = time.time()
                         if pbar.n > 0: pbar.bar_format = bar_format_full
                     else:
                         to_recognize.append(photo_path)
                         photo_to_key[photo_path] = key
+
+                    # Update postfix periodically to avoid overhead.
+                    if (pbar.n % 25) == 0 and pbar.total:
+                        try:
+                            pbar.set_postfix_str(
+                                _c(f"缓存命中 {cache_hit_count} / 待识别 {len(to_recognize)}", "90")
+                            )
+                        except Exception:
+                            pass
                 except Exception as e:
                     logger.exception(f"处理照片 {photo_path} 时发生异常")
                     error_photos.append(photo_path)
                     error_count += 1
                     self.stats['processed_photos'] += 1
                     pbar.update(1)
+                    last_progress_at = time.time()
 
             # 2) Recognition
             if to_recognize:
                 logger.info(f"✓ 识别缓存命中: {cache_hit_count} 张；待识别: {len(to_recognize)} 张")
+
+                try:
+                    pbar.set_postfix_str(_c(f"识别中：{len(to_recognize)} 张", "36"))
+                except Exception:
+                    pass
                 
                 parallel_cfg = self.config_loader.get_parallel_recognition()
                 config_enabled = bool(parallel_cfg.get('enabled'))
@@ -296,9 +388,14 @@ class Pipeline:
                             if key is not None:
                                 store_result(date_to_cache[key.date], key, result)
                             pbar.update(1)
+                            last_progress_at = time.time()
                             if pbar.n > 0: pbar.bar_format = bar_format_full
                     except Exception as e:
                         logger.warning(f"并行识别失败，回退串行: {e}")
+                        try:
+                            pbar.set_postfix_str(_c("回退串行（仍在运行）", "33"))
+                        except Exception:
+                            pass
                         for photo_path in to_recognize:
                             result = face_recognizer.recognize_faces(photo_path, return_details=True)
                             _apply_result(photo_path, result)
@@ -306,7 +403,12 @@ class Pipeline:
                             if key is not None:
                                 store_result(date_to_cache[key.date], key, result)
                             pbar.update(1)
+                            last_progress_at = time.time()
                 else:
+                    try:
+                        pbar.set_postfix_str(_c("串行识别（仍在运行）", "36"))
+                    except Exception:
+                        pass
                     for photo_path in to_recognize:
                         result = face_recognizer.recognize_faces(photo_path, return_details=True)
                         _apply_result(photo_path, result)
@@ -314,8 +416,29 @@ class Pipeline:
                         if key is not None:
                             store_result(date_to_cache[key.date], key, result)
                         pbar.update(1)
+                        last_progress_at = time.time()
             else:
                 logger.info(f"✓ 识别缓存命中: {cache_hit_count} 张；待识别: 0 张")
+
+            try:
+                pbar.set_postfix_str(_c("完成", "32"))
+            except Exception:
+                pass
+
+            stop_heartbeat.set()
+            t.join(timeout=0.2)
+
+        # Teacher-friendly: write one compact completion line (avoid scrolling lots of tqdm remnants).
+        try:
+            if _teacher_mode_enabled():
+                tqdm.write(
+                    _c(
+                        f"[DONE] MATCH 完成：缓存命中 {cache_hit_count} 张；unknown {self.stats.get('unknown_photos', 0)} 张；无人脸 {self.stats.get('no_face_photos', 0)} 张；出错 {self.stats.get('error_photos', 0)} 张",
+                        "32",
+                    )
+                )
+        except Exception:
+            pass
 
         # 3) Save cache
         for date, cache in date_to_cache.items():

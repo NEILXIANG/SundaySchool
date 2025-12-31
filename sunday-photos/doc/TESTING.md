@@ -1,7 +1,7 @@
 # 测试指南 / Testing Guide
 
 **版本**: v0.4.0  
-**更新日期**: 2025-12-26
+**更新日期**: 2025-12-31
 
 ## 运行方式 / How to Run
 
@@ -166,7 +166,6 @@ input/
 
 详细配置字段与注释规则详见：
 - 配置参考手册（SSOT）: [CONFIG_REFERENCE.md](CONFIG_REFERENCE.md)
-- 归档指引（已废弃的指针页）: [CONFIG.md](CONFIG.md), [CONFIG_en.md](CONFIG_en.md)
 
 ## 持续集成 / CI
 

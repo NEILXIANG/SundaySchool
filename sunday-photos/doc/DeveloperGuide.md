@@ -1,7 +1,7 @@
 # 开发与打包指南 (Developer Guide)
 
 **版本**: v0.4.0  
-**更新日期**: 2025-12-26
+**更新日期**: 2025-12-31
 
 面向开发者与发布维护者，涵盖本地调试、架构说明、打包与 CI 工作流。
 
@@ -399,7 +399,7 @@ Options:
 
 ### 配置文件（config.json）
 
-见 [doc/CONFIG.md](CONFIG.md) 获取完整配置说明。
+见 [CONFIG_REFERENCE.md](CONFIG_REFERENCE.md) 获取完整配置说明（SSOT）。
 
 ### 环境变量
 
@@ -410,8 +410,8 @@ SUNDAY_PHOTOS_PARALLEL=1
 # 强制禁用并行（排障）
 SUNDAY_PHOTOS_NO_PARALLEL=1
 
-# 自定义配置文件路径
-SUNDAY_PHOTOS_CONFIG=/path/to/config.json
+# 覆盖 Work folder（Work folder 下的 config.json 为配置来源）
+SUNDAY_PHOTOS_WORK_DIR=/path/to/work_dir
 ```
 
 ---
@@ -521,7 +521,7 @@ cd release_console
 
 - [项目README](../README.md) - 项目概览和快速开始
 - [PRD](PRD.md) - 产品需求文档
-- [配置说明](CONFIG.md) - config.json 详细说明
+- [配置说明（SSOT）](CONFIG_REFERENCE.md) - config.json 详细说明
 - [测试文档](TESTING.md) - 测试策略和用例
 - [老师指南](TeacherGuide.md) - 打包版使用说明
 - [发布检查清单](ReleaseAcceptanceChecklist.md) - 发布前验收

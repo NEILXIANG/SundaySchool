@@ -1,5 +1,8 @@
 # 🎓 Sunday School Photo Organizer - Deployment Guide (Console Edition)
 
+**Version**: v0.4.0  
+**Last updated**: 2025-12-31
+
 ## 📦 Deliverables
 Console/CLI distribution only, located under `release_console/`:
 1. **SundayPhotoOrganizer** (macOS executable, already chmod +x)
@@ -116,3 +119,7 @@ macOS first-run gatekeeper: if blocked, go to System Settings → Privacy & Secu
 
 ## 🔨 Modular Updates
 - Core gained `config` submodule; UI gained `validators` and `guides` submodules for maintainability.
+
+Configuration SSOT:
+- Chinese: [CONFIG_REFERENCE.md](CONFIG_REFERENCE.md)
+- English: [CONFIG_REFERENCE_en.md](CONFIG_REFERENCE_en.md)

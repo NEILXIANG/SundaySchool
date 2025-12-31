@@ -10,6 +10,13 @@ cd "$(dirname "$0")/.."
 # 图标文件路径
 ICON_PATH="app_icon.icns"
 
+# Best-effort: keep app_icon.icns fresh from app_icon.iconset.
+# Note: macOS directory mtime is not reliable when modifying existing files.
+if [ -d "app_icon.iconset" ] && command -v iconutil >/dev/null 2>&1; then
+    echo "🎨 生成图标: $ICON_PATH"
+    iconutil -c icns "app_icon.iconset" -o "$ICON_PATH"
+fi
+
 # 可选目标架构：设置环境变量 TARGET_ARCH=universal2 或 arm64 或 x86_64
 TARGET_ARCH=${TARGET_ARCH:-}
 if [ -n "$TARGET_ARCH" ]; then
@@ -28,6 +35,9 @@ if [ ! -x "$PYTHON" ]; then
     PYTHON="python3"
 fi
 
+echo "🐍 使用 Python: $PYTHON"
+"$PYTHON" -V || true
+
 # 检查 PyInstaller 是否安装（在同一 python 环境中）
 if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
     echo "PyInstaller 未安装（当前 python: $PYTHON）"
@@ -38,6 +48,45 @@ fi
 # 打包命令（控制台 onedir）：PyInstaller 会生成 dist/SundayPhotoOrganizer/
 SPEC_FILE="SundayPhotoOrganizer.spec"
 APP_NAME="SundayPhotoOrganizer"
+
+# 预检：这个项目依赖 Pillow/opencv，且 PyInstaller hooks 可能会收集它们的 .dylibs。
+# 若当前 Python 环境不完整（例如缺少 libXau.6.dylib），PyInstaller 可能报：
+#   FileNotFoundError: .../PIL/.dylibs/libXau.6.dylib
+# 这里提前给出更可操作的报错提示。
+"$PYTHON" - <<'PY'
+import os
+import sys
+from pathlib import Path
+
+def require_import(module: str) -> None:
+    try:
+        __import__(module)
+    except Exception as e:
+        print(f"❌ 无法 import {module}: {e}")
+        print("建议：在当前 Python 环境中安装依赖后再打包：")
+        print(f"  {sys.executable} -m pip install -r requirements.txt")
+        sys.exit(2)
+
+require_import("PIL")
+require_import("cv2")
+
+import PIL  # noqa: E402
+import cv2  # noqa: E402
+
+pil_lib = Path(PIL.__file__).parent / ".dylibs" / "libXau.6.dylib"
+cv2_lib = Path(cv2.__file__).parent / ".dylibs" / "libXau.6.dylib"
+
+missing = [p for p in (pil_lib, cv2_lib) if not p.exists()]
+if missing:
+    print("❌ 依赖动态库缺失（PyInstaller 可能在收集 .dylibs 时抛 FileNotFoundError）:")
+    for p in missing:
+        print(f"  - {p}")
+    print("建议：重新安装对应依赖（会补齐 wheel 中的 .dylibs）：")
+    print(f"  {sys.executable} -m pip install -r requirements.txt --force-reinstall")
+    sys.exit(3)
+
+print("✅ 依赖预检通过（PIL/cv2 及 libXau 存在）。")
+PY
 
 # 使用项目内缓存目录，避免全局 pyinstaller cache 权限/缺失导致的构建失败。
 # 注意：PyInstaller 使用 PYINSTALLER_CONFIG_DIR 来决定缓存目录（包含 bincache）。
@@ -52,7 +101,9 @@ if [ "${SKIP_PYINSTALLER:-}" = "1" ]; then
         exit 1
     fi
 else
-    PYINSTALLER_CONFIG_DIR="$PYINSTALLER_CONFIG_DIR_LOCAL" "$PYTHON" -m PyInstaller \
+    PYINSTALLER_CONFIG_DIR="$PYINSTALLER_CONFIG_DIR_LOCAL" \
+    PYINSTALLER_CACHEDIR="$PYINSTALLER_CONFIG_DIR_LOCAL" \
+    "$PYTHON" -m PyInstaller \
         --clean \
         --noconfirm \
         "$SPEC_FILE"
@@ -166,8 +217,10 @@ else
 fi
 
 # 强制工作目录为解压根目录：确保 input/output/logs 都在老师能看到的位置。
+# 老师模式：核心日志不在控制台刷屏（只写 logs/）。
 # 默认关闭控制台动画（spinner/pulse）。某些终端对 \r 支持不佳会导致“刷屏/轮询打印”。
-SUNDAY_PHOTOS_WORK_DIR="$DIR" SUNDAY_PHOTOS_NO_ANIMATION=1 "$EXECUTABLE" "$@"
+: "${SUNDAY_PHOTOS_UI_PAUSE_MS:=200}"
+SUNDAY_PHOTOS_WORK_DIR="$DIR" SUNDAY_PHOTOS_TEACHER_MODE=1 SUNDAY_PHOTOS_NO_ANIMATION=1 SUNDAY_PHOTOS_UI_PAUSE_MS="$SUNDAY_PHOTOS_UI_PAUSE_MS" "$EXECUTABLE" "$@"
 
 echo ""
 echo "程序运行完成。按回车键退出..."
@@ -192,8 +245,14 @@ cd /d "%DIR%"
 REM Force work dir to the extracted folder root (so input/output/logs live next to this .bat)
 set "SUNDAY_PHOTOS_WORK_DIR=%DIR%"
 
+REM Teacher mode: suppress internal core logs in console (still writes to logs/)
+set "SUNDAY_PHOTOS_TEACHER_MODE=1"
+
 REM Default: disable console animations (spinner/pulse). Some consoles render \r poorly and will spam lines.
 set "SUNDAY_PHOTOS_NO_ANIMATION=1"
+
+REM Teacher-friendly pacing: tiny pause after critical messages (ms). Allow override.
+if "%SUNDAY_PHOTOS_UI_PAUSE_MS%"=="" set "SUNDAY_PHOTOS_UI_PAUSE_MS=200"
 
 set "EXE=%DIR%SundayPhotoOrganizer\SundayPhotoOrganizer.exe"
 if not exist "%EXE%" set "EXE=%DIR%SundayPhotoOrganizer.exe"

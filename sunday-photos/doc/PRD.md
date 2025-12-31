@@ -1,7 +1,8 @@
 # 产品需求说明文档 / Product Requirements Document (PRD)
-项目：主日学照片整理工具 / Sunday Photos Organizer  
-版本：1.3.0  
-更新日期：2025-12-26
+
+**项目**: 主日学照片整理工具 / Sunday Photos Organizer  
+**版本**: 1.3.0  
+**更新日期**: 2025-12-31
 
 ---
 
@@ -244,7 +245,7 @@ dlib
 
 ### 7.3 用户文档
 - **老师指南**：doc/TeacherGuide.md（中文） + doc/TeacherGuide_en.md（英文）
-- **配置说明**：doc/CONFIG.md（中文） + doc/CONFIG_en.md（英文）
+- **配置说明（SSOT）**：doc/CONFIG_REFERENCE.md（中文） + doc/CONFIG_REFERENCE_en.md（英文）
 - **开发指南**：doc/DeveloperGuide.md
 - **测试说明**：doc/TESTING.md
 

@@ -1,13 +1,14 @@
 # AI Requirements & Prompt Templates (for this project: teacher-friendly, zero-arg photo organizer)
 
+**Version**: v0.4.0  
+**Last updated**: 2025-12-31
+
 Purpose:
 - Reusable templates to help an AI understand the goal, constraints, and acceptance criteria.
 - Includes:
   - Generic templates (usable for any project)
   - A fill-in template tailored to this repository (copy/paste to AI)
   - Specialized templates: testing / packaging / release acceptance
-
-Last updated: 2025-12-22
 
 ---
 

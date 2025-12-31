@@ -8,6 +8,11 @@ import sys
 import traceback
 from pathlib import Path
 
+try:
+    import json
+except Exception:  # pragma: no cover
+    json = None  # type: ignore
+
 class TeacherHelper:
     """教师辅助类"""
     
@@ -167,7 +172,11 @@ class TeacherHelper:
             return self.format_message('import_error', context)
         elif "network" in error_str.lower() or "connection" in error_str.lower():
             return self.format_message('network_error', context)
-        elif "config" in error_str.lower() or "JSON" in error_str:
+        elif (
+            (json is not None and isinstance(error, json.JSONDecodeError))
+            or ("config" in error_str.lower())
+            or ("JSON" in error_str)
+        ):
             return self.format_message('config_error', context)
         elif "format" in error_str.lower() and "photo" in error_str.lower():
             return self.format_message('photo_format_error', context)

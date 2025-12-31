@@ -1,10 +1,10 @@
 # 项目健康检查清单（Health Check Checklist）
 
-**更新日期**: 2025-12-28
+**更新日期**: 2025-12-31
 
 目的：这是一份“可执行”的检查清单，用于发布前/回归前快速确认项目处于健康状态。
 
-说明：历史的“体检报告类总结”请参考 `doc/HealthCheckReport.md` / `doc/HealthCheckReport_en.md`。
+说明：本清单是权威可执行入口；不再维护“体检报告类总结文档”，避免示例数据误导。
 
 ---
 
@@ -18,7 +18,7 @@
 建议抽查：
 - `doc/TeacherQuickStart.md` / `doc/TeacherQuickStart_en.md`
 - `doc/TeacherGuide.md` / `doc/TeacherGuide_en.md`
-- `doc/CONFIG.md` / `doc/CONFIG_en.md`
+- `doc/CONFIG_REFERENCE.md` / `doc/CONFIG_REFERENCE_en.md`
 
 ---
 

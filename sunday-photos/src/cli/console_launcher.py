@@ -31,6 +31,8 @@ import unicodedata
 import importlib
 import logging
 import tempfile
+import atexit
+import io
 
 
 def _early_setup_matplotlib_env() -> None:
@@ -95,6 +97,21 @@ class ConsolePhotoOrganizer:
         self._hud_width = 56
         self._term_width = 80
 
+        # Console output cleanup:
+        # - If two divider lines are printed with only blank lines between,
+        #   keep only one to reduce visual noise.
+        self._last_emitted_was_divider = False
+        self._only_blank_since_divider = False
+
+        # Teacher-friendly: print the "notices" (formerly scattered TIP lines) only once.
+        self._notices_printed = False
+
+        # Teacher-friendly pacing: optionally add a tiny pause after *critical* lines
+        # so they are easier to perceive when the console scrolls quickly.
+        self._ui_pause_ms = self._get_env_int("SUNDAY_PHOTOS_UI_PAUSE_MS", default=0)
+        self._ui_pause_ms = max(0, min(int(self._ui_pause_ms), 1000))
+        self._ui_pause_last_ts = 0.0
+
         # Fit divider width to current terminal to reduce line-wrapping artifacts.
         try:
             cols = shutil.get_terminal_size(fallback=(80, 20)).columns
@@ -107,8 +124,229 @@ class ConsolePhotoOrganizer:
         # Packaged console app: always write a UTF-8 log file under work folder.
         # Do NOT add extra console logging here to keep teacher-facing output stable.
         self._setup_matplotlib_runtime_cache()
+        self._acquire_single_instance_lock()
         self._ensure_file_logging()
         self._log_startup_diagnostics()
+
+        # Teacher console palette (techy + minimal): cyan primary + state colors + gray for background details.
+        # Keep this mapping stable so VS Code/debug/.app output looks consistent.
+        self._label_color_map: dict[str, str] = {
+            # Primary / navigation
+            "SYS": "36",
+            "BOOT": "36",
+            "STEP": "36",
+            "RUN": "36",
+            "MODE": "36",
+            "PATH": "36",
+            "HUD": "36",
+            "GO": "36",
+            "AI": "36",
+            "SCAN": "36",
+            "ORG": "36",
+            # State
+            "OK": "32",
+            "DONE": "32",
+            "WARN": "33",
+            "NEXT": "34",
+            "FAIL": "31",
+            # Background / diagnostics
+            "DIAG": "90",
+            "FULL": "90",
+            "UI": "90",
+            "TIP": "90",
+        }
+
+    def _default_color_for_label(self, label: str) -> str | None:
+        try:
+            label_norm = (label or "").strip().upper()
+            if not label_norm:
+                return None
+            return self._label_color_map.get(label_norm)
+        except Exception:
+            return None
+
+    def _get_env_int(self, name: str, *, default: int = 0) -> int:
+        try:
+            raw = os.environ.get(name, "")
+            if raw is None:
+                return int(default)
+            raw = str(raw).strip()
+            if raw == "":
+                return int(default)
+            return int(float(raw))
+        except Exception:
+            return int(default)
+
+    def _teacher_mode_enabled(self) -> bool:
+        try:
+            return os.environ.get("SUNDAY_PHOTOS_TEACHER_MODE", "").strip().lower() in (
+                "1",
+                "true",
+                "yes",
+                "y",
+                "on",
+            )
+        except Exception:
+            return False
+
+    def _ui_pause_enabled(self) -> bool:
+        if self._ui_pause_ms <= 0:
+            return False
+        if not self._teacher_mode_enabled():
+            return False
+        try:
+            return bool(getattr(sys.stdout, "isatty", lambda: False)())
+        except Exception:
+            return False
+
+    def _maybe_ui_pause(self) -> None:
+        """Best-effort tiny pause to improve perception of critical messages.
+
+        Rules:
+        - Only when teacher mode + interactive TTY.
+        - Default disabled unless SUNDAY_PHOTOS_UI_PAUSE_MS > 0.
+        - Avoid stacking pauses back-to-back.
+        """
+
+        if not self._ui_pause_enabled():
+            return
+
+        now = time.monotonic()
+        # If we just paused very recently, skip to avoid slowing down too much.
+        if (now - float(self._ui_pause_last_ts)) < 0.25:
+            return
+
+        try:
+            time.sleep(float(self._ui_pause_ms) / 1000.0)
+            self._ui_pause_last_ts = time.monotonic()
+        except Exception:
+            return
+
+    def _should_enforce_single_instance(self) -> bool:
+        """Return True if we should prevent multiple instances.
+
+        Rationale:
+        - Teachers often double-click twice when startup is slow.
+        - Multiple concurrent runs can open multiple terminals and duplicate work.
+        """
+        try:
+            if os.environ.get("SUNDAY_PHOTOS_DISABLE_SINGLE_INSTANCE", "").strip().lower() in (
+                "1",
+                "true",
+                "yes",
+                "y",
+                "on",
+            ):
+                return False
+        except Exception:
+            pass
+
+        # Default: enforce only in packaged (frozen) builds.
+        try:
+            if bool(getattr(sys, "frozen", False)):
+                return True
+        except Exception:
+            pass
+
+        # Allow manual opt-in for dev runs.
+        return os.environ.get("SUNDAY_PHOTOS_ENFORCE_SINGLE_INSTANCE", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "y",
+            "on",
+        )
+
+    def _acquire_single_instance_lock(self) -> None:
+        """Best-effort single-instance lock (cross-platform).
+
+        Uses an advisory file lock under work_dir/logs/run.lock.
+        If lock is held, print a short teacher-friendly message and exit with code 2.
+        """
+        if not self._should_enforce_single_instance():
+            return
+
+        try:
+            lock_dir = self.app_directory / "logs"
+            lock_dir.mkdir(parents=True, exist_ok=True)
+            lock_path = lock_dir / "run.lock"
+
+            # Keep the file handle open for the lifetime of the process.
+            f = open(lock_path, "a+", encoding="utf-8")
+
+            locked = False
+            if os.name == "posix":
+                try:
+                    import fcntl  # type: ignore
+
+                    fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    locked = True
+                except Exception:
+                    locked = False
+            else:
+                # Windows best-effort
+                try:
+                    import msvcrt  # type: ignore
+
+                    # Lock the first byte.
+                    msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+                    locked = True
+                except Exception:
+                    locked = False
+
+            if not locked:
+                try:
+                    # Keep message short and actionable.
+                    print("⚠️ 程序已在运行，请查看已打开的终端窗口（不要重复双击）。")
+                    print("如果你确定没有在运行：请等待 10 秒后再试，或重启电脑后再运行。")
+                except Exception:
+                    pass
+                raise SystemExit(2)
+
+            # Record basic info for support.
+            try:
+                f.seek(0)
+                f.truncate()
+                f.write(
+                    json.dumps(
+                        {
+                            "pid": os.getpid(),
+                            "started_at": datetime.now().isoformat(timespec="seconds"),
+                            "argv": sys.argv,
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
+                f.flush()
+            except Exception:
+                pass
+
+            self._instance_lock_handle = f
+
+            def _release() -> None:
+                try:
+                    if os.name == "posix":
+                        import fcntl  # type: ignore
+
+                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                    else:
+                        import msvcrt  # type: ignore
+
+                        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+                except Exception:
+                    pass
+                try:
+                    f.close()
+                except Exception:
+                    pass
+
+            atexit.register(_release)
+        except SystemExit:
+            raise
+        except Exception:
+            # Must never block teacher usage.
+            return
 
     def _setup_matplotlib_runtime_cache(self) -> None:
         """Best-effort: make Matplotlib cache location deterministic and writable.
@@ -294,17 +532,16 @@ class ConsolePhotoOrganizer:
 
         # Keep output compact and searchable.
         self._print_divider()
-        self._print_hud("DIAG", "Runtime diagnostics (SUNDAY_PHOTOS_PRINT_DIAG=1)", color="35")
-        self._print_hud("DIAG", f"frozen={1 if frozen else 0} python={sys.version.split()[0]}", color="35")
-        self._print_hud("DIAG", f"sys.executable={sys.executable}", color="35")
-        self._print_hud("DIAG", f"program_dir={self._program_dir}", color="35")
-        self._print_hud("DIAG", f"work_dir={self.app_directory}", color="35")
+        self._print_hud("DIAG", "Runtime diagnostics (SUNDAY_PHOTOS_PRINT_DIAG=1)")
+        self._print_hud("DIAG", f"frozen={1 if frozen else 0} python={sys.version.split()[0]}")
+        self._print_hud("DIAG", f"sys.executable={sys.executable}")
+        self._print_hud("DIAG", f"program_dir={self._program_dir}")
+        self._print_hud("DIAG", f"work_dir={self.app_directory}")
         if config_file is not None:
-            self._print_hud("DIAG", f"config_file={config_file}", color="35")
+            self._print_hud("DIAG", f"config_file={config_file}")
         self._print_hud(
             "DIAG",
             f"face_backend env='{env_engine or '-'}' config='{cfg_engine or '-'}' resolved='{resolved_engine}'",
-            color="35",
         )
         self._print_hud(
             "DIAG",
@@ -319,12 +556,119 @@ class ConsolePhotoOrganizer:
                     f"dlib={self._try_pkg_version('dlib')}",
                 ]
             ),
-            color="35",
         )
         self._print_divider()
 
     def _print_divider(self):
-        print(self._hud_border("rule"))
+        self._emit_heavy_divider(self._hud_border("rule"))
+
+    def _print_rule(self) -> None:
+        """Light divider for sub-sections (keeps heavy dividers for major sections only)."""
+        self._emit_line(self._hud_rule())
+
+    def _rel_path(self, path: Path) -> str:
+        """Return a short, readable path relative to WORK_DIR when possible."""
+        try:
+            base = self.app_directory.resolve()
+            target = Path(path).resolve()
+            rel = target.relative_to(base)
+            return str(rel)
+        except Exception:
+            try:
+                return str(path)
+            except Exception:
+                return ""
+
+    def _emit_full_path_kv(self, key: str, path: Path, *, color: str | None = None) -> None:
+        """Emit an un-truncated FULL line suitable for copy/paste."""
+        try:
+            tag = self._tag("FULL", color)
+            self._emit_line(f"{tag} {key}={path}")
+        except Exception:
+            return
+
+    def _print_notices_once(self) -> None:
+        """Print a single, compact notice block (3 items) for teachers."""
+        if self._notices_printed:
+            return
+        self._notices_printed = True
+
+        self._print_hud("TIP", "注意事项（3条）", color="36")
+        self._emit_line(self._hud_line("  1) 支持格式：JPG / JPEG / PNG"))
+        self._emit_line(self._hud_line("  2) 隐私：照片只在本机处理，不会自动上传网络"))
+        self._emit_line(self._hud_line("  3) 运行时请不要关闭窗口；程序不会删除照片，只会复制结果到 output/"))
+
+        # Give a tiny beat so teachers can visually catch this block.
+        self._maybe_ui_pause()
+
+    def _emit_line(self, text: str = "") -> None:
+        """Emit a line while collapsing repeated divider lines.
+
+        Rules:
+        - Never print a blank line immediately after a divider line.
+        - If two divider lines appear with nothing but blanks between them, keep only one.
+        """
+        try:
+            line = "" if text is None else str(text)
+        except Exception:
+            line = ""
+
+        try:
+            is_blank = (line.strip() == "")
+        except Exception:
+            is_blank = False
+
+        if is_blank:
+            # Teachers prefer the divider to be immediately followed by meaningful content.
+            if self._last_emitted_was_divider:
+                self._only_blank_since_divider = True
+                return
+            print(line)
+            return
+
+        if self._is_divider_line(line):
+            self._emit_divider(line)
+            return
+
+        # Normal, non-blank, non-divider line.
+        self._last_emitted_was_divider = False
+        self._only_blank_since_divider = False
+        print(line)
+
+    def _emit_divider(self, line: str) -> None:
+        """Emit a divider line, collapsing duplicates separated only by blanks."""
+        try:
+            divider = "" if line is None else str(line)
+        except Exception:
+            divider = ""
+
+        if self._last_emitted_was_divider and self._only_blank_since_divider:
+            return
+
+        print(divider)
+        self._last_emitted_was_divider = True
+        self._only_blank_since_divider = True
+
+    def _emit_heavy_divider(self, line: str) -> None:
+        # Backward-compatible alias.
+        self._emit_divider(line)
+
+    def _is_divider_line(self, text: str) -> bool:
+        """Return True if text looks like a full-width divider line (═/━/= repeated)."""
+        try:
+            s = self._strip_ansi(str(text)).strip("\r\n")
+            if not s:
+                return False
+            # Must be a single repeated character.
+            if len(set(s)) != 1:
+                return False
+            ch = s[0]
+            if ch not in ("═", "━", "="):
+                return False
+            # Heuristic: avoid collapsing short sequences that might be meaningful.
+            return len(s) >= 40
+        except Exception:
+            return False
 
     def _divider_width(self) -> int:
         return max(40, int(self._term_width))
@@ -350,7 +694,8 @@ class ConsolePhotoOrganizer:
 
         We intentionally avoid box frames (no '|' side borders) to keep output clean.
         """
-        return self._divider_line("━")
+        # Teacher console uses the double-line style (═) for a more modern HUD look.
+        return self._divider_line("═")
 
     def _hud_line(self, content: str = "") -> str:
         content = (content or "")
@@ -416,8 +761,8 @@ class ConsolePhotoOrganizer:
         return truncated
 
     def _hud_rule(self) -> str:
-        """A light horizontal separator line."""
-        return self._divider_line("─")
+        """A horizontal separator line (double-line style)."""
+        return self._divider_line("═")
 
     def _tag(self, label: str, color_code: str | None = None) -> str:
         """Return a short bracketed tag, optionally colored (TTY-only)."""
@@ -429,8 +774,38 @@ class ConsolePhotoOrganizer:
         return tag
 
     def _print_hud(self, label: str, text: str, *, color: str | None = None) -> None:
-        msg = f"{self._tag(label, color)} {text}"
-        print(self._hud_line(msg))
+        effective_color = color
+        if effective_color is None:
+            effective_color = self._default_color_for_label(label)
+
+        msg = f"{self._tag(label, effective_color)} {text}"
+        # For SYS lines, avoid truncating with ellipsis; long paths should be
+        # fully visible (terminal can wrap naturally).
+        label_norm = (label or "").strip().upper()
+        rendered = msg if label_norm == "SYS" else self._hud_line(msg)
+        self._emit_line(rendered)
+
+        # If content was truncated with ellipsis, also print the full message.
+        # To avoid overwhelming teachers, skip for verbose TIP/UI blocks.
+        try:
+            label_norm = (label or "").strip().upper()
+            if label_norm not in {"TIP", "UI", "FULL"}:
+                raw = self._strip_ansi(msg)
+                shown = self._strip_ansi(rendered)
+                if shown.endswith("…") and shown != raw:
+                    # FULL lines are for copy/paste; keep them low-key (gray) to avoid stealing attention.
+                    full_tag = self._tag("FULL", self._default_color_for_label("FULL"))
+                    self._emit_line(f"{full_tag} {text}")
+        except Exception:
+            pass
+
+        # Tiny pause after critical teacher-facing lines (opt-in via env).
+        try:
+            label_norm = (label or "").strip().upper()
+            if label_norm in {"WARN", "NEXT", "RUN", "DONE", "BOOT", "FAIL", "OK"}:
+                self._maybe_ui_pause()
+        except Exception:
+            pass
 
     def _animation_enabled(self) -> bool:
         """Return True if we should render animated console output.
@@ -530,24 +905,32 @@ class ConsolePhotoOrganizer:
         print("\r" + (" " * (len(label) + 18)) + "\r", end="", flush=True)
 
     def _print_section(self, title: str):
-        print()
+        self._emit_line("")
         header = f"◆ {title}"
+        # Use a single divider line for section headers (teachers prefer less visual noise).
         self._print_divider()
-        print(self._hud_line(self._style(header, bold=True) if self._ansi_enabled() else header))
-        self._print_divider()
+        self._emit_line(self._hud_line(self._style(header, bold=True) if self._ansi_enabled() else header))
 
     def _print_tip(self, text: str):
-        self._print_hud("TIP", text, color="36")
+        # Tips are intentionally consolidated into a single "注意事项（3条）" block.
+        # Keep this method for backward compatibility, but do not spam the console.
+        try:
+            self.logger.info("[TIP] %s", text)
+        except Exception:
+            pass
 
     def _print_ok(self, text: str):
         # Preserve "[OK]" for any downstream expectations.
-        print(self._hud_line(f"[OK] {text}"))
+        self._emit_line(self._hud_line(f"[OK] {text}"))
+        self._maybe_ui_pause()
 
     def _print_warn(self, text: str):
         self._print_hud("WARN", text, color="33")
+        self._maybe_ui_pause()
 
     def _print_next(self, text: str):
         self._print_hud("NEXT", text, color="34")
+        self._maybe_ui_pause()
         
     def print_header(self):
         """打印欢迎信息"""
@@ -559,30 +942,61 @@ class ConsolePhotoOrganizer:
             except Exception:
                 pass
 
+        # Optional teacher-friendly banner (hard-coded for this distribution).
+        # Uses double-line box drawing "═" when unicode is available.
+        banner_line = self._divider_line("═")
+        self._emit_heavy_divider(banner_line)
+        self._print_hud("SYS", "SUNDAY PHOTO ORGANIZER / 主日学照片整理", color="36")
+        self._print_hud("ORG", "LECC / 湖东教会", color="36")
+        self._print_hud("MODE", "PIPELINE: SCAN -> MATCH -> SORT -> REPORT", color="36")
+        # Keep only one banner divider line.
+
         self._print_divider()
         run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
         # Keep these keywords stable for tests: "SundayPhotoOrganizer Console" and "WORK_DIR=".
         self._print_hud("SYS", "SYSTEM ONLINE: SundayPhotoOrganizer Console", color="36")
         self._print_hud("SYS", f"RUN_ID={run_id}", color="36")
-        self._print_hud("SYS", f"WORK_DIR={self.app_directory}", color="36")
+        # Keep it short (avoid ellipsis). Full path is printed once in the summary below.
+        try:
+            work_dir_short = str(getattr(self.app_directory, "name", "") or "")
+            if not work_dir_short:
+                work_dir_short = str(self.app_directory)
+        except Exception:
+            work_dir_short = str(self.app_directory)
+        self._print_hud("SYS", f"WORK_DIR={work_dir_short}", color="36")
         self._print_hud("HUD", "PIPELINE: SCAN -> MATCH -> SORT -> REPORT", color="35")
         self._print_hud("UI", "按提示放照片 → 运行 → 自动输出到 output/", color="35")
         # Teacher-friendly: don't require understanding filesystem permissions.
         override = os.environ.get("SUNDAY_PHOTOS_WORK_DIR", "").strip()
         if override:
-            self._print_tip("已使用自定义工作目录（由环境变量指定）。")
+            self._print_hud("SYS", "已使用自定义工作目录（由环境变量指定）。", color="36")
         elif self.app_directory != self._program_dir:
             self._print_warn("当前程序所在位置无法创建工作文件夹，我已自动改用其它位置继续运行。")
-            self._print_tip("你无需处理权限问题；按上面 Work folder 提示的路径放照片即可。")
-        else:
-            self._print_tip("默认使用程序所在目录；如果该位置无法创建文件夹，会自动改用桌面或主目录。")
-        self._print_tip("隐私说明：照片只在本机处理，不会自动上传到网络。")
-        self._print_tip("安全说明：程序不会删除照片；只会把结果复制到 output/。为了便于下次继续整理，课堂照片可能会被归档到 class_photos/ 里的日期子文件夹（例如 YYYY-MM-DD/）。")
-        print("")
+
+        # Consolidated notices (print only once).
+        self._print_notices_once()
+
+        self._emit_line("")
         self._print_hud("BOOT", "QUICK START / 快速启动", color="36")
-        self._print_hud("PATH", f"STUDENTS={self.app_directory / 'input' / 'student_photos'}", color="32")
-        self._print_hud("PATH", f"CLASSROOM={self.app_directory / 'input' / 'class_photos'}", color="32")
-        self._print_hud("PATH", f"OUTPUT={self.app_directory / 'output'}", color="32")
+        students_dir = self.app_directory / "input" / "student_photos"
+        classroom_dir = self.app_directory / "input" / "class_photos"
+        output_dir = self.app_directory / "output"
+        logs_dir = self.app_directory / "logs"
+
+        # Prefer short, relative paths for readability.
+        self._print_hud("PATH", f"STUDENTS={self._rel_path(students_dir)}", color="32")
+        self._print_hud("PATH", f"CLASSROOM={self._rel_path(classroom_dir)}", color="32")
+        self._print_hud("PATH", f"OUTPUT={self._rel_path(output_dir)}", color="32")
+        self._print_hud("PATH", f"LOGS={self._rel_path(logs_dir)}", color="32")
+
+        # Print full paths once for copy/paste.
+        self._emit_line("")
+        self._emit_line(self._hud_line("完整路径（用于复制粘贴；只在这里显示一次）："))
+        self._emit_full_path_kv("WORK_DIR", self.app_directory, color="32")
+        self._emit_full_path_kv("STUDENTS", students_dir, color="32")
+        self._emit_full_path_kv("CLASSROOM", classroom_dir, color="32")
+        self._emit_full_path_kv("OUTPUT", output_dir, color="32")
+        self._emit_full_path_kv("LOGS", logs_dir, color="32")
         self._print_hud("GO", "把照片放好后，再运行一次即可。", color="32")
         self._print_divider()
     
@@ -639,7 +1053,7 @@ Supported formats: .jpg / .jpeg / .png
             self._print_ok(f"文件夹已准备好（新建 {created_count} 个）")
         else:
             self._print_ok("文件夹已准备好")
-        self._print_divider()
+        self._print_rule()
         return True
 
     def _ensure_instruction_file(self, directory, content):
@@ -674,7 +1088,6 @@ Supported formats: .jpg / .jpeg / .png
         self._print_section("检查照片")
         self._print_hud("SCAN", "扫描输入目录（参考照/课堂照）", color="36")
         self._pulse("SCAN / input")
-        self._print_tip("支持格式：JPG / JPEG / PNG")
         
         student_photos_dir = self.app_directory / "input" / "student_photos"
         class_photos_dir = self.app_directory / "input" / "class_photos"
@@ -699,20 +1112,19 @@ Supported formats: .jpg / .jpeg / .png
         if len(student_photos) == 0:
             self._print_warn("还没有找到学生参考照。")
             self._print_next("Create one folder per student under the folder below, then put clear face photos inside")
-            self._print_hud("PATH", str(student_photos_dir), color="32")
-            self._print_tip("Example: student_photos/Alice/ref_01.jpg (filenames can be anything)")
-            self._print_divider()
+            self._print_hud("PATH", f"STUDENTS={self._rel_path(student_photos_dir)}", color="32")
+            self._print_rule()
             return False
         
         if len(class_photos) == 0:
             self._print_warn("还没有找到课堂照片。")
             self._print_next("把需要整理的课堂照片放进下面这个文件夹")
-            self._print_hud("PATH", str(class_photos_dir), color="32")
-            self._print_divider()
+            self._print_hud("PATH", f"CLASSROOM={self._rel_path(class_photos_dir)}", color="32")
+            self._print_rule()
             return False
 
         self._print_ok("照片已就绪，可以开始整理。")
-        self._print_divider()
+        self._print_rule()
         return True
     
     def create_config_file(self):
@@ -759,9 +1171,8 @@ Supported formats: .jpg / .jpeg / .png
         """处理照片"""
         self._print_section("开始整理")
         self._print_hud("AI", "进入整理模式：识别 → 分类 → 输出", color="35")
-        self._print_tip("执行中请不要关闭窗口；完成后会显示 output/ 位置。")
-        self._print_tip(f"如果出现问题：日志会保存在 {self.app_directory / 'logs'}")
-        self._print_tip("无需任何配置文件，我会自动为你准备默认配置。")
+        # Keep it short and stable; SYS lines are not truncated (they wrap naturally).
+        self._print_hud("SYS", "执行中请看进度条；完成后打开 output/。", color="36")
         
         start_time = time.time()
         
@@ -779,7 +1190,7 @@ Supported formats: .jpg / .jpeg / .png
             if created:
                 self._print_ok("已自动生成默认配置（无需修改）")
             else:
-                self._print_tip("检测到已有配置，将直接使用。")
+                self._print_hud("SYS", "检测到已有配置，将直接使用。", color="36")
 
             config_loader = ConfigLoader(str(config_file))
 
@@ -808,19 +1219,22 @@ Supported formats: .jpg / .jpeg / .png
                 organizer.face_recognizer.min_face_size = min_face_size
             
             self._print_hud("STEP", "1/4 载入参考照：建立识别资料库", color="36")
-            print(self._hud_rule())
+            self._emit_line(self._hud_rule())
             self._print_hud("STEP", "2/4 分析课堂照：检测人脸 → 匹配姓名 → 分类保存", color="36")
-            print(self._hud_rule())
+            self._emit_line(self._hud_rule())
             self._print_hud("STEP", "3/4 写入结果：复制照片 + 生成统计报告", color="36")
-            print(self._hud_rule())
+            self._emit_line(self._hud_rule())
             self._print_hud("STEP", "4/4 打开输出：尝试为你打开 output/", color="36")
-            print(self._hud_rule())
-            self._print_tip("提示：进度条在动 = 正常运行；长时间不动可能是在计算。")
+            self._emit_line(self._hud_rule())
+            self._print_hud("SYS", "提示：进度条在动 = 正常运行；长时间不动可能是在计算。", color="36")
+
+            # Give a short beat after stage overview.
+            self._maybe_ui_pause()
 
             # Clear visual boundary before the heavy pipeline output (tqdm, stats).
-            print(self._hud_line())
+            self._emit_line(self._hud_line())
             self._print_hud("RUN", "开始执行识别流水线（请关注进度条）", color="35")
-            print(self._hud_rule())
+            self._emit_line(self._hud_rule())
 
             # Divider before the verbose pipeline output.
             self._print_divider()
@@ -839,25 +1253,28 @@ Supported formats: .jpg / .jpeg / .png
             report = organizer.last_run_report or {}
             organize_stats = report.get('organize_stats', {})
             pipeline_stats = report.get('pipeline_stats', {})
-            print("🎉 收尾啦：整理结果并生成统计...")
-            print("[OK] 整理完成。")
+            self._print_hud("RUN", "收尾：整理结果并生成统计", color="35")
+            self._print_ok("整理完成。")
             
             # 显示详细结果
             self.display_results(organize_stats, elapsed_time, pipeline_stats)
             
             # 显示文件位置
             output_dir = self.app_directory / "output"
-            print(f"结果文件夹：{output_dir}")
-            self._print_tip("If you see unknown_photos/, those are unrecognized photos; adding 2–3 clearer reference photos usually helps.")
+            self._print_hud("PATH", f"OUTPUT={self._rel_path(output_dir)}", color="32")
+            self._print_next("如果看到 unknown_photos/，表示未识别；补 2-3 张更清晰参考照通常有帮助。")
             
             # 自动打开结果文件夹
-            print("🗂️ 我来帮你打开结果文件夹...")
+            self._print_hud("SYS", "我来帮你打开结果文件夹...", color="36")
             if self._try_open_folder(output_dir, "结果文件夹"):
-                print("[OK] 已打开结果文件夹。")
+                self._print_ok("已打开结果文件夹。")
             else:
                 self._print_warn("我没能自动打开文件夹（不影响结果）。")
                 self._print_next("请手动打开这个文件夹查看结果")
-                print(f"  {output_dir}")
+                self._emit_line(self._hud_line(f"  {self._rel_path(output_dir)}"))
+
+            # Final tiny beat so the end messages don't get visually lost.
+            self._maybe_ui_pause()
 
             return True
             
@@ -869,16 +1286,18 @@ Supported formats: .jpg / .jpeg / .png
             except Exception:
                 pass
 
-            print("\n")
+            self._emit_line("")
             self._print_divider()
-            print("[错误] 程序遇到问题（不用紧张）")
+            self._emit_line("[错误] 程序遇到问题（不用紧张）")
             self._print_divider()
-            print(self._format_friendly_error(e, context=context))
-            print("\n你可以按下面顺序检查：")
-            print("  1) 确认 student_photos/ 与 class_photos/ 里都放了照片")
-            print("  2) Reference photos: put them in student_photos/<student_name>/ (folder); filenames can be anything")
-            print("  3) 识别不准：给该学生补 2-3 张更清晰的正脸参考照")
-            print(f"  4) 需要求助：把 logs 里最新日志发给同工/技术支持：{self.app_directory / 'logs'}")
+            self._emit_line(self._format_friendly_error(e, context=context))
+            self._emit_line("\n你可以按下面顺序检查：")
+            self._emit_line("  1) 确认 student_photos/ 与 class_photos/ 里都放了照片")
+            self._emit_line("  2) Reference photos: put them in student_photos/<student_name>/ (folder); filenames can be anything")
+            self._emit_line("  3) 识别不准：给该学生补 2-3 张更清晰的正脸参考照")
+            self._emit_line(f"  4) 需要求助：把 logs 里最新日志发给同工/技术支持：{self.app_directory / 'logs'}")
+
+            self._maybe_ui_pause()
             return False
     
     def display_results(self, results, elapsed_time, pipeline_stats=None):
@@ -909,7 +1328,7 @@ Supported formats: .jpg / .jpeg / .png
             # 对老师来说按学生逐条刷屏可能过长；仅保留总体统计。
 
         self._print_hud("DONE", "照片已按学生姓名分类保存到 output/。", color="32")
-        self._print_divider()
+        self._print_rule()
     
     def run_auto(self):
         """自动运行模式"""
@@ -932,7 +1351,6 @@ Supported formats: .jpg / .jpeg / .png
         if success:
             print()
             self._print_ok("完成。")
-            self._print_next("下次只要把新课堂照片放进 class_photos/，再运行一次即可")
         else:
             print()
             self._print_warn("未完成，请按上面的提示检查后重试。")

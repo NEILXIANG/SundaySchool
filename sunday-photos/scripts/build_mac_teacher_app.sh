@@ -22,6 +22,13 @@ APP_BUNDLE="$RELEASE_APP_DIR/$APP_NAME.app"
 ICON_ICNS="app_icon.icns"
 RUN_MODE="${RUN_MODE:-terminal}"
 
+# Best-effort: keep app_icon.icns fresh (macOS directory mtime is not reliable
+# when modifying existing PNGs under app_icon.iconset).
+if [ -d "app_icon.iconset" ] && command -v iconutil >/dev/null 2>&1; then
+  echo "🎨 生成图标: $ICON_ICNS"
+  iconutil -c icns "app_icon.iconset" -o "$ICON_ICNS"
+fi
+
 # Bundle InsightFace models into the packaged artifact for offline teacher deployment.
 # Default ON for teacher .app build.
 BUNDLE_INSIGHTFACE_MODELS="${BUNDLE_INSIGHTFACE_MODELS:-1}"
@@ -95,17 +102,20 @@ cat > "$RELEASE_APP_DIR/input/student_photos/把学生参考照放这里.md" <<'
 建议：每位学生 1~5 张，清晰正脸、光线充足、不要过度美颜。
 示例文件名：张三_1.jpg、张三_2.jpg
 EOF
+
 cat > "$RELEASE_APP_DIR/input/class_photos/把课堂照片放这里.md" <<'EOF'
 请把“课堂/活动照片（需要整理的照片）”放到这个文件夹里。
 
 示例文件名：2025-12-25_活动_001.jpg
 EOF
+
 cat > "$RELEASE_APP_DIR/input/student_photos/PUT_STUDENT_PHOTOS_HERE.md" <<'EOF'
 Put student reference photos here (used to recognize each student).
 
 Tip: 1–5 photos per student; clear frontal face works best.
 Example: Alice_1.jpg, Alice_2.jpg
 EOF
+
 cat > "$RELEASE_APP_DIR/input/class_photos/PUT_CLASS_PHOTOS_HERE.md" <<'EOF'
 Put class/event photos to be organized here.
 
@@ -150,13 +160,24 @@ on run
   set resourcesDir to appBundlePath & "Contents/Resources"
   set exePath to resourcesDir & "/SundayPhotoOrganizer/SundayPhotoOrganizer"
   set mplConfigDir to parentDir & "/logs/mplconfig"
-  set cmd to "cd " & quoted form of parentDir & " && /bin/mkdir -p " & quoted form of mplConfigDir & " && /usr/bin/env " & ¬
+  set cmd to "cd " & quoted form of parentDir & " && /bin/mkdir -p " & quoted form of mplConfigDir & " && /usr/bin/clear && /usr/bin/env " & ¬
+    "SUNDAY_PHOTOS_TEACHER_MODE=1 " & ¬
+    "SUNDAY_PHOTOS_UI_PAUSE_MS=200 " & ¬
     "SUNDAY_PHOTOS_WORK_DIR=" & quoted form of parentDir & " " & ¬
     "MPLBACKEND=Agg " & ¬
     "MPLCONFIGDIR=" & quoted form of mplConfigDir & " " & ¬
     "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 " & ¬
     "SUNDAY_PHOTOS_PARALLEL_STRATEGY=threads " & ¬
     quoted form of exePath
+
+  -- Best-effort: avoid opening another Terminal if already running.
+  try
+    set isRunning to do shell script "/usr/bin/pgrep -f '/SundayPhotoOrganizer/SundayPhotoOrganizer' >/dev/null 2>&1; echo $?"
+    if isRunning is "0" then
+      display dialog "程序已在运行，请查看已打开的终端窗口（不要重复双击）。" buttons {"好的"} default button 1
+      return
+    end if
+  end try
 
   tell application "Terminal"
     activate
@@ -179,6 +200,14 @@ chmod +x "$APP_BUNDLE/Contents/Resources/$APP_NAME/$APP_NAME" || true
 # Replace default applet icon.
 # AppleScript apps use applet.icns by default.
 cp -f "$ICON_ICNS" "$APP_BUNDLE/Contents/Resources/applet.icns"
+
+# Best-effort: refresh LaunchServices/Finder icon cache so the icon shows in
+# Finder list view immediately (instead of only after selection).
+touch "$APP_BUNDLE" "$APP_BUNDLE/Contents/Info.plist" "$APP_BUNDLE/Contents/Resources/applet.icns" 2>/dev/null || true
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+if [ -x "$LSREGISTER" ]; then
+  "$LSREGISTER" -f "$APP_BUNDLE" >/dev/null 2>&1 || true
+fi
 
 # Copy teacher docs next to the .app for convenience.
 cp -f "doc/TeacherQuickStart.md" "$RELEASE_APP_DIR/老师快速开始.md" || true

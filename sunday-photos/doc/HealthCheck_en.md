@@ -1,10 +1,10 @@
 # Project Health Check Checklist
 
-**Last updated**: 2025-12-28
+**Last updated**: 2025-12-31
 
 Purpose: a runnable checklist for release-time / regression-time sanity checks.
 
-Note: for the narrative “health check report”, see `doc/HealthCheckReport.md` / `doc/HealthCheckReport_en.md`.
+Note: this checklist is the only maintained entry; we no longer maintain narrative “health check reports” to avoid stale example numbers.
 
 ---
 
@@ -20,7 +20,7 @@ Note: for the narrative “health check report”, see `doc/HealthCheckReport.md
 Suggested spot checks:
 - `doc/TeacherQuickStart.md` / `doc/TeacherQuickStart_en.md`
 - `doc/TeacherGuide.md` / `doc/TeacherGuide_en.md`
-- `doc/CONFIG.md` / `doc/CONFIG_en.md`
+- `doc/CONFIG_REFERENCE.md` / `doc/CONFIG_REFERENCE_en.md`
 
 ---
 

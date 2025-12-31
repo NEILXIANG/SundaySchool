@@ -1,5 +1,8 @@
 # Developer Architecture Guide
 
+**Version**: v0.4.0  
+**Last updated**: 2025-12-31
+
 For code contributors and maintainers: deep dive into project architecture, core module principles, and best practices.
 
 ---
@@ -502,7 +505,7 @@ except Exception as e:
 1. Add default in [src/core/config.py](src/core/config.py)
 2. Update `DEFAULT_CONFIG` dict
 3. Handle special logic in `config_loader.py` (if any)
-4. Update [doc/CONFIG_en.md](doc/CONFIG_en.md)
+4. Update [doc/CONFIG_REFERENCE_en.md](doc/CONFIG_REFERENCE_en.md)
 5. Add unit tests to `test_config_loader_complete.py`
 
 ### 5.2 Optimize Recognition Algorithm

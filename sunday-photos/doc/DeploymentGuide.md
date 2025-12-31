@@ -1,7 +1,7 @@
 # 🎓 主日学照片整理工具 - 部署指南（控制台版）
 
 **版本**: v0.4.0  
-**更新日期**: 2025-12-26
+**更新日期**: 2025-12-31
 
 ## 📦 发布交付物
 
@@ -174,7 +174,7 @@ output/
   - 新生识别：经常出现的未知人脸可能是新学生
   - 志愿者追踪：定期参与者的照片集中管理
 
-详细配置见 [CONFIG.md](CONFIG.md) 的 `unknown_face_clustering` 章节。
+详细配置见 [CONFIG_REFERENCE.md](CONFIG_REFERENCE.md) 的 `unknown_face_clustering` 章节。
 
 ## 🔨 架构优化
 
@@ -191,7 +191,7 @@ output/
 ## 📚 相关文档
 
 - **用户指南**: [TeacherGuide.md](TeacherGuide.md) - 老师使用指南（详细三步流程）
-- **配置说明**: [CONFIG.md](CONFIG.md) - 配置文件详解
+- **配置说明（SSOT）**: [CONFIG_REFERENCE.md](CONFIG_REFERENCE.md) - 配置文件详解
 - **开发指南**: [DeveloperGuide.md](DeveloperGuide.md) - 开发者手册
 - **测试指南**: [TESTING.md](TESTING.md) - 测试套件说明
 - **产品需求**: [PRD.md](PRD.md) - 产品需求文档
@@ -216,5 +216,3 @@ output/
 - 完整列表见 `requirements.txt`
 
 ---
-
-*最后更新：2025-12-26 | 版本：v0.4.0*

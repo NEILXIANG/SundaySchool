@@ -53,6 +53,19 @@ def setup_logger(log_dir=None, enable_color_console=False):
     from ..config import DEFAULT_LOG_DIR
     if log_dir is None:
         log_dir = DEFAULT_LOG_DIR
+
+    # Teacher mode: keep console output clean.
+    # - Do not add console handlers.
+    # - Do not wipe existing file handlers (e.g., packaged console launcher may add one early).
+    teacher_mode = os.environ.get("SUNDAY_PHOTOS_TEACHER_MODE", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "y",
+        "on",
+    )
+    if teacher_mode:
+        enable_color_console = False
         
     os.makedirs(log_dir, exist_ok=True)
     
@@ -61,18 +74,31 @@ def setup_logger(log_dir=None, enable_color_console=False):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     
-    # 避免重复添加handler
+    # 避免重复添加 handler
+    # - Default (dev): clear all handlers to keep output deterministic.
+    # - Teacher mode: keep file handlers; only remove non-file stream handlers to avoid console spam.
     if logger.handlers:
-        for h in logger.handlers[:]:
-            logger.removeHandler(h)
+        if teacher_mode:
+            for h in logger.handlers[:]:
+                # FileHandler is also a StreamHandler; keep it.
+                if isinstance(h, logging.FileHandler):
+                    continue
+                if isinstance(h, logging.StreamHandler):
+                    logger.removeHandler(h)
+        else:
+            for h in logger.handlers[:]:
+                logger.removeHandler(h)
 
-    # 文件日志（始终无颜色）
-    fh = logging.FileHandler(log_file, encoding='utf-8')
-    fh.setFormatter(logging.Formatter(LOG_FORMAT))
-    logger.addHandler(fh)
+    # 文件日志（始终无颜色）；teacher mode 下如果已有 FileHandler 则复用
+    has_file_handler = any(isinstance(h, logging.FileHandler) for h in logger.handlers)
+    if not has_file_handler:
+        fh = logging.FileHandler(log_file, encoding='utf-8')
+        fh.setFormatter(logging.Formatter(LOG_FORMAT))
+        logger.addHandler(fh)
     
-    # 控制台日志（可选彩色）
-    ch = ColoredConsoleHandler(enable_color=enable_color_console)
-    logger.addHandler(ch)
+    # 控制台日志（可选彩色；teacher mode 下默认关闭）
+    if enable_color_console and (not teacher_mode):
+        ch = ColoredConsoleHandler(enable_color=enable_color_console)
+        logger.addHandler(ch)
     
     return logging.getLogger(__name__)

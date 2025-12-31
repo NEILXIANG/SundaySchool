@@ -1,5 +1,8 @@
 # Teacher Quick Start (macOS / Windows)
 
+**Version**: v0.4.0  
+**Last updated**: 2025-12-31
+
 This guide is for teachers: no technical background required.
 
 ## What you need
@@ -10,8 +13,16 @@ This guide is for teachers: no technical background required.
 ## 3 steps (the only steps you need)
 
 ### Step 1: Unzip
-1. Download the zip file you received
-2. Unzip it to Desktop (recommended)
+1. Download the zip file you received (e.g., `SundayPhotoOrganizer_macOS.zip`)
+2. Unzip it to Desktop (recommended) or anywhere convenient
+3. You'll see a folder (e.g., `SundayPhotoOrganizer/`)
+
+**Important**: The app auto-creates the working folders inside this directory:
+- `input/` (where you put photos)
+- `output/` (where results appear)
+- `logs/` (log files)
+
+If the app can't write here (permission issues), it falls back to Desktop and tells you the actual location when running.
 
 (Screenshot placeholder: a folder appears on Desktop after unzipping)
 
@@ -55,7 +66,7 @@ In `output/`, you typically see:
 
 More docs (usually not needed):
 - Full teacher guide: `doc/TeacherGuide_en.md`
-- Configuration & advanced options (SSOT): `doc/CONFIG_REFERENCE.md` (or the archived pointer `doc/CONFIG_en.md`)
+- Configuration & advanced options (SSOT): `doc/CONFIG_REFERENCE_en.md` (or the archived pointer `doc/CONFIG_en.md`)
 
 (Screenshot placeholder: output folder contains organized results)
 

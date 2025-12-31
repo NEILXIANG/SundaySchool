@@ -1,5 +1,8 @@
 # Developer & Packaging Guide
 
+**Version**: v0.4.0  
+**Last updated**: 2025-12-31
+
 For developers and release maintainers: local dev, packaging, and CI workflows.
 
 Release flow (sequence diagram + inputs/outputs):

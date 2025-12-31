@@ -2,6 +2,8 @@
 
 用途：当你要让 AI 在本仓库上实现“新需求/修 bug/增强老师体验”时，复制本文件内容给 AI，并在【变更点】里写清你想改什么。
 
+**更新日期**: 2025-12-31
+
 ---
 
 ## 提示词（直接复制给 AI）
@@ -10,7 +12,7 @@
 
 【仓库背景】
 - 项目：Sunday School photo organizer (for teachers)
-- 技术：Python + pytest；发布为 macOS 控制台可执行（PyInstaller）
+- 技术：Python + pytest；发布为 PyInstaller 打包应用（macOS 控制台 onedir + 可选老师双击版 .app；Windows 控制台 onedir）
 
 【最重要的产品原则（必须遵守）】
 1) 老师端应尽量做到默认无需参数、默认无需额外配置、操作尽量清晰。
@@ -21,11 +23,10 @@
 
 【现有老师端约定】
 - 老师双击运行打包程序。
-- 程序在可执行文件同目录创建 `input/`、`output/`、`logs/`，其中 `input/` 包含：
-  - `student_photos/`（学生参考照）
-  - `class_photos/`（课堂照片）
-  - `output/`（输出）
-  - `logs/`（日志）
+- 程序在可执行文件同目录创建（或回退到 Desktop/Home 作为 Work folder）：
+  - `input/`（其中包含 `student_photos/` 与 `class_photos/`）
+  - `output/`
+  - `logs/`
 - 识别不准时，只允许给“三步法”（补清晰正脸参考照 / 参考照不要多人合照 / 课堂照尽量清晰明亮）。
 - 不允许引导老师改阈值/参数/配置文件。
 

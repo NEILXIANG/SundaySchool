@@ -1,5 +1,8 @@
 # 开发者架构指南
 
+**版本**: v0.4.0  
+**更新日期**: 2025-12-31
+
 面向代码贡献者与维护者，深入讲解项目架构设计、核心模块原理与最佳实践。
 
 ---
@@ -504,7 +507,7 @@ except Exception as e:
 1. 在 [src/core/config.py](src/core/config.py) 添加默认值
 2. 更新 `DEFAULT_CONFIG` 字典
 3. 在 `config_loader.py` 处理特殊逻辑（如有）
-4. 更新 [doc/CONFIG.md](doc/CONFIG.md) 文档
+4. 更新 [doc/CONFIG_REFERENCE.md](doc/CONFIG_REFERENCE.md) 文档
 5. 添加单元测试到 `test_config_loader_complete.py`
 
 ### 5.2 优化识别算法

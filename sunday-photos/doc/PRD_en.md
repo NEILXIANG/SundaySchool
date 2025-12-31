@@ -1,6 +1,8 @@
 # Product Requirements Document (PRD)
+
 **Project**: Sunday School Photo Organizer (Sunday Photos Organizer)
-**Version**: 1.0
+**Version**: 1.3.0
+**Last updated**: 2025-12-31
 
 ---
 
@@ -141,7 +143,7 @@ output/
 
 ### 7.3 User Docs
 - Teacher guide: `doc/TeacherGuide.md` (ZH) + `doc/TeacherGuide_en.md` (EN).
-- Config guide: `doc/CONFIG.md` (ZH) + `doc/CONFIG_en.md` (EN).
+- Config reference (SSOT): `doc/CONFIG_REFERENCE.md` (ZH) + `doc/CONFIG_REFERENCE_en.md` (EN).
 - requests
 
 Optional (only if you select `dlib` backend):

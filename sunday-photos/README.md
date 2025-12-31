@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-passing-success.svg)](tests/)
 
-[特性](#-核心特性) • [快速开始](#-快速开始) • [文档](#-文档导航) • [技术亮点](#-技术架构亮点)
+[特性](#-核心特性) • [快速开始](#-快速开始) • [文档](#-文档导航) • [技术亮点](#-技术架构亮点) • [English](README_en.md)
 
 </div>
 
@@ -309,8 +309,10 @@ SUNDAY_PHOTOS_NO_PARALLEL=1 python run.py
 
 标准 JSON 不支持注释。为了让配置“打开就能看懂”，本项目在 `config.json` 中使用 `_comment` / `xxx_comment` 字段存放说明文字，程序会忽略这些字段，文件仍然是合法 JSON。
 
-- 中文配置说明：[doc/CONFIG.md](doc/CONFIG.md)
-- English config guide: [doc/CONFIG_en.md](doc/CONFIG_en.md)
+- 配置说明（SSOT）：[doc/CONFIG_REFERENCE.md](doc/CONFIG_REFERENCE.md)
+- Config reference (SSOT): [doc/CONFIG_REFERENCE_en.md](doc/CONFIG_REFERENCE_en.md)
+
+（说明：所有配置请以 [doc/CONFIG_REFERENCE.md](doc/CONFIG_REFERENCE.md) 为准。）
 
 ---
 
@@ -508,20 +510,19 @@ python run.py
 # 🚀 自动并行，无需每次设置
 ```
 
-详细配置说明：[doc/CONFIG.md](doc/CONFIG.md) | [doc/CONFIG_en.md](doc/CONFIG_en.md)
+详细配置说明（SSOT）：[doc/CONFIG_REFERENCE.md](doc/CONFIG_REFERENCE.md) | [doc/CONFIG_REFERENCE_en.md](doc/CONFIG_REFERENCE_en.md)
 
 ---
 
 ## 🎓 技术架构亮点
 
 ### 🧠 智能决策系统
-- **自适应并行策略**：
-  - 根据照片数量和系统资源自动选择最优处理模式
-  - 动态调整进程数和分片大小
-  - 智能检测CPU核心数并预留系统资源
+- **并行策略（稳定优先）**：
+  - 小批量默认串行；达到阈值后可启用并行（可通过配置/环境变量控制）
+  - 默认 workers 为固定值，不做“智能拉高/缩小”
+  - 排障时可一键强制串行：`SUNDAY_PHOTOS_NO_PARALLEL=1`
 - **智能提示引擎**：
-  - 检测到性能优化机会时主动建议
-  - 预估时间节省（串行120秒 → 并行40秒）
+  - 在合适时机提示可启用并行/切换后端等操作
   - 提供多种启用方式（临时/持久/强制禁用）
 - **渐进式增强**：默认稳定优先，按需开启高级特性
 

@@ -22,8 +22,15 @@ foreach ($p in $pythonCandidates) {
 
 Write-Host "Using python: $PYTHON"
 
+# Print python version for easier CI/local diagnostics.
+& $PYTHON -V
+
 # Ensure PyInstaller exists
 & $PYTHON -m PyInstaller --version | Out-Null
+
+# Preflight: ensure key binary deps are importable in this environment.
+# This catches common CI/venv issues before PyInstaller runs.
+& $PYTHON -c "import PIL; import cv2; print('Pillow:', PIL.__version__); print('OpenCV:', cv2.__version__)" 
 
 $SPEC_FILE = "SundayPhotoOrganizer.spec"
 
@@ -103,6 +110,15 @@ cd /d "%DIR%"
 
 REM Force work dir to the extracted folder root (so input/output/logs live next to this .bat)
 set "SUNDAY_PHOTOS_WORK_DIR=%DIR%"
+
+REM Teacher mode: suppress internal core logs in console (still writes to logs/)
+set "SUNDAY_PHOTOS_TEACHER_MODE=1"
+
+REM Default: disable console animations (spinner/pulse). Some consoles render \r poorly and will spam lines.
+set "SUNDAY_PHOTOS_NO_ANIMATION=1"
+
+REM Teacher-friendly pacing: tiny pause after critical messages (ms). Allow override.
+if "%SUNDAY_PHOTOS_UI_PAUSE_MS%"=="" set "SUNDAY_PHOTOS_UI_PAUSE_MS=200"
 
 set "EXE=%DIR%SundayPhotoOrganizer\SundayPhotoOrganizer.exe"
 if not exist "%EXE%" set "EXE=%DIR%SundayPhotoOrganizer.exe"

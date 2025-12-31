@@ -1,7 +1,18 @@
-name: Windows build
+name: Windows release acceptance
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'sunday-photos/**'
+      - '.github/workflows/windows-build.yml'
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'sunday-photos/**'
+      - '.github/workflows/windows-build.yml'
 
 jobs:
   build:
@@ -13,27 +24,77 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            sunday-photos/requirements.txt
+            sunday-photos/requirements-dlib.txt
 
-      - name: Install build tools
+      - name: Install deps
         working-directory: sunday-photos
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          python -m pip install cmake
-          # dlib is the riskiest dependency in CI; prefer wheels when available
-          python -m pip install "dlib>=19.24.2" --only-binary :all: || python -m pip install "dlib>=19.24.2"
           python -m pip install --prefer-binary -r requirements.txt
+          python -m pip install pytest pyinstaller
           python -c "import PIL; print('Pillow:', PIL.__version__)"
-          python -m pip install pyinstaller
+          python -c "import cv2; print('OpenCV:', cv2.__version__)"
+
+      - name: Unit tests (no packaged artifacts)
+        working-directory: sunday-photos
+        env:
+          ALLOW_NET_TESTDATA: "0"
+          STRICT_NET_TESTDATA: "0"
+        run: |
+          python -m pytest -q
 
       - name: Build (Windows)
         shell: pwsh
         working-directory: sunday-photos
+        env:
+          # CI does not have InsightFace model pre-downloaded; skip bundling here.
+          # (Offline model bundling can be tested in a separate, explicit job on a machine with models.)
+          BUNDLE_INSIGHTFACE_MODELS: "0"
         run: |
           ./scripts/build_windows_console_app.ps1
+
+      - name: Report packaged size (diagnostics)
+        shell: pwsh
+        working-directory: sunday-photos
+        run: |
+          $root = Join-Path $PWD "release_console"
+          if (-not (Test-Path $root)) { throw "release_console not found: $root" }
+          $bytes = (Get-ChildItem -File -Recurse $root | Measure-Object -Sum Length).Sum
+          $mb = [math]::Round($bytes / 1MB, 2)
+          Write-Host "release_console total (uncompressed): ${mb} MB"
+
+          $largest = Get-ChildItem -File -Recurse $root | Sort-Object Length -Descending | Select-Object -First 20
+          Write-Host "Top 20 largest files under release_console:"
+          $largest | ForEach-Object { '{0,10:N2} MB  {1}' -f ($_.Length/1MB), $_.FullName }
+
+      - name: Smoke test packaged exe
+        shell: pwsh
+        working-directory: sunday-photos
+        env:
+          SUNDAY_PHOTOS_TEACHER_MODE: "1"
+          SUNDAY_PHOTOS_NO_ANIMATION: "1"
+          SUNDAY_PHOTOS_UI_PAUSE_MS: "0"
+        run: |
+          $exe = Join-Path $PWD "release_console\SundayPhotoOrganizer\SundayPhotoOrganizer.exe"
+          if (-not (Test-Path $exe)) { throw "Packaged exe not found: $exe" }
+          & $exe --smoke
+
+      - name: Release acceptance tests (require packaged artifacts)
+        working-directory: sunday-photos
+        env:
+          REQUIRE_PACKAGED_ARTIFACTS: "1"
+          ALLOW_NET_TESTDATA: "0"
+          STRICT_NET_TESTDATA: "0"
+        run: |
+          python -m pytest -q
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-x86_64
+          name: windows-release_console
           path: sunday-photos/release_console/
+          retention-days: 14

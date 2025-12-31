@@ -2,11 +2,11 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run pipeline (source) - debug_work",
+      "name": "Run teacher console (console_launcher) - debug_work",
       "type": "python",
       "request": "launch",
       "python": "${workspaceFolder}/.venv/bin/python",
-      "program": "${workspaceFolder}/sunday-photos/run.py",
+      "program": "${workspaceFolder}/sunday-photos/src/cli/console_launcher.py",
       "console": "integratedTerminal",
       "redirectOutput": false,
       "internalConsoleOptions": "neverOpen",
@@ -15,23 +15,19 @@
       "env": {
         "GUIDE_FORCE_AUTO": "1",
         "DEBUGPY_LOG_DIR": "${workspaceFolder}/logs/debugpy",
+        "SUNDAY_PHOTOS_TEACHER_MODE": "1",
+        "SUNDAY_PHOTOS_WORK_DIR": "${workspaceFolder}/sunday-photos/.debug_work",
         "SUNDAY_PHOTOS_FORCE_ANIMATION": "1",
         "SUNDAY_PHOTOS_FORCE_COLOR": "1",
         "PYTHONUNBUFFERED": "1"
-      },
-      "args": [
-        "--input-dir",
-        "${workspaceFolder}/sunday-photos/.debug_work/input",
-        "--output-dir",
-        "${workspaceFolder}/sunday-photos/.debug_work/output"
-      ]
+      }
     },
     {
-      "name": "Check env (source) - run.py --check-env",
+      "name": "Smoke check (console_launcher) - debug_work",
       "type": "python",
       "request": "launch",
       "python": "${workspaceFolder}/.venv/bin/python",
-      "program": "${workspaceFolder}/sunday-photos/run.py",
+      "program": "${workspaceFolder}/sunday-photos/src/cli/console_launcher.py",
       "console": "integratedTerminal",
       "redirectOutput": false,
       "internalConsoleOptions": "neverOpen",
@@ -40,12 +36,14 @@
       "env": {
         "GUIDE_FORCE_AUTO": "1",
         "DEBUGPY_LOG_DIR": "${workspaceFolder}/logs/debugpy",
+        "SUNDAY_PHOTOS_TEACHER_MODE": "1",
+        "SUNDAY_PHOTOS_WORK_DIR": "${workspaceFolder}/sunday-photos/.debug_work",
         "SUNDAY_PHOTOS_FORCE_ANIMATION": "1",
         "SUNDAY_PHOTOS_FORCE_COLOR": "1",
         "PYTHONUNBUFFERED": "1"
       },
       "args": [
-        "--check-env"
+        "--smoke"
       ]
     },
     {
@@ -62,6 +60,7 @@
       "env": {
         "GUIDE_FORCE_AUTO": "1",
         "DEBUGPY_LOG_DIR": "${workspaceFolder}/logs/debugpy",
+        "SUNDAY_PHOTOS_TEACHER_MODE": "1",
         "SUNDAY_PHOTOS_WORK_DIR": "${workspaceFolder}/sunday-photos/.debug_work",
         "SUNDAY_PHOTOS_FORCE_ANIMATION": "1",
         "SUNDAY_PHOTOS_FORCE_COLOR": "1",

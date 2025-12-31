@@ -1,5 +1,8 @@
 # Testing Guide
 
+**Version**: v0.4.0  
+**Last updated**: 2025-12-31
+
 Tests are consolidated under `tests/` for quick runs by teachers and developers.
 
 ## How to run
@@ -37,6 +40,6 @@ Tests are consolidated under `tests/` for quick runs by teachers and developers.
 
 ## Configuration
 
-See:
-- Chinese: [doc/CONFIG.md](doc/CONFIG.md)
-- English: [doc/CONFIG_en.md](doc/CONFIG_en.md)
+Single Source of Truth (SSOT):
+- Chinese: [CONFIG_REFERENCE.md](CONFIG_REFERENCE.md)
+- English: [CONFIG_REFERENCE_en.md](CONFIG_REFERENCE_en.md)

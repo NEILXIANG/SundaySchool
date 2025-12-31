@@ -11,6 +11,7 @@
 """
 
 import os
+import sys
 import shutil
 import logging
 from pathlib import Path
@@ -22,6 +23,34 @@ from .utils.fs import ensure_directory_exists, ensure_resolved_under, safe_join_
 from .utils.date_parser import get_photo_date
 
 logger = logging.getLogger(__name__)
+
+
+def _teacher_mode_enabled() -> bool:
+    try:
+        return os.environ.get("SUNDAY_PHOTOS_TEACHER_MODE", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "y",
+            "on",
+        )
+    except Exception:
+        return False
+
+
+def _ansi_enabled() -> bool:
+    try:
+        if os.environ.get("NO_COLOR") is not None:
+            return False
+        return bool(getattr(sys.stdout, "isatty", lambda: False)())
+    except Exception:
+        return False
+
+
+def _c(text: str, code: str) -> str:
+    if not _ansi_enabled():
+        return text
+    return f"\033[{code}m{text}\033[0m"
 
 
 class FileOrganizer:
@@ -97,8 +126,41 @@ class FileOrganizer:
         processed_photos = set()  # 用于检测重复照片
         copied_files = []  # 跟踪已复制的文件，用于错误恢复
 
-        # 使用进度条
-        with tqdm(total=stats['total'], desc="整理照片", unit="张") as pbar:
+        # 使用进度条（老师可感知更强：百分比/剩余时间 + 阶段灯）
+        bar_format = "{desc} {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {postfix}"
+        desc_prefix = _c("● SORT", "36")
+        desc_text = f"{desc_prefix} 输出整理"
+
+        # Make sure the progress bar starts on its own clean line.
+        try:
+            tqdm.write(_c("[RUN ] 正在输出整理（SORT）", "36"))
+            tqdm.write(
+                "  ".join(
+                    [
+                        _c("✓ SCAN", "32"),
+                        _c("✓ MATCH", "32"),
+                        _c("● SORT", "36"),
+                        _c("○ REPORT", "90"),
+                    ]
+                )
+            )
+        except Exception:
+            pass
+
+        with tqdm(
+            total=stats['total'],
+            desc=desc_text,
+            unit="张",
+            dynamic_ncols=True,
+            mininterval=0.2,
+            smoothing=0.05,
+            bar_format=bar_format,
+            leave=not _teacher_mode_enabled(),
+        ) as pbar:
+            try:
+                pbar.set_postfix_str(_c("复制中", "90"))
+            except Exception:
+                pass
             try:
                 # 处理识别到的照片
                 for photo_path, student_names in recognition_results.items():
@@ -151,6 +213,18 @@ class FileOrganizer:
         elapsed = (datetime.now() - start_time).total_seconds()
         logger.info(f"照片整理完成，耗时: {elapsed:.2f}秒")
         logger.info(f"处理统计: 总计 {stats['total']} 个复制任务，成功 {stats['copied']}，失败 {stats['failed']}")
+
+        # Teacher-friendly: write one compact completion line (avoid leaving tqdm remnants).
+        try:
+            if _teacher_mode_enabled():
+                tqdm.write(
+                    _c(
+                        f"[DONE] SORT 完成：已分类 {stats.get('copied', 0)}；unknown {stats.get('unknown_total', 0)}；无人脸 {stats.get('no_face_total', 0)}；出错 {stats.get('error_total', 0)}；失败 {stats.get('failed', 0)}",
+                        "32",
+                    )
+                )
+        except Exception:
+            pass
         
         # 输出每个学生的照片数量
         for student_name, count in stats['students'].items():
@@ -163,32 +237,30 @@ class FileOrganizer:
         try:
             # 获取照片日期（输出目录按学生→日期分层）
             photo_date = get_photo_date(photo_path)
-            
+
             # 为每个识别到的学生复制照片（学生/日期/文件）
             for student_name in student_names:
                 # 使用 safe_join_under 防止路径遍历攻击
                 student_dir = safe_join_under(self.output_dir, student_name, photo_date)
                 ensure_directory_exists(student_dir)
-                
+
                 # 复制照片
                 success = self._copy_photo(photo_path, student_dir, copied_files)
-                
+
                 if success:
                     stats['copied'] += 1
-                    
+
                     # 更新学生统计
                     if student_name not in stats['students']:
                         stats['students'][student_name] = 0
                     stats['students'][student_name] += 1
                 else:
                     stats['failed'] += 1
-                    
                     logger.error(f"复制照片失败: {photo_path} -> {student_dir}")
-        
-        except Exception as e:
+        except Exception:
             logger.exception(f"处理照片 {photo_path} 时发生异常")
             stats['failed'] += len(student_names)
-        
+
         # 按复制任务计数（多人合影按学生数累加）
         stats['processed'] += len(student_names)
     
