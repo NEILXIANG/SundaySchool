@@ -218,7 +218,7 @@ $docRoot = Join-Path (Get-Location).Path "doc"
 if (Test-Path $docRoot) {
   $pairs = @(
     @{ Src = (Join-Path $docRoot "TeacherQuickStart.md");     Dst = (Join-Path $RELEASE_DIR "老师快速开始.md") },
-    @{ Src = (Join-Path $docRoot "TeacherQuickStart_en.md");  Dst = (Join-Path $RELEASE_DIR "QuickStart_EN.md") },
+    @{ Src = (Join-Path $docRoot "TeacherQuickStart_en.md");  Dst = (Join-Path $RELEASE_DIR "QuickStart_EN.md") }
   )
   foreach ($p in $pairs) {
     if (Test-Path $p.Src) {
