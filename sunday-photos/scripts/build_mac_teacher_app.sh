@@ -139,7 +139,7 @@ if [ "$RUN_MODE" = "silent" ]; then
 on run
   set appBundlePath to POSIX path of (path to me)
   set parentDir to do shell script "/usr/bin/dirname " & quoted form of appBundlePath
-  set resourcesDir to appBundlePath & "Contents/Resources"
+  set resourcesDir to appBundlePath & "/Contents/Resources"
   set exePath to resourcesDir & "/SundayPhotoOrganizer/SundayPhotoOrganizer"
   set mplConfigDir to parentDir & "/logs/mplconfig"
   set cmd to "cd " & quoted form of parentDir & " && /bin/mkdir -p " & quoted form of mplConfigDir & " && /usr/bin/nohup /usr/bin/env " & ¬
@@ -157,7 +157,7 @@ else
 on run
   set appBundlePath to POSIX path of (path to me)
   set parentDir to do shell script "/usr/bin/dirname " & quoted form of appBundlePath
-  set resourcesDir to appBundlePath & "Contents/Resources"
+  set resourcesDir to appBundlePath & "/Contents/Resources"
   set exePath to resourcesDir & "/SundayPhotoOrganizer/SundayPhotoOrganizer"
   set mplConfigDir to parentDir & "/logs/mplconfig"
   set cmd to "cd " & quoted form of parentDir & " && /bin/mkdir -p " & quoted form of mplConfigDir & " && /usr/bin/clear && /usr/bin/env " & ¬
