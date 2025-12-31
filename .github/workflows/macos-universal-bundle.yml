@@ -313,10 +313,25 @@ jobs:
           osacompile -o "$APP_BUNDLE" "$OSASCRIPT_FILE"
           rm -f "$OSASCRIPT_FILE"
           
-          # Copy universal launcher into app bundle
+          # Copy universal launcher and bin directory into app bundle
           mkdir -p "$APP_BUNDLE/Contents/Resources"
           cp "$CONSOLE_UNIVERSAL_DIR/SundayPhotoOrganizer" "$APP_BUNDLE/Contents/Resources/"
           chmod +x "$APP_BUNDLE/Contents/Resources/SundayPhotoOrganizer"
+          
+          # Copy bin directory with architecture-specific binaries
+          cp -R "$CONSOLE_UNIVERSAL_DIR/bin" "$APP_BUNDLE/Contents/Resources/"
+          
+          # Ensure binaries are executable
+          if [ -d "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-arm64" ]; then
+            chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-arm64/SundayPhotoOrganizer"
+          else
+            chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-arm64"
+          fi
+          if [ -d "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-x86_64" ]; then
+            chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-x86_64/SundayPhotoOrganizer"
+          else
+            chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-x86_64"
+          fi
           
           # Replace default applet icon with custom icon
           if [ -f sunday-photos/app_icon.iconset/icon_512x512.png ]; then
