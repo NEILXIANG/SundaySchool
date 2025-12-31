@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import logging
+import platform
 
 import sys
 
@@ -32,6 +33,27 @@ from src.core.config import DEFAULT_TOLERANCE
 
 class TestComprehensive(unittest.TestCase):
     """全面综合测试套件"""
+
+    def _close_logging_handlers(self) -> None:
+        try:
+            logging.shutdown()
+        except Exception:
+            pass
+
+        root = logging.getLogger()
+        for h in root.handlers[:]:
+            try:
+                h.flush()
+            except Exception:
+                pass
+            try:
+                h.close()
+            except Exception:
+                pass
+            try:
+                root.removeHandler(h)
+            except Exception:
+                pass
 
     def setUp(self):
         # 创建临时测试环境
@@ -57,8 +79,19 @@ class TestComprehensive(unittest.TestCase):
         )
 
     def tearDown(self):
-        # 清理临时文件
-        shutil.rmtree(self.test_dir)
+        # Windows: open FileHandler prevents directory cleanup; close handlers first.
+        self._close_logging_handlers()
+
+        # 清理临时文件（Windows 下对文件锁做一次轻量重试）
+        try:
+            shutil.rmtree(self.test_dir)
+        except PermissionError:
+            if platform.system().lower().startswith("win"):
+                time.sleep(0.2)
+                self._close_logging_handlers()
+                shutil.rmtree(self.test_dir)
+            else:
+                raise
 
     def test_empty_input_directory(self):
         """测试空输入目录的情况"""

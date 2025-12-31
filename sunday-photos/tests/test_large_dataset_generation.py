@@ -15,6 +15,7 @@ import os
 import sys
 import tempfile
 import shutil
+import logging
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -147,6 +148,22 @@ def test_large_dataset_incremental_and_organize():
         produced = _count_files(output_dir)
         print(f"输出文件总数(清理后): {produced}")
         assert produced >= 50, f"输出文件数过少(清理后): {produced}"
+
+        # Windows: ensure log file handles are closed before TemporaryDirectory cleanup.
+        try:
+            logging.shutdown()
+        except Exception:
+            pass
+        root = logging.getLogger()
+        for h in root.handlers[:]:
+            try:
+                h.close()
+            except Exception:
+                pass
+            try:
+                root.removeHandler(h)
+            except Exception:
+                pass
 
     print("✓ 大规模数据自动构建与验证通过")
     return

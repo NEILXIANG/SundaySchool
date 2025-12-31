@@ -141,13 +141,16 @@ jobs:
           ARM_DIR="artifacts/arm64"
           X86_DIR="artifacts/x86_64"
 
-          if [ ! -f "$ARM_DIR/SundayPhotoOrganizer" ]; then
-            echo "arm64 executable not found: $ARM_DIR/SundayPhotoOrganizer" >&2
+          # PyInstaller may produce either:
+          # - onefile: SundayPhotoOrganizer (file)
+          # - onedir : SundayPhotoOrganizer/ (directory containing the executable)
+          if [ ! -e "$ARM_DIR/SundayPhotoOrganizer" ]; then
+            echo "arm64 payload not found: $ARM_DIR/SundayPhotoOrganizer" >&2
             ls -la "$ARM_DIR" || true
             exit 1
           fi
-          if [ ! -f "$X86_DIR/SundayPhotoOrganizer" ]; then
-            echo "x86_64 executable not found: $X86_DIR/SundayPhotoOrganizer" >&2
+          if [ ! -e "$X86_DIR/SundayPhotoOrganizer" ]; then
+            echo "x86_64 payload not found: $X86_DIR/SundayPhotoOrganizer" >&2
             ls -la "$X86_DIR" || true
             exit 1
           fi
@@ -156,8 +159,29 @@ jobs:
           cp -R "$ARM_DIR" release_console_universal
 
           mkdir -p release_console_universal/bin
+          rm -rf release_console_universal/bin/SundayPhotoOrganizer-arm64 release_console_universal/bin/SundayPhotoOrganizer-x86_64
+
+          # Move arm64 payload (file or directory) into bin/
           mv release_console_universal/SundayPhotoOrganizer release_console_universal/bin/SundayPhotoOrganizer-arm64
-          cp "$X86_DIR/SundayPhotoOrganizer" release_console_universal/bin/SundayPhotoOrganizer-x86_64
+
+          # Copy x86_64 payload (file or directory) into bin/
+          if [ -d "$X86_DIR/SundayPhotoOrganizer" ]; then
+            cp -R "$X86_DIR/SundayPhotoOrganizer" release_console_universal/bin/SundayPhotoOrganizer-x86_64
+          else
+            cp "$X86_DIR/SundayPhotoOrganizer" release_console_universal/bin/SundayPhotoOrganizer-x86_64
+          fi
+
+          # Validate payloads
+          if [ -d "release_console_universal/bin/SundayPhotoOrganizer-arm64" ]; then
+            test -f "release_console_universal/bin/SundayPhotoOrganizer-arm64/SundayPhotoOrganizer"
+          else
+            test -f "release_console_universal/bin/SundayPhotoOrganizer-arm64"
+          fi
+          if [ -d "release_console_universal/bin/SundayPhotoOrganizer-x86_64" ]; then
+            test -f "release_console_universal/bin/SundayPhotoOrganizer-x86_64/SundayPhotoOrganizer"
+          else
+            test -f "release_console_universal/bin/SundayPhotoOrganizer-x86_64"
+          fi
 
           cat > release_console_universal/SundayPhotoOrganizer <<'EOF'
           #!/bin/bash
@@ -165,14 +189,28 @@ jobs:
           DIR="$(cd "$(dirname "$0")" && pwd)"
           ARCH="$(uname -m)"
           if [[ "$ARCH" == "arm64" ]]; then
-            exec "$DIR/bin/SundayPhotoOrganizer-arm64" "$@"
+            TARGET="$DIR/bin/SundayPhotoOrganizer-arm64"
           else
-            exec "$DIR/bin/SundayPhotoOrganizer-x86_64" "$@"
+            TARGET="$DIR/bin/SundayPhotoOrganizer-x86_64"
+          fi
+
+          if [[ -d "$TARGET" ]]; then
+            exec "$TARGET/SundayPhotoOrganizer" "$@"
+          else
+            exec "$TARGET" "$@"
           fi
           EOF
           chmod +x release_console_universal/SundayPhotoOrganizer
-          chmod +x release_console_universal/bin/SundayPhotoOrganizer-arm64
-          chmod +x release_console_universal/bin/SundayPhotoOrganizer-x86_64
+          if [ -d release_console_universal/bin/SundayPhotoOrganizer-arm64 ]; then
+            chmod +x release_console_universal/bin/SundayPhotoOrganizer-arm64/SundayPhotoOrganizer
+          else
+            chmod +x release_console_universal/bin/SundayPhotoOrganizer-arm64
+          fi
+          if [ -d release_console_universal/bin/SundayPhotoOrganizer-x86_64 ]; then
+            chmod +x release_console_universal/bin/SundayPhotoOrganizer-x86_64/SundayPhotoOrganizer
+          else
+            chmod +x release_console_universal/bin/SundayPhotoOrganizer-x86_64
+          fi
 
           echo "Universal package prepared: release_console_universal"
           ls -la release_console_universal | head -n 50

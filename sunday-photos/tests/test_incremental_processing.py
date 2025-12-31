@@ -13,6 +13,7 @@ import os
 import sys
 import tempfile
 import shutil
+import logging
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -106,6 +107,22 @@ def test_snapshot_diff_and_cleanup():
         assert not (output_dir / "StudentA" / "2024-12-21").exists()
         assert not (output_dir / "StudentB" / "2024-12-21").exists()
         assert not (output_dir / "unknown_photos" / "2024-12-21").exists()
+
+        # Windows: ensure log file handles are closed before TemporaryDirectory cleanup.
+        try:
+            logging.shutdown()
+        except Exception:
+            pass
+        root = logging.getLogger()
+        for h in root.handlers[:]:
+            try:
+                h.close()
+            except Exception:
+                pass
+            try:
+                root.removeHandler(h)
+            except Exception:
+                pass
 
     print("✓ 增量处理测试通过")
     return

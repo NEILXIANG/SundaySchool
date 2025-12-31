@@ -106,7 +106,7 @@ def test_memory_cleanup():
     
     try:
         # 检查face_recognizer.py中是否包含内存清理代码
-        with open('src/face_recognizer.py', 'r') as f:
+        with open('src/face_recognizer.py', 'r', encoding='utf-8') as f:
             content = f.read()
             
         if 'del image' in content and 'del face_locations' in content:
