@@ -183,6 +183,7 @@ jobs:
             test -f "release_console_universal/bin/SundayPhotoOrganizer-x86_64"
           fi
 
+          # Create main launcher script (for terminal use)
           cat > release_console_universal/SundayPhotoOrganizer <<'EOF'
           #!/bin/bash
           set -euo pipefail
@@ -201,6 +202,27 @@ jobs:
           fi
           EOF
           chmod +x release_console_universal/SundayPhotoOrganizer
+
+          # Create .command file for double-click launching on macOS
+          cat > release_console_universal/启动工具.command <<'EOF'
+          #!/bin/bash
+          # macOS 双击启动脚本（.command 文件可在 Finder 中双击运行）
+          set -euo pipefail
+          
+          # 切换到脚本所在目录
+          cd "$(dirname "$0")"
+          
+          # 调用主启动器
+          ./SundayPhotoOrganizer
+          
+          # 运行完成后暂停，让用户看到输出
+          echo ""
+          echo "按任意键退出..."
+          read -n 1 -s
+          EOF
+          chmod +x release_console_universal/启动工具.command
+
+          # Set executable permissions on actual binaries
           if [ -d release_console_universal/bin/SundayPhotoOrganizer-arm64 ]; then
             chmod +x release_console_universal/bin/SundayPhotoOrganizer-arm64/SundayPhotoOrganizer
           else
@@ -213,6 +235,8 @@ jobs:
           fi
 
           echo "Universal package prepared: release_console_universal"
+          echo "- Main launcher: SundayPhotoOrganizer (for terminal)"
+          echo "- Double-click launcher: 启动工具.command (for Finder)"
           ls -la release_console_universal | head -n 50
 
       - name: Upload artifact (universal)
