@@ -144,65 +144,56 @@ jobs:
           ARM_DIR="artifacts/arm64"
           X86_DIR="artifacts/x86_64"
 
-          # PyInstaller may produce either:
-          # - onefile: SundayPhotoOrganizer (file)
-          # - onedir : SundayPhotoOrganizer/ (directory containing the executable)
-          if [ ! -e "$ARM_DIR/SundayPhotoOrganizer" ]; then
-            echo "arm64 payload not found: $ARM_DIR/SundayPhotoOrganizer" >&2
+          # Validate onedir bundles exist (PyInstaller configured for onedir mode)
+          if [ ! -d "$ARM_DIR/SundayPhotoOrganizer" ]; then
+            echo "❌ arm64 onedir bundle not found: $ARM_DIR/SundayPhotoOrganizer/" >&2
+            echo "Expected: $ARM_DIR/SundayPhotoOrganizer/SundayPhotoOrganizer (executable)" >&2
             ls -la "$ARM_DIR" || true
             exit 1
           fi
-          if [ ! -e "$X86_DIR/SundayPhotoOrganizer" ]; then
-            echo "x86_64 payload not found: $X86_DIR/SundayPhotoOrganizer" >&2
+          if [ ! -d "$X86_DIR/SundayPhotoOrganizer" ]; then
+            echo "❌ x86_64 onedir bundle not found: $X86_DIR/SundayPhotoOrganizer/" >&2
+            echo "Expected: $X86_DIR/SundayPhotoOrganizer/SundayPhotoOrganizer (executable)" >&2
             ls -la "$X86_DIR" || true
             exit 1
           fi
+          
+          # Validate executables inside onedir bundles
+          if [ ! -f "$ARM_DIR/SundayPhotoOrganizer/SundayPhotoOrganizer" ]; then
+            echo "❌ arm64 executable missing in onedir bundle" >&2
+            ls -la "$ARM_DIR/SundayPhotoOrganizer" || true
+            exit 1
+          fi
+          if [ ! -f "$X86_DIR/SundayPhotoOrganizer/SundayPhotoOrganizer" ]; then
+            echo "❌ x86_64 executable missing in onedir bundle" >&2
+            ls -la "$X86_DIR/SundayPhotoOrganizer" || true
+            exit 1
+          fi
 
+          # Create universal bundle structure
           rm -rf release_console_universal
           cp -R "$ARM_DIR" release_console_universal
-
+          
+          # Move architecture-specific onedir bundles into bin/
           mkdir -p release_console_universal/bin
-          rm -rf release_console_universal/bin/SundayPhotoOrganizer-arm64 release_console_universal/bin/SundayPhotoOrganizer-x86_64
-
-          # Move arm64 payload (file or directory) into bin/
           mv release_console_universal/SundayPhotoOrganizer release_console_universal/bin/SundayPhotoOrganizer-arm64
+          cp -R "$X86_DIR/SundayPhotoOrganizer" release_console_universal/bin/SundayPhotoOrganizer-x86_64
 
-          # Copy x86_64 payload (file or directory) into bin/
-          if [ -d "$X86_DIR/SundayPhotoOrganizer" ]; then
-            cp -R "$X86_DIR/SundayPhotoOrganizer" release_console_universal/bin/SundayPhotoOrganizer-x86_64
-          else
-            cp "$X86_DIR/SundayPhotoOrganizer" release_console_universal/bin/SundayPhotoOrganizer-x86_64
-          fi
-
-          # Validate payloads
-          if [ -d "release_console_universal/bin/SundayPhotoOrganizer-arm64" ]; then
-            test -f "release_console_universal/bin/SundayPhotoOrganizer-arm64/SundayPhotoOrganizer"
-          else
-            test -f "release_console_universal/bin/SundayPhotoOrganizer-arm64"
-          fi
-          if [ -d "release_console_universal/bin/SundayPhotoOrganizer-x86_64" ]; then
-            test -f "release_console_universal/bin/SundayPhotoOrganizer-x86_64/SundayPhotoOrganizer"
-          else
-            test -f "release_console_universal/bin/SundayPhotoOrganizer-x86_64"
-          fi
-
-          # Create main launcher script (for terminal use)
+          # Create universal launcher script
           cat > release_console_universal/SundayPhotoOrganizer <<'EOF'
           #!/bin/bash
           set -euo pipefail
           DIR="$(cd "$(dirname "$0")" && pwd)"
           ARCH="$(uname -m)"
+          
           if [[ "$ARCH" == "arm64" ]]; then
             TARGET="$DIR/bin/SundayPhotoOrganizer-arm64"
           else
             TARGET="$DIR/bin/SundayPhotoOrganizer-x86_64"
           fi
-
-          if [[ -d "$TARGET" ]]; then
-            exec "$TARGET/SundayPhotoOrganizer" "$@"
-          else
-            exec "$TARGET" "$@"
-          fi
+          
+          # Execute architecture-specific onedir bundle
+          exec "$TARGET/SundayPhotoOrganizer" "$@"
           EOF
           chmod +x release_console_universal/SundayPhotoOrganizer
 
@@ -225,21 +216,16 @@ jobs:
           EOF
           chmod +x release_console_universal/启动工具.command
 
-          # Set executable permissions on actual binaries
-          if [ -d release_console_universal/bin/SundayPhotoOrganizer-arm64 ]; then
-            chmod +x release_console_universal/bin/SundayPhotoOrganizer-arm64/SundayPhotoOrganizer
-          else
-            chmod +x release_console_universal/bin/SundayPhotoOrganizer-arm64
-          fi
-          if [ -d release_console_universal/bin/SundayPhotoOrganizer-x86_64 ]; then
-            chmod +x release_console_universal/bin/SundayPhotoOrganizer-x86_64/SundayPhotoOrganizer
-          else
-            chmod +x release_console_universal/bin/SundayPhotoOrganizer-x86_64
-          fi
+          # Set executable permissions on architecture-specific binaries
+          chmod +x release_console_universal/bin/SundayPhotoOrganizer-arm64/SundayPhotoOrganizer
+          chmod +x release_console_universal/bin/SundayPhotoOrganizer-x86_64/SundayPhotoOrganizer
 
-          echo "Universal console package prepared: release_console_universal"
-          echo "- Main launcher: SundayPhotoOrganizer (for terminal)"
-          echo "- Double-click launcher: 启动工具.command (for Finder)"
+          echo "✅ Universal console package prepared: release_console_universal"
+          echo "📦 Structure:"
+          echo "  - SundayPhotoOrganizer (universal launcher script)"
+          echo "  - 启动工具.command (double-click launcher for Finder)"
+          echo "  - bin/SundayPhotoOrganizer-arm64/ (onedir bundle)"
+          echo "  - bin/SundayPhotoOrganizer-x86_64/ (onedir bundle)"
           ls -la release_console_universal | head -n 50
 
       - name: Build macOS .app wrapper (universal)
@@ -318,20 +304,12 @@ jobs:
           cp "$CONSOLE_UNIVERSAL_DIR/SundayPhotoOrganizer" "$APP_BUNDLE/Contents/Resources/"
           chmod +x "$APP_BUNDLE/Contents/Resources/SundayPhotoOrganizer"
           
-          # Copy bin directory with architecture-specific binaries
+          # Copy bin directory with architecture-specific onedir bundles
           cp -R "$CONSOLE_UNIVERSAL_DIR/bin" "$APP_BUNDLE/Contents/Resources/"
           
-          # Ensure binaries are executable
-          if [ -d "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-arm64" ]; then
-            chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-arm64/SundayPhotoOrganizer"
-          else
-            chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-arm64"
-          fi
-          if [ -d "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-x86_64" ]; then
-            chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-x86_64/SundayPhotoOrganizer"
-          else
-            chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-x86_64"
-          fi
+          # Set executable permissions on onedir binaries
+          chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-arm64/SundayPhotoOrganizer"
+          chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-x86_64/SundayPhotoOrganizer"
           
           # Replace default applet icon with custom icon
           if [ -f sunday-photos/app_icon.iconset/icon_512x512.png ]; then
