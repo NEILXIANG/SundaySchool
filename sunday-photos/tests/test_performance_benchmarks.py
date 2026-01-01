@@ -178,9 +178,9 @@ def test_incremental_performance(benchmark_env):
         service_container=container
     )
     
-    start_time = time.perf_counter()
+    start_time = time.time()
     organizer.run()
-    first_run_time = time.perf_counter() - start_time
+    first_run_time = time.time() - start_time
     
     # Second run: add 10 more photos
     for i in range(10):
@@ -195,26 +195,17 @@ def test_incremental_performance(benchmark_env):
         service_container=container2
     )
     
-    start_time = time.perf_counter()
+    start_time = time.time()
     organizer2.run()
-    second_run_time = time.perf_counter() - start_time
+    second_run_time = time.time() - start_time
     
     output_photos = list(output_dir.rglob("*.jpg"))
     
     print(f"✅ Incremental: 1st run {first_run_time:.2f}s, 2nd run {second_run_time:.2f}s")
     print(f"   Total photos: {len(output_photos)}")
     
-    # Second run should be faster (only processing new photos).
-    # NOTE: This is a *micro* benchmark (tens to hundreds of ms). Constant overhead
-    # (filesystem, Python startup, snapshot IO, etc.) can dominate and cause flaky
-    # ratios on busy CI machines. We assert a meaningful speedup instead of a strict 2x.
-    assert second_run_time < first_run_time
-
-    # For longer runs, require either a noticeable relative improvement or an absolute win.
-    # - Relative: at least 25% faster
-    # - Absolute: at least 60ms faster
-    if first_run_time >= 0.2:
-        assert (second_run_time <= first_run_time * 0.75) or ((first_run_time - second_run_time) >= 0.06)
+    # Second run should be much faster (only processing new photos)
+    assert second_run_time < first_run_time / 2
     assert len(output_photos) > 30
 
 
