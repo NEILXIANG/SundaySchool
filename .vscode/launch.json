@@ -98,38 +98,6 @@
         "SUNDAY_PHOTOS_PARALLEL_STRATEGY": "threads",
         "PYTHONUNBUFFERED": "1"
       }
-    },
-    {
-      "name": "Simulate macOS .app (integratedTerminal)",
-      "type": "python",
-      "request": "launch",
-      "python": "${workspaceFolder}/.venv/bin/python",
-      "program": "${workspaceFolder}/sunday-photos/src/cli/console_launcher.py",
-      "console": "integratedTerminal",
-      "redirectOutput": false,
-      "internalConsoleOptions": "neverOpen",
-      "logToFile": true,
-      "cwd": "${workspaceFolder}/sunday-photos",
-      "env": {
-        "GUIDE_FORCE_AUTO": "1",
-        "DEBUGPY_LOG_DIR": "${workspaceFolder}/logs/debugpy",
-
-        "SUNDAY_PHOTOS_TEACHER_MODE": "1",
-        "SUNDAY_PHOTOS_WORK_DIR": "${workspaceFolder}/sunday-photos/.debug_work",
-
-        "SUNDAY_PHOTOS_UI_PAUSE_MS": "200",
-
-        "MPLBACKEND": "Agg",
-        "MPLCONFIGDIR": "${workspaceFolder}/sunday-photos/.debug_work/logs/mplconfig",
-
-        "OMP_NUM_THREADS": "1",
-        "OPENBLAS_NUM_THREADS": "1",
-        "MKL_NUM_THREADS": "1",
-        "VECLIB_MAXIMUM_THREADS": "1",
-
-        "SUNDAY_PHOTOS_PARALLEL_STRATEGY": "threads",
-        "PYTHONUNBUFFERED": "1"
-      }
     }
   ]
 }
