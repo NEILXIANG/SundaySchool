@@ -1,7 +1,7 @@
 # Testing Guide
 
 **Version**: v0.4.0  
-**Last updated**: 2025-12-31
+**Last updated**: 2026-01-02
 
 Tests are consolidated under `tests/` for quick runs by teachers and developers.
 

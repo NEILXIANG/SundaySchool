@@ -2,7 +2,7 @@
 
 **Project**: Sunday School Photo Organizer (Sunday Photos Organizer)
 **Version**: 1.3.0
-**Last updated**: 2025-12-31
+**Last updated**: 2026-01-02
 
 ---
 

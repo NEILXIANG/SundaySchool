@@ -1,7 +1,7 @@
 # Teacher Guide (Packaged App / No Python needed)
 
 **Version**: v0.4.0  
-**Last updated**: 2025-12-31
+**Last updated**: 2026-01-02
 
 Audience: teachers who use the packaged app by double-clicking. No Python installation required.
 
@@ -65,12 +65,18 @@ When to ask for help (send `logs/`):
 - The app errors/crashes immediately
 - Photos are in the right place but output stays empty
 
+For troubleshooting, start with `HealthCheck_Runtime_en.md` and follow “what happened → what to do → where is the log”.
+
 ### Step 2: Put photos in the right place
 
 **Student reference photos (must follow this layout)**:
 - Put photos under: `input/student_photos/<student_name>/*.jpg|png...`
 - One folder per student; filenames do not matter
 - See `doc/TeacherQuickStart_en.md` for examples/screenshots
+
+Reference photo quality (do not ask teachers to tune thresholds):
+- Clear frontal, single person, no occlusion, even lighting; avoid side/backlit/group shots.
+- 1–5 photos per student are enough; if accuracy is low, add better reference photos instead of changing parameters.
 
 **Classroom photos**:
 - Location: `input/class_photos/`
@@ -190,3 +196,13 @@ Not necessarily.
 What to do:
 1) Open the latest `*_整理报告.txt` in `output/` to see the breakdown.
 2) If a student should be recognized, add 2–3 clearer reference photos for that student and run again.
+
+---
+
+## Useful tips (optional)
+
+- Better reference photos matter most: 2–3 clear, frontal, sharp photos per student usually beats tweaking parameters.
+- Keep a small backup: occasionally copy the whole Work folder (especially `input/student_photos/`) to another disk.
+- When asking for help: zip and send the entire `logs/` folder; also include the printed `Work folder:` line (if the app fell back).
+- Understanding unknowns: `Unknown_Person_X` folders often represent the same visitor/new student across photos; you can promote them into a real student by moving 2–3 clear photos into `input/student_photos/<student_name>/` and running again.
+- If you want to “re-run everything”: rename the date folder under `input/class_photos/` or delete `output/.state/` (see FAQ).

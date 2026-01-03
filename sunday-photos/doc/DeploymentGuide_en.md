@@ -1,7 +1,7 @@
 # 🎓 Sunday School Photo Organizer - Deployment Guide (Console Edition)
 
 **Version**: v0.4.0  
-**Last updated**: 2025-12-31
+**Last updated**: 2026-01-02
 
 ## 📦 Deliverables
 Console/CLI distribution only, located under `release_console/`:

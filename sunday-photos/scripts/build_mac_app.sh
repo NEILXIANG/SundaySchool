@@ -184,6 +184,12 @@ EOF
     cp -f "doc/TeacherQuickStart.md" "$RELEASE_DIR/老师快速开始.md" || true
     cp -f "doc/TeacherQuickStart_en.md" "$RELEASE_DIR/QuickStart_EN.md" || true
 
+    # 同步“老师使用指南 / 配置参考手册”（每次打包都刷新一份，避免 release 包内文档漂移）
+    cp -f "doc/TeacherGuide.md" "$RELEASE_DIR/老师使用指南.md" || true
+    cp -f "doc/TeacherGuide_en.md" "$RELEASE_DIR/TeacherGuide_EN.md" || true
+    cp -f "doc/CONFIG_REFERENCE.md" "$RELEASE_DIR/配置参考手册.md" || true
+    cp -f "doc/CONFIG_REFERENCE_en.md" "$RELEASE_DIR/CONFIG_REFERENCE_EN.md" || true
+
     # 老师文档只保留 .md：无论内容是否相同，都不分发 .txt。
     rm -f \
         "$RELEASE_DIR/老师快速开始.txt" \
@@ -191,6 +197,7 @@ EOF
         || true
 
         # 生成启动脚本与简要说明（release_console/ 作为“完全可分发产物”）。
+        # macOS 双击推荐入口：启动工具.command（Finder 双击更直观）；启动工具.sh 作为兼容/高级方式保留。
         cat > "$RELEASE_DIR/启动工具.sh" <<'EOF'
 #!/bin/bash
 set -e
@@ -229,6 +236,10 @@ if [ -t 0 ]; then
 fi
 EOF
         chmod +x "$RELEASE_DIR/启动工具.sh" || true
+
+    # .command: same content as .sh, but macOS Finder double-click launches Terminal automatically.
+    cp -f "$RELEASE_DIR/启动工具.sh" "$RELEASE_DIR/启动工具.command" || true
+    chmod +x "$RELEASE_DIR/启动工具.command" || true
 
         cat > "$RELEASE_DIR/Launch_SundayPhotoOrganizer.bat" <<'EOF'
 @echo off
@@ -288,7 +299,9 @@ EOF
 
 ## 使用方法
 - 双击运行：
-    - macOS：双击 `启动工具.sh`（控制台版）。如果你拿到的是 `.app` 版本，则双击 `SundayPhotoOrganizer.app`。
+        - macOS：首次推荐双击 `启动工具.command`（控制台版）。
+            - 备选：双击 `启动工具.sh`（同内容，某些环境需要右键→打开）。
+            - 如果你拿到的是 `.app` 版本，则双击 `SundayPhotoOrganizer.app`。
     - Windows：双击 `Launch_SundayPhotoOrganizer.bat`。
 - 放照片：
     - 学生照片（参考照）：`input/student_photos/<学生名>/...`
@@ -309,17 +322,38 @@ EOF
 更详细说明请看：`老师快速开始.md`
 EOF
 
-          cat > "$RELEASE_DIR/USAGE_EN.md" <<'EOF'
+             cat > "$RELEASE_DIR/USAGE_EN.md" <<'EOF'
 # Teacher usage (short)
 
-1) Put student reference photos into: `input/student_photos/` (one folder per student)
-2) Put class photos into: `input/class_photos/`
+## Steps
+
+1) Put student reference photos into: `input/student_photos/<student_name>/...`
+    - One folder per student
+    - 1–5 clear frontal photos per student works best
+
+2) Put class/event photos into: `input/class_photos/`
+    - Date subfolders are recommended (e.g. `YYYY-MM-DD/...`)
+
 3) Run:
-    - macOS: double-click `SundayPhotoOrganizer.app` (recommended) or `启动工具.sh`
+    - macOS (console bundle): double-click `启动工具.command` (recommended)
+      - Alternative: `启动工具.sh`
+    - macOS (teacher .app bundle, if provided): double-click `SundayPhotoOrganizer.app`
     - Windows: double-click `Launch_SundayPhotoOrganizer.bat`
+
 4) Results: `output/`   Logs: `logs/`
 
-See `QuickStart_EN.md` for details.
+## Where is the “Work folder”?
+
+By default it is the extracted folder root (next to the launcher).
+If that folder is not writable, the app may fall back to Desktop/Home and prints `Work folder:` in the console/logs (that printed path is the source of truth).
+
+## Common issues
+
+- No results: ensure there are photos under `input/class_photos/`.
+- Inaccurate recognition: add 2–3 better reference photos (do not tune parameters first).
+- Need help: zip and send the entire `logs/` folder (and a screenshot of the error if any).
+
+See `QuickStart_EN.md` for the full quick start.
 EOF
 
         # Remove legacy .txt usage files (always keep only .md).

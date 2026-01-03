@@ -1,7 +1,7 @@
 # Configuration Reference (SSOT)
 
-**Version**: v1.4.0  
-**Last updated**: 2025-12-31
+**Version**: v0.4.0  
+**Last updated**: 2026-01-02
 
 This document is the Single Source of Truth (SSOT) for configuration of the Sunday School Photo Organizer (sunday-photos):
 
@@ -31,6 +31,34 @@ Precedence order (high → low):
 4. **Hardcoded defaults**: see `src/core/config.py`
 
 Important: not every config key has an environment-variable equivalent. Only selected toggles are overridable via env vars.
+
+### Defaults (source: src/core/config.py)
+
+- Paths: `input_dir=input`, `output_dir=output`, `log_dir=logs`
+- Thresholds: `tolerance=0.6`, `min_face_size=50`
+- Parallel: `enabled=true`, `workers=6`, `chunk_size=12`, `min_photos=30`
+- Unknown clustering: `enabled=true`, `threshold=0.45`, `min_cluster_size=2`
+- Directory names: `student_photos`, `class_photos`, `unknown_photos`, `no_face_photos`, `error_photos`
+- Reports: `整理报告.txt`, `智能分析报告.txt`
+
+### Env override matrix (what actually overrides)
+
+| Env | Purpose | Override |
+| :--- | :--- | :--- |
+| `SUNDAY_PHOTOS_WORK_DIR` | Force Work folder root | Base path |
+| `SUNDAY_PHOTOS_FACE_BACKEND` | Backend (insightface/dlib) | Backend selection |
+| `SUNDAY_PHOTOS_NO_PARALLEL` | Force serial | Parallel off |
+| `SUNDAY_PHOTOS_PARALLEL` | Force parallel | Parallel on |
+| `SUNDAY_PHOTOS_PARALLEL_MIN_PHOTOS` | Min photos threshold | `min_photos` |
+| `SUNDAY_PHOTOS_INSIGHTFACE_HOME` | Model home | Model path |
+| `SUNDAY_PHOTOS_INSIGHTFACE_MODEL` | Model name | Model name |
+| `NO_COLOR` | Disable colors | Output style only |
+| `SUNDAY_PHOTOS_UI_PAUSE_MS` | UI pause (ms) | Refresh pacing only |
+| `GUIDE_FORCE_AUTO` | Force interactive guide auto mode | Maintainer/test only |
+| `SUNDAY_PHOTOS_DIAG_ENV` | Verbose diagnostics | Maintainer/CI |
+| `SUNDAY_PHOTOS_PRINT_DIAG` | Diagnostic summary | Maintainer |
+| `SUNDAY_PHOTOS_PARALLEL_STRATEGY` | `threads` / `processes` | Debug only |
+| (no env) | e.g., `unknown_face_clustering.threshold`, `min_cluster_size` | Set via config.json/CLI only |
 
 ---
 
@@ -106,6 +134,10 @@ Env vars can force enable/disable parallel (see Section 3). CLI `--no-parallel` 
 | `SUNDAY_PHOTOS_INSIGHTFACE_HOME` | `/path/to/.insightface` | Set InsightFace model home (offline/portable deploy). |
 | `SUNDAY_PHOTOS_INSIGHTFACE_MODEL` | `buffalo_l` | Set InsightFace model name (default `buffalo_l`). |
 | `SUNDAY_PHOTOS_QUIET_MODELS` | `1` | Quieter model-loading logs. |
+| `NO_COLOR` | `1` | Disable console color output. |
+| `GUIDE_FORCE_AUTO` | `1` | Force interactive guide to auto mode (skip prompt). |
+| `SUNDAY_PHOTOS_UI_PAUSE_MS` | `200` | UI pause duration (ms) for refresh rate control. |
+| `SUNDAY_PHOTOS_PARALLEL_STRATEGY` | `threads` / `processes` | Parallel strategy (default processes; threads for debug only). |
 
 ---
 

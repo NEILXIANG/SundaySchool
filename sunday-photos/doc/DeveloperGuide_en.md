@@ -1,7 +1,7 @@
 # Developer & Packaging Guide
 
 **Version**: v0.4.0  
-**Last updated**: 2025-12-31
+**Last updated**: 2026-01-02
 
 For developers and release maintainers: local dev, packaging, and CI workflows.
 
@@ -12,6 +12,18 @@ Release flow (sequence diagram + inputs/outputs):
 Teacher-facing quick start (included in release bundles):
 - `doc/TeacherQuickStart.md`
 - `doc/TeacherQuickStart_en.md`
+
+## Key code locations (authoritative)
+
+- CLI entrypoint: `src/cli/run.py`
+- Main orchestration: `src/core/main.py`
+- Config defaults & schema: `src/core/config.py`
+- Config loading & precedence: `src/config_loader.py`
+- Face recognition backend wrapper: `src/face_recognizer.py`
+- File organization & output layout: `src/file_organizer.py`
+- Incremental processing state: `src/incremental_state.py`
+
+Tip: when updating docs, these files are the SSOT for behavior.
 
 ## Key structure
 - Source: `sunday-photos/src/` (entry `src/cli/run.py`, core logic in `src/core/`).

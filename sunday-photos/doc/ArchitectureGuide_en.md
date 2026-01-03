@@ -1,7 +1,7 @@
 # Developer Architecture Guide
 
 **Version**: v0.4.0  
-**Last updated**: 2025-12-31
+**Last updated**: 2026-01-02
 
 For code contributors and maintainers: deep dive into project architecture, core module principles, and best practices.
 

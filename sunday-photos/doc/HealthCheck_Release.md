@@ -1,6 +1,8 @@
 # 发布验收清单（Release Acceptance Checklist）
+
 **版本**: v0.4.0  
 **更新日期**: 2026-01-02
+
 目的：确保“老师可用的发布包”在交付前通过强校验，避免出现：可执行文件缺失、说明不一致、运行后找不到目录、老师不知道下一步怎么做。
 
 适用范围：
@@ -96,18 +98,3 @@
 - 并行识别异常时自动回退串行：`tests/test_e2e_parallel_and_clustering.py::test_e2e_parallel_recognize_fallback_to_serial`
 - 并行识别成功路径（不走回退）：`tests/test_e2e_parallel_and_clustering.py::test_e2e_parallel_recognize_success_path`
 - unknown_face_clustering enabled 的落盘行为：`tests/test_e2e_parallel_and_clustering.py::test_e2e_unknown_face_clustering_enabled`
-
----
-
-## E. 人工快速抽检（发给老师前 2 分钟）
-
-- 双击运行入口（可执行文件或启动脚本）一次
-- 确认工作目录创建成功（默认在程序同级；若不可写会回退到桌面/主目录）
-- 确认 `input/`、`output/`、`logs/` 目录创建成功
-- 随便放 1-2 张照片模拟输入，确认不会崩溃
-- 确认 output/ 有结果或有明确提示
-- 确认 logs/ 生成日志
-
-开发者命令（可选）：
-- 全量回归：`python3 -m pytest -q`
-- 仅验证并行识别/聚类相关 e2e：`python3 -m pytest -q tests/test_e2e_parallel_and_clustering.py`

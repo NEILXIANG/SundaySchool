@@ -226,6 +226,19 @@ if (Test-Path $docRoot) {
     }
   }
 
+  # Also sync the full teacher guide + config reference into the release bundle
+  $morePairs = @(
+    @{ Src = (Join-Path $docRoot "TeacherGuide.md");          Dst = (Join-Path $RELEASE_DIR "老师使用指南.md") },
+    @{ Src = (Join-Path $docRoot "TeacherGuide_en.md");       Dst = (Join-Path $RELEASE_DIR "TeacherGuide_EN.md") },
+    @{ Src = (Join-Path $docRoot "CONFIG_REFERENCE.md");      Dst = (Join-Path $RELEASE_DIR "配置参考手册.md") },
+    @{ Src = (Join-Path $docRoot "CONFIG_REFERENCE_en.md");   Dst = (Join-Path $RELEASE_DIR "CONFIG_REFERENCE_EN.md") }
+  )
+  foreach ($p in $morePairs) {
+    if (Test-Path $p.Src) {
+      Copy-Item -Force $p.Src $p.Dst
+    }
+  }
+
     # Teacher docs: always keep only .md (remove any .txt if present).
     $txtDocs = @(
       (Join-Path $RELEASE_DIR "老师快速开始.txt"),

@@ -1,11 +1,23 @@
 # 开发与打包指南 (Developer Guide)
 
 **版本**: v0.4.0  
-**更新日期**: 2025-12-31
+**更新日期**: 2026-01-02
 
 面向开发者与发布维护者，涵盖本地调试、架构说明、打包与 CI 工作流。
 
 ---
+
+## 🔎 关键代码位置（权威口径）
+
+- CLI 入口：`src/cli/run.py`
+- 主流程编排：`src/core/main.py`
+- 配置默认值/结构：`src/core/config.py`
+- 配置加载与优先级：`src/config_loader.py`
+- 人脸识别封装：`src/face_recognizer.py`
+- 文件整理与输出结构：`src/file_organizer.py`
+- 增量处理状态：`src/incremental_state.py`
+
+提示：文档里凡是描述“实际行为/优先级/输出结构”的内容，最终都应以这些模块为准。
 
 ## 📋 目录
 - [项目结构要点](#-项目结构要点)

@@ -1,7 +1,7 @@
 # Release Flow (Source → release_console)
 
 **Version**: v0.4.0  
-**Last updated**: 2025-12-31
+**Last updated**: 2026-01-02
 
 For release maintainers: package the repo into a distributable console bundle and perform a minimal acceptance check.
 
