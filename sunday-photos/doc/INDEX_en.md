@@ -46,6 +46,7 @@ Goal: Minimize duplication, standardize conventions, and make project more susta
 | [CONFIG_REFERENCE_en.md](CONFIG_REFERENCE_en.md) | **SSOT**: All parameters, priorities, env vars |
 | [TESTING_en.md](TESTING_en.md) | Running tests & coverage |
 | [LoggingStandards_en.md](LoggingStandards_en.md) | Log formats & debugging |
+| [OPTIMIZATION_SUMMARY_20260102.md](OPTIMIZATION_SUMMARY_20260102.md) | Documentation refactor summary (2026-01-02, Chinese) |
 
 ### Operations Docs (Release & Deployment)
 

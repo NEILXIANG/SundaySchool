@@ -46,6 +46,7 @@
 | [CONFIG_REFERENCE.md](CONFIG_REFERENCE.md) / [CONFIG_REFERENCE_en.md](CONFIG_REFERENCE_en.md) | **SSOT**: 所有参数、优先级、环境变量 |
 | [TESTING.md](TESTING.md) / [TESTING_en.md](TESTING_en.md) | 运行测试、覆盖率 |
 | [LoggingStandards.md](LoggingStandards.md) / [LoggingStandards_en.md](LoggingStandards_en.md) | 日志格式、排障指南 |
+| [OPTIMIZATION_SUMMARY_20260102.md](OPTIMIZATION_SUMMARY_20260102.md) | 文档体系优化总结（2026-01-02） |
 
 ### 运维文档（📦 发布与部署）
 
