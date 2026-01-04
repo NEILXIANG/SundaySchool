@@ -11,8 +11,8 @@
 2. **SundayPhotoOrganizer.exe** (Windows 可执行文件)
 3. **启动工具.sh** (macOS 启动脚本；可双击或终端运行)
 4. **Launch_SundayPhotoOrganizer.bat** (Windows 启动脚本；双击运行)
-5. **使用说明.md** (中文用户指南)
-6. **USAGE_EN.md** (英文用户指南)
+5. **README.md** (中文简明说明；完整手册见 doc/)
+6. **README_EN.md** (英文简明说明，可选)
 
 分发给老师时，请保持这些文件在同一目录下。
 

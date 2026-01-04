@@ -9,8 +9,8 @@ Console/CLI distribution only, located under `release_console/`:
 2. **SundayPhotoOrganizer.exe** (Windows executable)
 3. **启动工具.sh** (macOS launcher script; double-click or run via terminal)
 4. **Launch_SundayPhotoOrganizer.bat** (Windows launcher; double-click)
-5. **使用说明.md** (Chinese user guide)
-6. **USAGE_EN.md** (English user guide)
+5. **README.md** (Chinese quick guide; full docs under doc/)
+6. **README_EN.md** (English quick guide, optional)
 
 Keep these files together when distributing to teachers.
 

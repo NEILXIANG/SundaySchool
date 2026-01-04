@@ -13,7 +13,7 @@ For release maintainers: package the repo into a distributable console bundle an
   - macOS executable: `release_console/SundayPhotoOrganizer/SundayPhotoOrganizer`
   - Windows executable: `release_console/SundayPhotoOrganizer/SundayPhotoOrganizer.exe`
   - Launchers: `release_console/启动工具.sh` (macOS), `release_console/Launch_SundayPhotoOrganizer.bat` (Windows)
-  - Docs: `release_console/使用说明.md`, `release_console/USAGE_EN.md`
+  - Docs (minimal README; full docs under doc/): `release_console/README.md`, `release_console/README_EN.md`
   - Runtime folders (auto-created on first run): `input/`, `output/`, `logs/`
 
 ## High-level sequence (maintainer view)

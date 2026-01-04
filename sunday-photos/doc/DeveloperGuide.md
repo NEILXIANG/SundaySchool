@@ -66,8 +66,8 @@ sunday-photos/
 │   │   └── SundayPhotoOrganizer.exe # Windows可执行文件（在目录内）
 │   ├── 启动工具.sh                # macOS 启动脚本（推荐入口，固定工作目录）
 │   ├── Launch_SundayPhotoOrganizer.bat # Windows 启动脚本
-│   ├── 使用说明.md                # 中文使用说明（md-only）
-│   └── USAGE_EN.md              # English usage (md-only)
+│   ├── README.md                # 中文简明说明（release 内最小 README；详细文档见 doc/）
+│   └── README_EN.md             # English quick guide (optional)
 ├── release_mac_app/             # macOS 老师双击版（.app + input/output/logs）
 ├── doc/                         # 项目文档
 ├── config.json                  # 配置文件（示例）

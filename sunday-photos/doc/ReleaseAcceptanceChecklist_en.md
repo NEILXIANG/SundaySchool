@@ -23,8 +23,8 @@ Must exist under `sunday-photos/release_console/` (by platform):
 - `Launch_SundayPhotoOrganizer.bat` (launcher script; double-click entry, keeps window open)
 
 **Universal:**
-- `使用说明.md` (Chinese teacher guide, zero-parameter approach)
-- `USAGE_EN.md` (English teacher guide, optional)
+- `README.md` (Chinese quick guide; full docs under doc/)
+- `README_EN.md` (English quick guide, optional)
 
 **Optional** (placeholder/example directories; teachers actually use `input/`, `output/`, `logs/` next to the executable):
 - `input/` (may contain `student_photos/`, `class_photos/` for source-mode examples)

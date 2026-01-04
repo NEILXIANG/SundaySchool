@@ -19,7 +19,8 @@
   - `SundayPhotoOrganizer.exe`（Windows 控制台可执行文件）
   - `Launch_SundayPhotoOrganizer.bat`（双击入口脚本，保持窗口不闪退）
 - 通用：
-  - `使用说明.md`（老师版简明说明，默认无需参数的口径）
+  - `README.md`（老师版简明说明，默认无需参数的口径；详细文档见 doc/）
+  - `README_EN.md`（英文简明说明，可选）
 
 可选（占位/示例目录；老师实际使用程序同级目录下的 `input/`、`output/`、`logs/`）：
 - `input/`（如需提供源码模式示例，可包含 `student_photos/`、`class_photos/`）
