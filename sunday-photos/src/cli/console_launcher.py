@@ -33,6 +33,7 @@ import logging
 import tempfile
 import atexit
 import io
+import warnings
 
 
 def _early_setup_matplotlib_env() -> None:
@@ -126,6 +127,7 @@ class ConsolePhotoOrganizer:
         self._setup_matplotlib_runtime_cache()
         self._acquire_single_instance_lock()
         self._ensure_file_logging()
+        self._install_teacher_warning_capture()
         self._log_startup_diagnostics()
 
         # Teacher console palette (techy + minimal): cyan primary + state colors + gray for background details.
@@ -188,6 +190,71 @@ class ConsolePhotoOrganizer:
             )
         except Exception:
             return False
+
+    def _install_teacher_warning_capture(self) -> None:
+        """Capture Python warnings into log files (teacher mode) and keep console clean.
+
+        Motivation:
+        - Some third-party deps (e.g., InsightFace -> skimage) emit FutureWarning/DeprecationWarning.
+        - Teachers should not see these noisy lines in the Terminal.
+        - We still want the information for troubleshooting, so log it.
+
+        Scope:
+        - Only enabled when SUNDAY_PHOTOS_TEACHER_MODE is on.
+        - Best-effort and must never break startup.
+        """
+
+        if not self._teacher_mode_enabled():
+            return
+
+        try:
+            warning_logger = logging.getLogger("py.warnings")
+            warning_logger.setLevel(logging.WARNING)
+
+            # Deduplicate repeated warnings to avoid log spam.
+            seen: set[tuple[str, str, str, int]] = set()
+            seen_limit = 2000
+
+            original_showwarning = warnings.showwarning
+
+            def _showwarning(
+                message,
+                category,
+                filename,
+                lineno,
+                file=None,
+                line=None,
+            ) -> None:
+                try:
+                    cat_name = getattr(category, "__name__", str(category))
+                    msg = str(message)
+                    key = (cat_name, msg, str(filename), int(lineno))
+                    if key not in seen:
+                        if len(seen) < seen_limit:
+                            seen.add(key)
+                        warning_logger.warning(
+                            "[PYWARN] %s:%s: %s: %s",
+                            filename,
+                            lineno,
+                            cat_name,
+                            msg,
+                        )
+                    # Do NOT print to stderr/console in teacher mode.
+                    return
+                except Exception:
+                    # Fall back to default behavior if our handler fails.
+                    try:
+                        original_showwarning(message, category, filename, lineno, file=file, line=line)
+                    except Exception:
+                        return
+
+            warnings.showwarning = _showwarning
+            # Ensure these warnings are not globally suppressed.
+            warnings.simplefilter("default", FutureWarning)
+            warnings.simplefilter("default", DeprecationWarning)
+            warnings.simplefilter("default", UserWarning)
+        except Exception:
+            return
 
     def _ui_pause_enabled(self) -> bool:
         if self._ui_pause_ms <= 0:
