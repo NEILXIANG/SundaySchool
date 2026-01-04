@@ -218,54 +218,86 @@ if [ -x "$LSREGISTER" ]; then
   "$LSREGISTER" -f "$APP_BUNDLE" >/dev/null 2>&1 || true
 fi
 
-# Copy teacher docs next to the .app for convenience.
-cp -f "doc/TeacherQuickStart.md" "$RELEASE_APP_DIR/老师快速开始.md" || true
-cp -f "doc/TeacherQuickStart_en.md" "$RELEASE_APP_DIR/QuickStart_EN.md" || true
+# Generate minimal README for teacher release (replaces verbose doc copies).
+cat > "$RELEASE_APP_DIR/README.md" <<'EOF'
+# SundayPhotoOrganizer（macOS 版）
 
-# Sync the full teacher guide + config reference (avoid drift between doc/ and release bundle).
-cp -f "doc/TeacherGuide.md" "$RELEASE_APP_DIR/老师使用指南.md" || true
-cp -f "doc/TeacherGuide_en.md" "$RELEASE_APP_DIR/TeacherGuide_EN.md" || true
-cp -f "doc/CONFIG_REFERENCE.md" "$RELEASE_APP_DIR/配置参考手册.md" || true
-cp -f "doc/CONFIG_REFERENCE_en.md" "$RELEASE_APP_DIR/CONFIG_REFERENCE_EN.md" || true
+## 快速开始
 
-# Teacher docs: always keep only .md (remove any .txt if present).
-rm -f \
-  "$RELEASE_APP_DIR/老师快速开始.txt" \
-  "$RELEASE_APP_DIR/QuickStart_EN.txt" \
-  || true
+### 首次使用（网络下载/AirDrop 接收后）
 
-cat > "$RELEASE_APP_DIR/使用说明_启动方式.md" <<'EOF'
-# macOS 启动方式（老师版 .app）
-
-## 首次使用（从网络下载/AirDrop 接收后）
-
-**重要：** 如果程序是通过网络下载、AirDrop、邮件附件等方式获取的，请先执行：
+**重要：** 从网络下载或 AirDrop 接收后，请先执行：
 
 1. 双击 `首次运行前清理.command`（清除 macOS 隔离属性）
-2. 然后双击 `SundayPhotoOrganizer.app` 启动
+2. 双击 `SundayPhotoOrganizer.app` 启动
 
-**或者** 右键点击 `SundayPhotoOrganizer.app` → 选择"打开"（首次可绕过 Gatekeeper 检查）
+**或** 右键点击 `SundayPhotoOrganizer.app` → 选择"打开"（绕过 Gatekeeper）
 
-## 日常使用
+### 日常使用
 
-1. 双击 `SundayPhotoOrganizer.app` 启动
-2. 程序会在后台运行；完成后会自动打开 `output/` 文件夹
+1. 双击 `SundayPhotoOrganizer.app`
+2. 学生参考照放 `input/student_photos/<学生名>/`
+3. 课堂照片放 `input/class_photos/`
+4. 完成后自动打开 `output/` 文件夹
 
 ## 日志位置
 
-- `logs/teacher_app_console.log`：启动器捕获的控制台输出（排障优先看这个）
-- `logs/`：程序运行日志
+- `logs/teacher_app_console.log` - 启动器控制台输出（排障首选）
+- `logs/` - 程序运行日志
 
-## 故障排查
+## 详细文档
 
-如果 macOS 提示"无法打开/来自未知开发者"：
-- 方法1：双击 `首次运行前清理.command` 后重试
-- 方法2：右键点击 .app → 选择"打开"
-- 方法3：系统设置 → 隐私与安全性 → 找到被拦截的 app → 仍要打开
+- [完整教师指南](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/TeacherGuide.md)
+- [配置参考手册](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/CONFIG_REFERENCE.md)
+- [常见问题](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/FAQ.md)
 EOF
 
-# Remove legacy .txt usage file.
-rm -f "$RELEASE_APP_DIR/使用说明_启动方式.txt" || true
+cat > "$RELEASE_APP_DIR/README_EN.md" <<'EOF'
+# SundayPhotoOrganizer (macOS)
+
+## Quick Start
+
+### First Use (After Network Download/AirDrop)
+
+**Important:** If downloaded from the internet or received via AirDrop:
+
+1. Double-click `首次运行前清理.command` (clears macOS quarantine)
+2. Double-click `SundayPhotoOrganizer.app` to launch
+
+**Or** Right-click `SundayPhotoOrganizer.app` → Open (bypasses Gatekeeper)
+
+### Daily Use
+
+1. Double-click `SundayPhotoOrganizer.app`
+2. Student photos → `input/student_photos/<student_name>/`
+3. Class photos → `input/class_photos/`
+4. Auto-opens `output/` folder when done
+
+## Logs
+
+- `logs/teacher_app_console.log` - Launcher console output (check first)
+- `logs/` - Application logs
+
+## Full Documentation
+
+- [Teacher Guide](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/TeacherGuide_en.md)
+- [Config Reference](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/CONFIG_REFERENCE_en.md)
+- [FAQ](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/FAQ_en.md)
+EOF
+
+# Clean up legacy teacher doc copies and .txt files.
+rm -f \
+  "$RELEASE_APP_DIR/老师快速开始.md" \
+  "$RELEASE_APP_DIR/QuickStart_EN.md" \
+  "$RELEASE_APP_DIR/老师使用指南.md" \
+  "$RELEASE_APP_DIR/TeacherGuide_EN.md" \
+  "$RELEASE_APP_DIR/配置参考手册.md" \
+  "$RELEASE_APP_DIR/CONFIG_REFERENCE_EN.md" \
+  "$RELEASE_APP_DIR/使用说明_启动方式.md" \
+  "$RELEASE_APP_DIR/使用说明_启动方式.txt" \
+  "$RELEASE_APP_DIR/老师快速开始.txt" \
+  "$RELEASE_APP_DIR/QuickStart_EN.txt" \
+  || true
 
 # Generate external cleanup script (for first-time network download).
 cat > "$RELEASE_APP_DIR/首次运行前清理.command" <<'CLEANUP'

@@ -213,40 +213,66 @@ if (-not (Test-Path $dstExe)) {
   throw "Release copied, but executable not found under $dstDir."
 }
 
-# Copy teacher quick start docs into release_console (refresh on each build)
-$docRoot = Join-Path (Get-Location).Path "doc"
-if (Test-Path $docRoot) {
-  $pairs = @(
-    @{ Src = (Join-Path $docRoot "TeacherQuickStart.md");     Dst = (Join-Path $RELEASE_DIR "老师快速开始.md") },
-    @{ Src = (Join-Path $docRoot "TeacherQuickStart_en.md");  Dst = (Join-Path $RELEASE_DIR "QuickStart_EN.md") }
-  )
-  foreach ($p in $pairs) {
-    if (Test-Path $p.Src) {
-      Copy-Item -Force $p.Src $p.Dst
-    }
-  }
+# Generate minimal README for Windows console release (replaces verbose doc copies).
+@"
+# SundayPhotoOrganizer（控制台版 - Windows）
 
-  # Also sync the full teacher guide + config reference into the release bundle
-  $morePairs = @(
-    @{ Src = (Join-Path $docRoot "TeacherGuide.md");          Dst = (Join-Path $RELEASE_DIR "老师使用指南.md") },
-    @{ Src = (Join-Path $docRoot "TeacherGuide_en.md");       Dst = (Join-Path $RELEASE_DIR "TeacherGuide_EN.md") },
-    @{ Src = (Join-Path $docRoot "CONFIG_REFERENCE.md");      Dst = (Join-Path $RELEASE_DIR "配置参考手册.md") },
-    @{ Src = (Join-Path $docRoot "CONFIG_REFERENCE_en.md");   Dst = (Join-Path $RELEASE_DIR "CONFIG_REFERENCE_EN.md") }
-  )
-  foreach ($p in $morePairs) {
-    if (Test-Path $p.Src) {
-      Copy-Item -Force $p.Src $p.Dst
-    }
-  }
+## 快速开始
 
-    # Teacher docs: always keep only .md (remove any .txt if present).
-    $txtDocs = @(
-      (Join-Path $RELEASE_DIR "老师快速开始.txt"),
-      (Join-Path $RELEASE_DIR "QuickStart_EN.txt")
-    )
-    foreach ($t in $txtDocs) {
-      if (Test-Path $t) { Remove-Item -Force $t }
-    }
+双击 ``Launch_SundayPhotoOrganizer.bat`` 启动
+
+### 使用步骤
+1. 学生参考照放 ``input/student_photos/<学生名>/``
+2. 课堂照片放 ``input/class_photos/``
+3. 再次运行，结果在 ``output/``
+
+## 工作目录
+默认在启动器所在目录（解压后的文件夹根目录）。
+如果不可写，程序自动回退到桌面/主目录，控制台会显示实际路径。
+
+## 详细文档
+- [完整教师指南](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/TeacherGuide.md)
+- [配置参考手册](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/CONFIG_REFERENCE.md)
+- [常见问题](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/FAQ.md)
+"@ | Set-Content -Encoding UTF8 (Join-Path $RELEASE_DIR "README.md")
+
+@"
+# SundayPhotoOrganizer (Console - Windows)
+
+## Quick Start
+
+Double-click ``Launch_SundayPhotoOrganizer.bat`` to launch
+
+### Steps
+1. Student photos → ``input/student_photos/<student_name>/``
+2. Class photos → ``input/class_photos/``
+3. Run again, results in ``output/``
+
+## Work Folder
+Defaults to launcher directory (extracted folder root).
+If not writable, falls back to Desktop/home, shown in console.
+
+## Full Documentation
+- [Teacher Guide](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/TeacherGuide_en.md)
+- [Config Reference](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/CONFIG_REFERENCE_en.md)
+- [FAQ](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/FAQ_en.md)
+"@ | Set-Content -Encoding UTF8 (Join-Path $RELEASE_DIR "README_EN.md")
+
+# Clean up legacy teacher doc copies and .txt files.
+$legacyDocs = @(
+  (Join-Path $RELEASE_DIR "老师快速开始.md"),
+  (Join-Path $RELEASE_DIR "QuickStart_EN.md"),
+  (Join-Path $RELEASE_DIR "老师使用指南.md"),
+  (Join-Path $RELEASE_DIR "TeacherGuide_EN.md"),
+  (Join-Path $RELEASE_DIR "配置参考手册.md"),
+  (Join-Path $RELEASE_DIR "CONFIG_REFERENCE_EN.md"),
+  (Join-Path $RELEASE_DIR "使用说明.md"),
+  (Join-Path $RELEASE_DIR "USAGE_EN.md"),
+  (Join-Path $RELEASE_DIR "老师快速开始.txt"),
+  (Join-Path $RELEASE_DIR "QuickStart_EN.txt")
+)
+foreach ($d in $legacyDocs) {
+  if (Test-Path $d) { Remove-Item -Force $d }
 }
 
 Write-Host "Release prepared: $RELEASE_DIR"

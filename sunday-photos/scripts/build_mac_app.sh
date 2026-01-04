@@ -179,19 +179,69 @@ EOF
     cp -R "dist/$APP_NAME" "$RELEASE_DIR/$APP_NAME"
     chmod +x "$RELEASE_DIR/$APP_NAME/$APP_NAME" || true
 
-    # 将“老师快速开始”文档复制到发布目录（每次打包都刷新一份）
-    # 老师只需要看 release_console/ 里的文件即可
-    cp -f "doc/TeacherQuickStart.md" "$RELEASE_DIR/老师快速开始.md" || true
-    cp -f "doc/TeacherQuickStart_en.md" "$RELEASE_DIR/QuickStart_EN.md" || true
+    # Generate minimal README for console release (replaces verbose doc copies).
+    cat > "$RELEASE_DIR/README.md" <<'EOF'
+# SundayPhotoOrganizer（控制台版）
 
-    # 同步“老师使用指南 / 配置参考手册”（每次打包都刷新一份，避免 release 包内文档漂移）
-    cp -f "doc/TeacherGuide.md" "$RELEASE_DIR/老师使用指南.md" || true
-    cp -f "doc/TeacherGuide_en.md" "$RELEASE_DIR/TeacherGuide_EN.md" || true
-    cp -f "doc/CONFIG_REFERENCE.md" "$RELEASE_DIR/配置参考手册.md" || true
-    cp -f "doc/CONFIG_REFERENCE_en.md" "$RELEASE_DIR/CONFIG_REFERENCE_EN.md" || true
+## 快速开始
 
-    # 老师文档只保留 .md：无论内容是否相同，都不分发 .txt。
+### macOS
+双击 `启动工具.command`（推荐）或 `启动工具.sh`
+
+### Windows
+双击 `Launch_SundayPhotoOrganizer.bat`
+
+### 使用步骤
+1. 学生参考照放 `input/student_photos/<学生名>/`
+2. 课堂照片放 `input/class_photos/`
+3. 再次运行，结果在 `output/`
+
+## 工作目录
+默认在启动器所在目录（解压后的文件夹根目录）。
+如果不可写，程序自动回退到桌面/主目录，控制台会显示实际路径。
+
+## 详细文档
+- [完整教师指南](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/TeacherGuide.md)
+- [配置参考手册](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/CONFIG_REFERENCE.md)
+- [常见问题](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/FAQ.md)
+EOF
+
+    cat > "$RELEASE_DIR/README_EN.md" <<'EOF'
+# SundayPhotoOrganizer (Console)
+
+## Quick Start
+
+### macOS
+Double-click `启动工具.command` (recommended) or `启动工具.sh`
+
+### Windows
+Double-click `Launch_SundayPhotoOrganizer.bat`
+
+### Steps
+1. Student photos → `input/student_photos/<student_name>/`
+2. Class photos → `input/class_photos/`
+3. Run again, results in `output/`
+
+## Work Folder
+Defaults to launcher directory (extracted folder root).
+If not writable, falls back to Desktop/home, shown in console.
+
+## Full Documentation
+- [Teacher Guide](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/TeacherGuide_en.md)
+- [Config Reference](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/CONFIG_REFERENCE_en.md)
+- [FAQ](https://github.com/NEILXIANG/SundaySchool/blob/main/sunday-photos/doc/FAQ_en.md)
+EOF
+
+    # Clean up legacy teacher doc copies and .txt files.
     rm -f \
+        "$RELEASE_DIR/老师快速开始.md" \
+        "$RELEASE_DIR/QuickStart_EN.md" \
+        "$RELEASE_DIR/老师使用指南.md" \
+        "$RELEASE_DIR/TeacherGuide_EN.md" \
+        "$RELEASE_DIR/配置参考手册.md" \
+        "$RELEASE_DIR/CONFIG_REFERENCE_EN.md" \
+        "$RELEASE_DIR/使用说明.md" \
+        "$RELEASE_DIR/USAGE_EN.md" \
         "$RELEASE_DIR/老师快速开始.txt" \
         "$RELEASE_DIR/QuickStart_EN.txt" \
         || true
@@ -294,67 +344,7 @@ echo Press any key to exit...
 pause >nul
 EOF
 
-                    cat > "$RELEASE_DIR/使用说明.md" <<'EOF'
-# 使用说明（老师版）
 
-## 使用方法
-- 双击运行：
-        - macOS：首次推荐双击 `启动工具.command`（控制台版）。
-            - 备选：双击 `启动工具.sh`（同内容，某些环境需要右键→打开）。
-            - 如果你拿到的是 `.app` 版本，则双击 `SundayPhotoOrganizer.app`。
-    - Windows：双击 `Launch_SundayPhotoOrganizer.bat`。
-- 放照片：
-    - 学生照片（参考照）：`input/student_photos/<学生名>/...`
-    - 课堂照片（待整理）：`input/class_photos/`（可按日期建子目录）
-- 再运行一次：整理完成后会自动打开 `output/`。
-
-## 文件夹位置
-- 工作目录：默认在“启动器所在目录”（例如解压后的文件夹根目录）。
-    - 如果目录不可写，程序可能回退到桌面/主目录，并在控制台打印 `Work folder:` 实际路径。
-- 输入：`input/`（学生照片/课堂照片）
-- 输出：`output/`
-- 日志：`logs/`
-
-## 常见问题
-- 运行后没有结果：确认 `input/class_photos/` 里有课堂照片。
-- 识别不准：尽量提供清晰正脸的学生照片（每人 1–5 张）。
-
-更详细说明请看：`老师快速开始.md`
-EOF
-
-             cat > "$RELEASE_DIR/USAGE_EN.md" <<'EOF'
-# Teacher usage (short)
-
-## Steps
-
-1) Put student reference photos into: `input/student_photos/<student_name>/...`
-    - One folder per student
-    - 1–5 clear frontal photos per student works best
-
-2) Put class/event photos into: `input/class_photos/`
-    - Date subfolders are recommended (e.g. `YYYY-MM-DD/...`)
-
-3) Run:
-    - macOS (console bundle): double-click `启动工具.command` (recommended)
-      - Alternative: `启动工具.sh`
-    - macOS (teacher .app bundle, if provided): double-click `SundayPhotoOrganizer.app`
-    - Windows: double-click `Launch_SundayPhotoOrganizer.bat`
-
-4) Results: `output/`   Logs: `logs/`
-
-## Where is the “Work folder”?
-
-By default it is the extracted folder root (next to the launcher).
-If that folder is not writable, the app may fall back to Desktop/Home and prints `Work folder:` in the console/logs (that printed path is the source of truth).
-
-## Common issues
-
-- No results: ensure there are photos under `input/class_photos/`.
-- Inaccurate recognition: add 2–3 better reference photos (do not tune parameters first).
-- Need help: zip and send the entire `logs/` folder (and a screenshot of the error if any).
-
-See `QuickStart_EN.md` for the full quick start.
-EOF
 
         # Remove legacy .txt usage files (always keep only .md).
         rm -f \
