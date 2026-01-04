@@ -231,23 +231,38 @@ class _InsightFaceCompat:
 
         # 注意：InsightFace 的 FaceAnalysis 不接受 root=None（会触发 TypeError）。
         # - 未提供 override 时，直接省略 root 参数，让其使用默认 ~/.insightface。
-        # InsightFace 内部会 print 模型信息（find model / Applied providers）。这里对初始化阶段做输出重定向。
-        sink = io.StringIO()
-        redir = contextlib.nullcontext()
+        # InsightFace 内部会 print 模型信息（find model / Applied providers）到底层 C++ stdout/stderr。
+        # Python 的 contextlib.redirect_stdout/stderr 无法捕获这些输出，需要重定向文件描述符。
         if suppress_output:
-            redir = contextlib.redirect_stdout(sink)
-        with redir:
-            redir_err = contextlib.nullcontext()
-            if suppress_output:
-                redir_err = contextlib.redirect_stderr(sink)
-            with redir_err:
+            # 保存原始文件描述符
+            old_stdout_fd = os.dup(1)
+            old_stderr_fd = os.dup(2)
+            devnull_fd = os.open(os.devnull, os.O_WRONLY)
+            try:
+                # 重定向底层文件描述符到 /dev/null
+                os.dup2(devnull_fd, 1)
+                os.dup2(devnull_fd, 2)
                 if model_root is None:
                     app = FaceAnalysis(name=model_name, providers=["CPUExecutionProvider"])
                 else:
                     app = FaceAnalysis(name=model_name, root=model_root, providers=["CPUExecutionProvider"])
-                # For InsightFace, ctx_id<0 means CPU; keep packaged runs consistent.
-                # (Also triggers some model classes to force CPU provider in prepare())
                 app.prepare(ctx_id=-1, det_size=(640, 640))
+            finally:
+                # 恢复原始文件描述符
+                os.dup2(old_stdout_fd, 1)
+                os.dup2(old_stderr_fd, 2)
+                os.close(devnull_fd)
+                os.close(old_stdout_fd)
+                os.close(old_stderr_fd)
+                # 确保 Python 的 sys.stdout/stderr 与底层文件描述符同步
+                sys.stdout.flush()
+                sys.stderr.flush()
+        else:
+            if model_root is None:
+                app = FaceAnalysis(name=model_name, providers=["CPUExecutionProvider"])
+            else:
+                app = FaceAnalysis(name=model_name, root=model_root, providers=["CPUExecutionProvider"])
+            app.prepare(ctx_id=-1, det_size=(640, 640))
         self._app = app
         return app
 
