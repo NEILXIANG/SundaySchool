@@ -273,8 +273,24 @@ cat > "$RELEASE_APP_DIR/首次运行前清理.command" <<'CLEANUP'
 # 首次从网络下载后运行此脚本，清除 macOS 隔离属性
 set -euo pipefail
 cd "$(dirname "$0")"
+
+APP="SundayPhotoOrganizer.app"
+
+# 1) Clear quarantine attributes (most common cause)
 /usr/bin/xattr -cr . 2>/dev/null || true
-echo "✅ 已清除隔离属性，现在可以双击 SundayPhotoOrganizer.app 启动"
+
+# 2) Best-effort: ad-hoc re-sign after unzipping/downloading.
+# Some macOS versions show "已损坏" when Gatekeeper thinks the signature is invalid.
+if [ -d "$APP" ] && [ -x /usr/bin/codesign ]; then
+  /usr/bin/codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
+fi
+
+# 3) Best-effort: register the app with spctl (may help on some systems)
+if [ -d "$APP" ] && [ -x /usr/sbin/spctl ]; then
+  /usr/sbin/spctl --add --label "SundayPhotoOrganizer" "$APP" >/dev/null 2>&1 || true
+fi
+
+echo "✅ 已执行清理/修复，现在可以双击 SundayPhotoOrganizer.app 启动"
 sleep 1
 # 自动关闭当前 Terminal 窗口
 /usr/bin/osascript -e 'tell application "Terminal" to close front window' >/dev/null 2>&1 || true

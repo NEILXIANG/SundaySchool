@@ -228,121 +228,30 @@ jobs:
           echo "  - bin/SundayPhotoOrganizer-x86_64/ (onedir bundle)"
           ls -la release_console_universal | head -n 50
 
-      - name: Build macOS .app wrapper (universal)
+          # Also prepare a repo-local layout compatible with scripts/build_mac_teacher_app.sh:
+          #   sunday-photos/release_console/SundayPhotoOrganizer/SundayPhotoOrganizer
+          # This keeps CI output consistent with local release bundles and ensures the .app
+          # bundle includes first-run cleanup tools and teacher docs.
+          rm -rf sunday-photos/release_console
+          mkdir -p sunday-photos/release_console/SundayPhotoOrganizer
+          cp -R release_console_universal/bin sunday-photos/release_console/SundayPhotoOrganizer/bin
+          cp -f release_console_universal/SundayPhotoOrganizer sunday-photos/release_console/SundayPhotoOrganizer/SundayPhotoOrganizer
+          chmod +x sunday-photos/release_console/SundayPhotoOrganizer/SundayPhotoOrganizer
+
+      - name: Build macOS teacher bundle (.app + docs + first-run cleanup)
+        working-directory: sunday-photos
         shell: bash
+        env:
+          # CI already prepared release_console/SundayPhotoOrganizer.
+          # Avoid triggering a console rebuild inside the teacher bundle script.
+          BUNDLE_INSIGHTFACE_MODELS: "0"
         run: |
           set -euo pipefail
-          
-          # Paths
-          CONSOLE_UNIVERSAL_DIR="release_console_universal"
-          RELEASE_DIR="sunday-photos/release_mac_app_universal"
-          APP_BUNDLE="$RELEASE_DIR/SundayPhotoOrganizer.app"
-          
-          # Validate universal launcher exists
-          if [ ! -f "$CONSOLE_UNIVERSAL_DIR/SundayPhotoOrganizer" ]; then
-            echo "Error: Universal launcher not found at $CONSOLE_UNIVERSAL_DIR/SundayPhotoOrganizer"
-            ls -la "$CONSOLE_UNIVERSAL_DIR" || true
-            exit 1
-          fi
-          
-          # Create release_mac_app_universal structure
-          rm -rf "$RELEASE_DIR"
-          mkdir -p "$RELEASE_DIR"
-          mkdir -p "$RELEASE_DIR/input/class_photos"
-          mkdir -p "$RELEASE_DIR/input/student_photos"
-          mkdir -p "$RELEASE_DIR/output"
-          mkdir -p "$RELEASE_DIR/logs"
-          
-          # Copy config
-          cp -f sunday-photos/config.json "$RELEASE_DIR/"
-          
-          # Create placeholder files
-          echo "将课堂合照放在这里" > "$RELEASE_DIR/input/class_photos/PUT_CLASS_PHOTOS_HERE.txt"
-          echo "将学生个人照放在这里" > "$RELEASE_DIR/input/student_photos/PUT_STUDENT_PHOTOS_HERE.txt"
-          
-          # Generate AppleScript that opens Terminal (teacher-friendly mode)
-          OSASCRIPT_FILE="$(mktemp).applescript"
-          cat > "$OSASCRIPT_FILE" <<'APPLESCRIPT'
-          on run
-            set appBundlePath to POSIX path of (path to me)
-            set parentDir to do shell script "/usr/bin/dirname " & quoted form of appBundlePath
-            set resourcesDir to appBundlePath & "/Contents/Resources"
-            set exePath to resourcesDir & "/SundayPhotoOrganizer"
-            set mplConfigDir to parentDir & "/logs/mplconfig"
-            set cmd to "cd " & quoted form of parentDir & " && /bin/mkdir -p " & quoted form of mplConfigDir & " && /usr/bin/clear && /usr/bin/env " & ¬
-              "SUNDAY_PHOTOS_TEACHER_MODE=1 " & ¬
-              "SUNDAY_PHOTOS_UI_PAUSE_MS=200 " & ¬
-              "SUNDAY_PHOTOS_WORK_DIR=" & quoted form of parentDir & " " & ¬
-              "MPLBACKEND=Agg " & ¬
-              "MPLCONFIGDIR=" & quoted form of mplConfigDir & " " & ¬
-              "OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 " & ¬
-              "SUNDAY_PHOTOS_PARALLEL_STRATEGY=threads " & ¬
-              quoted form of exePath
-          
-            -- Best-effort: avoid opening another Terminal if already running.
-            try
-              set isRunning to do shell script "/usr/bin/pgrep -f '/SundayPhotoOrganizer$' >/dev/null 2>&1; echo $?"
-              if isRunning is "0" then
-                display dialog "程序已在运行，请查看已打开的终端窗口（不要重复双击）。" buttons {"好的"} default button 1
-                return
-              end if
-            end try
-          
-            tell application "Terminal"
-              activate
-              do script cmd
-            end tell
-          end run
-          APPLESCRIPT
-          
-          # Compile AppleScript into .app
-          osacompile -o "$APP_BUNDLE" "$OSASCRIPT_FILE"
-          rm -f "$OSASCRIPT_FILE"
-          
-          # Copy universal launcher and bin directory into app bundle
-          mkdir -p "$APP_BUNDLE/Contents/Resources"
-          cp "$CONSOLE_UNIVERSAL_DIR/SundayPhotoOrganizer" "$APP_BUNDLE/Contents/Resources/"
-          chmod +x "$APP_BUNDLE/Contents/Resources/SundayPhotoOrganizer"
-          
-          # Copy bin directory with architecture-specific onedir bundles
-          cp -R "$CONSOLE_UNIVERSAL_DIR/bin" "$APP_BUNDLE/Contents/Resources/"
-          
-          # Set executable permissions on onedir binaries
-          chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-arm64/SundayPhotoOrganizer"
-          chmod +x "$APP_BUNDLE/Contents/Resources/bin/SundayPhotoOrganizer-x86_64/SundayPhotoOrganizer"
-          
-          # Replace default applet icon with custom icon
-          if [ -f sunday-photos/app_icon.iconset/icon_512x512.png ]; then
-            # Generate .icns from iconset if needed
-            ICON_ICNS="sunday-photos/app_icon.icns"
-            if [ ! -f "$ICON_ICNS" ] || [ sunday-photos/app_icon.iconset -nt "$ICON_ICNS" ]; then
-              iconutil -c icns -o "$ICON_ICNS" sunday-photos/app_icon.iconset 2>/dev/null || true
-            fi
-            
-            if [ -f "$ICON_ICNS" ]; then
-              cp -f "$ICON_ICNS" "$APP_BUNDLE/Contents/Resources/applet.icns"
-              # Refresh icon cache
-              touch "$APP_BUNDLE" "$APP_BUNDLE/Contents/Info.plist" "$APP_BUNDLE/Contents/Resources/applet.icns"
-            fi
-          fi
-          
-          # Copy teacher docs
-          cp -f sunday-photos/doc/TeacherQuickStart.md "$RELEASE_DIR/老师快速开始.md"
-          cp -f sunday-photos/doc/TeacherQuickStart_en.md "$RELEASE_DIR/QuickStart_EN.md"
-          
-          cat > "$RELEASE_DIR/使用说明_启动方式.md" <<'EOF'
-          # macOS 启动方式（老师版 .app）
-          
-          1) 双击 `SundayPhotoOrganizer.app` 启动。
-          2) 默认会自动打开"终端 Terminal"窗口显示运行进度（控制台信息）。
-          
-          如果 macOS 提示"无法打开/来自未知开发者"：
-          - 右键点击 app → 打开 → 再次点击"打开"
-          - 或：系统设置 → 隐私与安全性 → 找到被拦截的 app → 仍要打开
-          EOF
-          
-          echo "✅ Universal .app created: $APP_BUNDLE"
-          ls -la "$APP_BUNDLE/Contents/Resources" | head -n 20
+          bash scripts/build_mac_teacher_app.sh
+
+          # Keep artifact path stable for workflow consumers.
+          rm -rf release_mac_app_universal
+          mv release_mac_app release_mac_app_universal
 
       - name: Upload console bundle artifact
         uses: actions/upload-artifact@v4
