@@ -52,8 +52,8 @@ def main():
 
     print("✅ Build finished.")
     print("📦 Output folder: release_console/SundayPhotoOrganizer/")
-    print("📖 Usage (ZH): release_console/使用说明.md")
-    print("📖 Usage (EN): release_console/USAGE_EN.md")
+    print("📖 Usage (ZH): release_console/README.md")
+    print("📖 Usage (EN): release_console/README_EN.md")
     return True
 
 def create_console_guide():
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         print("\n🎊 Console release built successfully!")
         print("📂 release_console/ contains:")
         print("   - SundayPhotoOrganizer/ (onedir bundle)")
-        print("   - 使用说明.md / USAGE_EN.md (md-only docs)")
+        print("   - README.md / README_EN.md (minimal docs; full docs under doc/)")
     else:
         print("\n❌ 控制台版本打包失败，请检查错误信息")
         sys.exit(1)
