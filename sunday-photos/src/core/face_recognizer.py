@@ -22,6 +22,14 @@ logger = logging.getLogger(__name__)
 # 注意：该 warning 的 message 可能以换行开头，因此用 \s* 兼容。
 warnings.filterwarnings("ignore", message=r"\s*Error fetching version info.*")
 
+# InsightFace 依赖链（skimage）在较新版本会触发 FutureWarning：SimilarityTransform.estimate 弃用。
+# 这是上游库的兼容性提醒，不影响当前运行；为避免老师控制台看到噪声，做精准屏蔽。
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=r".*`estimate` is deprecated.*SimilarityTransform\.from_estimate.*",
+)
+
 try:
     # NOTE: Keep InsightFace import lazy.
     # Importing insightface at module import time can be slow and may block
