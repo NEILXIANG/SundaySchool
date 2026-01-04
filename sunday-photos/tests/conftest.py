@@ -54,6 +54,46 @@ def _set_mtime(path: Path, mtime_sec: int) -> None:
     os.utime(path, (mtime_sec, mtime_sec))
 
 
+def _is_supported_image_path(p: Path) -> bool:
+    return p.is_file() and p.suffix.lower() in (".jpg", ".jpeg", ".png")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _ensure_repo_fixture_student_photo():
+    """Ensure repo-local sample input does not contain empty student folders.
+
+    Some legacy tests initialize StudentManager against the repo's default `input/`
+    folder (rather than a tmp_path dataset). In this workspace, an empty
+    `input/student_photos/test_student/` folder may exist and causes StudentManager
+    to raise StudentPhotosLayoutError.
+
+    We create a minimal placeholder image if needed, and remove it after the test
+    session so the workspace is not permanently mutated.
+    """
+
+    project_root = Path(__file__).resolve().parents[1]
+    test_student_dir = project_root / "input" / "student_photos" / "test_student"
+
+    created: list[Path] = []
+
+    try:
+        if test_student_dir.exists() and test_student_dir.is_dir():
+            existing_images = [p for p in test_student_dir.iterdir() if _is_supported_image_path(p)]
+            if not existing_images:
+                placeholder = test_student_dir / "ref_01.jpg"
+                create_minimal_test_image(placeholder)
+                created.append(placeholder)
+
+        yield
+    finally:
+        for p in created:
+            try:
+                p.unlink(missing_ok=True)
+            except Exception:
+                # Best-effort cleanup; do not fail the session teardown.
+                pass
+
+
 @pytest.fixture()
 def offline_generated_dataset(tmp_path: Path):
     """构建一份完全离线、可重复的测试数据集。
