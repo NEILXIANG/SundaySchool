@@ -21,7 +21,8 @@ os.chdir(PROJECT_ROOT)
 
 RELEASE_DIR = PROJECT_ROOT / "release_console"
 EXECUTABLE = RELEASE_DIR / "SundayPhotoOrganizer"
-DOC_PATH = RELEASE_DIR / "使用说明.md"
+DOC_PATH = RELEASE_DIR / "README.md"
+DOC_PATH_EN = RELEASE_DIR / "README_EN.md"
 LAUNCHER = RELEASE_DIR / "启动工具.sh"
 
 
@@ -71,7 +72,7 @@ def test_artifacts_exist():
         print("ℹ️ 未发现可执行文件（可能未打包完成），跳过打包产物完整性测试。")
         pytest.skip("未发现 release_console/SundayPhotoOrganizer（可能未打包），跳过")
 
-    required_items = [RELEASE_DIR, EXECUTABLE, resolved_executable, DOC_PATH, LAUNCHER]
+    required_items = [RELEASE_DIR, EXECUTABLE, resolved_executable, DOC_PATH, DOC_PATH_EN, LAUNCHER]
     all_good = True
 
     for item in required_items:
@@ -139,25 +140,50 @@ def test_documentation():
         return
 
     if not DOC_PATH.exists():
-        print("❌ 用户文档不存在")
+        print("❌ 用户文档不存在（README.md）")
         assert False, "用户文档不存在"
 
-    content = DOC_PATH.read_text(encoding="utf-8")
-    required_sections = [
-        "使用方法",
-        "文件夹位置",
-        "常见问题",
+    if not DOC_PATH_EN.exists():
+        print("❌ English user doc missing (README_EN.md)")
+        assert False, "English user doc missing"
+
+    zh = DOC_PATH.read_text(encoding="utf-8")
+    en = DOC_PATH_EN.read_text(encoding="utf-8")
+
+    # Release docs are intentionally minimal; validate key guidance and links.
+    required_zh = [
+        "快速开始",
+        "使用步骤",
+        "input/student_photos",
+        "input/class_photos",
+        "output",
+        "详细文档",
+    ]
+    required_en = [
+        "Quick Start",
+        "Steps",
+        "input/student_photos",
+        "input/class_photos",
+        "output",
+        "Full Documentation",
     ]
 
     all_good = True
-    for section in required_sections:
-        if section in content:
-            print(f"✅ 包含'{section}'部分")
+    for item in required_zh:
+        if item in zh:
+            print(f"✅ README.md 包含 '{item}'")
         else:
-            print(f"❌ 缺少'{section}'部分")
+            print(f"❌ README.md 缺少 '{item}'")
             all_good = False
 
-    assert all_good, "用户文档缺少必要章节"
+    for item in required_en:
+        if item in en:
+            print(f"✅ README_EN.md contains '{item}'")
+        else:
+            print(f"❌ README_EN.md missing '{item}'")
+            all_good = False
+
+    assert all_good, "用户文档缺少必要内容"
 
 
 def main():
@@ -208,7 +234,8 @@ def main():
     print("• release_console/SundayPhotoOrganizer/ - 控制台发布包目录（onedir）")
     print("  - release_console/SundayPhotoOrganizer/SundayPhotoOrganizer(.exe) - 可执行文件")
     print("• release_console/启动工具.sh - 启动脚本")
-    print("• release_console/使用说明.md - 用户手册")
+    print("• release_console/README.md - 用户手册")
+    print("• release_console/README_EN.md - User Guide (EN)")
 
     return passed == total
 

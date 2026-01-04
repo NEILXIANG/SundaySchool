@@ -177,19 +177,21 @@ def test_documentation():
     if _skip_if_missing_release_console():
         return
     
-    doc_path = Path("release_console/使用说明.md")
+    doc_path = Path("release_console/README.md")
     if not doc_path.exists():
-        print("❌ 使用说明文档不存在")
-        assert False, "使用说明文档不存在"
+        print("❌ README.md 不存在")
+        assert False, "README.md 不存在"
     
     content = doc_path.read_text(encoding='utf-8')
     
-    # 检查关键内容
+    # Release docs are intentionally minimal; validate key usage guidance.
     required_content = [
-        "双击运行",
-        "学生照片",
+        "快速开始",
+        "双击",
+        "学生参考照",
         "课堂照片",
-        "桌面"
+        "output",
+        "详细文档",
     ]
     
     all_good = True
@@ -347,7 +349,7 @@ def main():
     
     print(f"\n📂 交付文件:")
     print("• release_console/SundayPhotoOrganizer - 可执行文件")
-    print("• release_console/使用说明.md - 使用说明")
+    print("• release_console/README.md - 使用说明")
     print("• release_console/启动工具.sh - 启动脚本")
     
     print(f"\n🚀 老师使用方法:")
