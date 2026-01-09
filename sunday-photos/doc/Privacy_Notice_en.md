@@ -81,11 +81,6 @@ From the beginning, we chose a "**completely offline**" technical approach rathe
 
 **Only when data never leaves the teacher's computer can we fundamentally eliminate the risk of leaks.**
 
-Many similar tools upload photos to the cloud for recognition. While convenient, this approach has these privacy risks:
-- 📤 Photos must be transmitted over the Internet (could be intercepted)
-- ☁️ Stored on third-party servers (no control over data security)
-- 📜 Dependent on service provider privacy policies (policies can change at any time)
-
 Our tool uses a "**completely offline**" approach, technically eliminating these risks. This is the most responsible way to protect children's privacy.
 
 ### Software Design Principles
