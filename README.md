@@ -78,6 +78,12 @@ python run.py
 **我想了解更多用法** 👇  
 [老师完整指南](sunday-photos/doc/TeacherGuide.md)（常见问题、最佳实践）
 
+**家长关心隐私与是否联网** 👇  
+[隐私与离线处理说明（面向家长）](sunday-photos/doc/Privacy_Notice.md)（可直接转发/打印）
+
+**Privacy & Offline Notice (for parents)** 👇  
+[Privacy & Offline Processing Notice (For Parents)](sunday-photos/doc/Privacy_Notice_en.md)
+
 **我是开发者，想贡献代码** 👇  
 [开发指南](sunday-photos/doc/DeveloperGuide.md)（本地开发、打包步骤）
 
